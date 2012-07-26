@@ -9,7 +9,7 @@ import types
 
 
 class Command(object):
-    def __init__(self, connection, query, write, type=None, **cfg):
+    def __init__(self, connection, query=None, write=None, type=None, **cfg):
         """
         Construct a new Command object
 
@@ -84,15 +84,16 @@ class Command(object):
         if cmd is None:
             return None, None
 
-        if isinstance(cmd, collections.Sequence):
+        if isinstance(cmd, basestring):
+            cmd_ = init_cmd(cmd)
+            type_ = init_type(default_type)
+        else:
+            cmd = list(cmd)
             cmd_ = init_cmd(cmd.pop(0))
             if cmd:
                 type_ = self.__init__(cmd.pop(0))
             else:
                 type_ = init_type(default_type)
-        else:
-            cmd_ = init_cmd(cmd)
-            type_ = init_type(default_type)
         return cmd_, type_
 
     def query(self):
@@ -129,7 +130,9 @@ class InstrumentBase(object):
         """Redirects write access of command attributes to the
         :class:`~.Command.write` function.
         """
-        attr = object.__getattribute__(self, name)
-        if isinstance(attr, Command):
-            attr.write(value)
-        object.__setattr__(name, value)
+        if hasattr(self, name):
+            attr = object.__getattribute__(self, name)
+            if isinstance(attr, Command):
+                attr.write(value)
+                return
+        object.__setattr__(self, name, value)
