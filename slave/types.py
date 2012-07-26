@@ -14,6 +14,11 @@ class Type(object):
         return value
 
 
+class Boolean(Type):
+    def convert(self, value):
+        return bool(value)
+
+
 class Number(Type):
     def __init__(self, min=None, max=None):
         """
