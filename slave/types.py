@@ -44,6 +44,15 @@ class Float(Number):
         return float(value)
 
 
+class Mapping(Type):
+    def __init__(self, map, **kw):
+        self._map = dict(map)
+        self._map.update(kw)
+
+    def convert(self, value):
+        return self._map[value]
+
+
 class String(Type):
     def convert(self, value):
         return str(value)
