@@ -1,0 +1,114 @@
+#  -*- coding: utf-8 -*-
+#
+# Slave, (c) 2012, see AUTHORS.  Licensed under the GNU GPL.
+
+import collections
+from itertools import izip_longest
+
+import types
+
+
+class Command(object):
+    def __init__(self, connection, query, write, type=None, **cfg):
+        """
+        Construct a new Command object
+
+        :param connection: Represents a connection object, used to query and
+          write the command. It may be the first positional argument or
+          specified via keyword. 
+
+        :param query: Represents the query command. It may be the second
+          positional argument or specified via keyword.
+
+        :type query: Either a command string or a tuple, where the first item
+          is the command string and the second is the result type of the query.
+
+        :param write: Represents the write command. It may be the third
+          positional argument.
+
+        :type write: Either a command string or a tuple, where the first item
+          is the command string and the second is the parameter type of the
+          write command.
+
+        :param type: Represents the type of the query result and the write
+          argument, indicated using an instance or class inheriting from
+          :class:`~tucold.types.Type`, e.g.::
+
+          # A type with no arguments
+          a = Command('QUERY?', 'WRITE', Integer)
+
+          # A type with two arguments
+          b = Command('QUERY?', 'WRITE', Integer(min=0, max=255))
+
+          Multiple return values are indicated using an iterable, e.g. a list
+          or tuple, holding type instances or classes, e.g.::
+
+            # A command returning an Integer and a Float on query
+            c = Command('QUERY?', type=[Integer, Float(min=12.)])
+
+          If the query result type or the write parameter type is set, it is
+          preferred.
+
+        """
+        self._connection = connection
+        self._query, self._result_type = self.__init_cmd__(query, type)
+        self._write, self._write_parms = self.__init_cmd__(write, type)
+
+        self._cfg = {
+            'separator': ','
+        }
+        self._cfg.update(cfg)
+
+    def __init_cmd__(self, cmd, default_type):
+        def init_cmd(value):
+            if isinstance(value, basestring):
+                return value
+            else:
+                raise ValueError()
+
+        def to_instance(value):
+            if isinstance(value, types.Type):
+                return value
+            elif isinstance(value, type) and issubclass(value, types.Type):
+                return value()
+            else:
+                raise ValueError('Invalid value.')
+
+        def init_type(value):
+            if not isinstance(value, collections.Sequence):
+                value = [value]
+            for v in value:
+                v = to_instance(v)
+            return value
+
+        if cmd is None:
+            return None, None
+
+        if isinstance(cmd, collections.Sequence):
+            cmd_ = init_cmd(cmd.pop(0))
+            if cmd:
+                type_ = self.__init__(cmd.pop(0))
+            else:
+                type_ = init_type(default_type)
+        else:
+            cmd_ = init_cmd(cmd)
+            type_ = init_type(default_type)
+        return cmd_, type_
+
+    def query(self):
+        result = self._connection.ask(self._query)
+        return self._parse_result(result)
+
+    def _parse_result(self, result):
+        sep = self._cfg['separator']
+        result = [i.strip() for i in result.split(sep)]
+        parsed = []
+        for (val, typ) in izip_longest(result, self._result_type):
+            if typ:
+                val = typ.convert(val)
+            parsed.append(val)
+        return parsed
+
+    def write(self, value):
+        # TODO implement write method
+        raise NotImplementedError()
