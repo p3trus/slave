@@ -50,8 +50,8 @@ class Float(Number):
 
 
 class Mapping(Type):
-    def __init__(self, map, **kw):
-        self._map = dict(map)
+    def __init__(self, map=None, **kw):
+        self._map = {} if map is None else dict(map)
         self._map.update(kw)
 
     def convert(self, value):
