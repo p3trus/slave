@@ -28,6 +28,7 @@ pip-log.txt
 
 #eclipse
 .project
+.settings
 
 #pydev
 .pydevproject
