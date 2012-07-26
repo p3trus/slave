@@ -112,3 +112,24 @@ class Command(object):
     def write(self, value):
         # TODO implement write method
         raise NotImplementedError()
+
+
+class InstrumentBase(object):
+    """Base class of all instruments."""
+    def __getattribute__(self, name):
+        """Redirects read access of command attributes to
+        the :class:`~.Command.query` function.
+        """
+        attr = object.__getattribute__(self, name)
+        if isinstance(attr, Command):
+            return attr.query()
+        return attr
+
+    def __setattr__(self, name, value):
+        """Redirects write access of command attributes to the
+        :class:`~.Command.write` function.
+        """
+        attr = object.__getattribute__(self, name)
+        if isinstance(attr, Command):
+            attr.write(value)
+        object.__setattr__(name, value)
