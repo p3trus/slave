@@ -7,7 +7,16 @@ from slave.types import Boolean, Float, Integer, Mapping
 
 
 class SR830(InstrumentBase):
+    """
+    Stanford Research SR830 Lock-In Amplifier instrument class.
+    """
     def __init__(self, connection):
+        """Constructs a SR830 instrument object.
+
+        :param connection: Represents a hardware connection to the real
+          instrument, e.g. a py-visa connection object.
+
+        """
         self.connection = connection
 
         # Reference and phase commands
@@ -15,9 +24,17 @@ class SR830(InstrumentBase):
         #: Sets and queries the reference phase
         self.phase = Command(connection, 'PHAS?', 'PHAS',
                              Float(min=-360., max=729.99))
+        #: Sets or queries the reference source
+        self.reference = Command(connection, 'FMOD?', 'FMOD',
+                                 Mapping({'external': 0, 'internal': 1}))
         #: Sets or queries the internal reference frequency.
         self.frequency = Command(connection, 'FREQ?', 'FREQ',
                                  Float(min=0.001, max=102000.))
+        #: Sets or triggers the reference trigger mode.
+        self.reference_trigger = Command(connection, 'RSLP?', 'RSLP',
+                                         Mapping({'sine': 0,
+                                                  'rise': 1,
+                                                  'fall': 2}))
         #: Sets or queries the detection harmonic.
         self.harmonic = Command(connection, 'HARM?', 'HARM',
                                 Integer(min=1, max=19999))
@@ -57,6 +74,10 @@ class SR830(InstrumentBase):
         #: Sets or queries the synchronous filtering mode.
         self.sync = Command(connection, 'SYNC?', 'SYNC', Boolean)
 
+        # Display and output commands
+        # ===========================
+        # TODO: DDEF, FPOP, OEXP, AOFF
+        
         # Setup commands
         # ==============
         #: Sets or queries the output interface
