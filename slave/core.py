@@ -15,7 +15,7 @@ class Command(object):
 
         :param connection: Represents a connection object, used to query and
           write the command. It may be the first positional argument or
-          specified via keyword. 
+          specified via keyword.
 
         :param query: Represents the query command. It may be the second
           positional argument or specified via keyword.
@@ -77,8 +77,9 @@ class Command(object):
         def init_type(value):
             if not isinstance(value, collections.Sequence):
                 value = [value]
-            for v in value:
-                v = to_instance(v)
+            else:
+                value = list(value)
+            value = map(to_instance, value)
             return value
 
         if cmd is None:
@@ -91,12 +92,14 @@ class Command(object):
             cmd = list(cmd)
             cmd_ = init_cmd(cmd.pop(0))
             if cmd:
-                type_ = self.__init__(cmd.pop(0))
+                type_ = init_type(cmd.pop(0))
             else:
                 type_ = init_type(default_type)
         return cmd_, type_
 
     def query(self):
+        if self._query is None:
+            raise AttributeError('Command is not queryable.')
         result = self._connection.ask(self._query)
         return self._parse_result(result)
 
@@ -106,13 +109,25 @@ class Command(object):
         parsed = []
         for (val, typ) in izip_longest(result, self._result_type):
             if typ:
-                val = typ.convert(val)
+                val = typ.load(val)
             parsed.append(val)
+
+        if len(parsed) == 1:
+            return parsed[0]
         return parsed
 
     def write(self, value):
-        # TODO implement write method
-        raise NotImplementedError()
+        if self._write is None:
+            raise AttributeError('Command is not writeable.')
+        if (isinstance(value, basestring)
+        or not isinstance(value, collections.Sequence)):
+            value = [value]
+        if len(self._write_parms) != len(value):
+            raise ValueError('Mismatch in argument number. Required:{}, Received:{}'.format(len(self._write_parms), len(value)))
+
+        args = map(lambda t, v: t.dump(v), self._write_parms, value)
+        cmd = self._write + ' ' + ','.join(args)
+        self._connection.write(cmd)
 
 
 class InstrumentBase(object):
