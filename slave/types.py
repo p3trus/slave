@@ -5,18 +5,44 @@
 
 class Type(object):
     """Type factory base class."""
-    def validate(self, value):
-        return True
+    def dump(self, value):
+        value = self._convert(value)
+        self._validate(value)
+        return self._serialize(value)
 
-    def __call__(self, value):
-        value = self.convert(value)
-        value = self.validate(value)
-        return value
+    def load(self, value):
+        return self._convert(value)
+
+    def _convert(self, value):
+        """Converts value to the type represented by this class."""
+        raise NotImplementedError()
+
+    def _validate(self, value):
+        """Validates the value.
+
+        This member function can be overwritten by subclasses to provide
+        validation. Per default it does nothing.
+
+        """
+        pass
+
+    def _serialize(self, value):
+        """Converts the value to a string.
+
+        The serialize function converts the value to a string. It can be
+        overwritten if custom serialisation behaviour is needed.
+
+        """
+        return str(value)
 
 
 class Boolean(Type):
-    def convert(self, value):
+    """Represents a boolean type. It is serialized in decimal form."""
+    def _convert(self, value):
         return bool(value)
+
+    def _serialize(self, value):
+        return '{:d}'.format(self.convert(value))
 
 
 class Number(Type):
@@ -28,36 +54,48 @@ class Number(Type):
         :param max: Maximal value a constructed object can have.
 
         """
-        self.min = self.convert(min)
-        self.max = self.convert(max)
+        # evaluates to min/max if min/max is None and to it's conversion
+        # otherwise.
+        self.min = min and self._convert(min)
+        self.max = max and self._convert(max)
 
-    def validate(self, value):
+    def _validate(self, value):
         if self.min is not None and value < self.min:
-            return False
+            raise ValueError('Value:{}<Min:{}'.format(value, self.min))
         if self.max is not None and value > self.max:
-            return False
-        return True
+            raise ValueError('Value:{}>Max:{}'.format(value, self.max))
 
 
 class Integer(Number):
-    def convert(self, value):
+    """Represents an integer type."""
+    def _convert(self, value):
         return int(value)
 
 
 class Float(Number):
-    def convert(self, value):
+    """Represents a floating point type."""
+    def _convert(self, value):
         return float(value)
 
 
 class Mapping(Type):
-    def __init__(self, map=None, **kw):
-        self._map = {} if map is None else dict(map)
-        self._map.update(kw)
+    """
+    Represents a one to one mapping of keys and values.
+    """
+    def __init__(self, map=None):
+        # Note: dict comprehension needs at least python 2.7
+        self._map = {k: str(v) for k, v in map.items()} if map else {}
+        self._inv = {v: k for k, v in self._map.items()}
+        print '\nMAP', self._map, 'X'
+        print '\nINV', self._inv, 'X'
 
-    def convert(self, value):
+    def _convert(self, value):
         return self._map[value]
+
+    def load(self, value):
+        return self._inv[value]
 
 
 class String(Type):
-    def convert(self, value):
+    def _convert(self, value):
         return str(value)
