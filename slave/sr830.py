@@ -8,11 +8,12 @@ from slave.types import Boolean, Float, Integer, Mapping, String
 
 class Aux(InstrumentBase):
     def __init__(self, connection, id):
+        super(Aux, self).__init__(connection)
         self.id = id = int(id)
         #: Queries the aux input voltages.
-        self.input = Command(connection, 'OAUX? {}'.format(id))
+        self.input = Command('OAUX? {}'.format(id))
         #: Sets and queries the output voltage.
-        self.output = Command(connection, 'AUXV? {}'.format(id),
+        self.output = Command('AUXV? {}'.format(id),
                               'AUXV {},'.format(id),
                               Float(min=-10.5, max=10.5))
 
@@ -33,62 +34,62 @@ class SR830(InstrumentBase):
           instrument, e.g. a py-visa connection object.
 
         """
-        self.connection = connection
+        super(SR830, self).__init__(connection)
 
         # Reference and phase commands
         # ============================
         #: Sets and queries the reference phase
-        self.phase = Command(connection, 'PHAS?', 'PHAS',
+        self.phase = Command('PHAS?', 'PHAS',
                              Float(min=-360., max=729.99))
         #: Sets or queries the reference source
-        self.reference = Command(connection, 'FMOD?', 'FMOD',
+        self.reference = Command('FMOD?', 'FMOD',
                                  Mapping({'external': 0, 'internal': 1}))
         #: Sets or queries the internal reference frequency.
-        self.frequency = Command(connection, 'FREQ?', 'FREQ',
+        self.frequency = Command('FREQ?', 'FREQ',
                                  Float(min=0.001, max=102000.))
         #: Sets or triggers the reference trigger mode.
-        self.reference_trigger = Command(connection, 'RSLP?', 'RSLP',
+        self.reference_trigger = Command('RSLP?', 'RSLP',
                                          Mapping({'sine': 0,
                                                   'rise': 1,
                                                   'fall': 2}))
         #: Sets or queries the detection harmonic.
-        self.harmonic = Command(connection, 'HARM?', 'HARM',
+        self.harmonic = Command('HARM?', 'HARM',
                                 Integer(min=1, max=19999))
         #: Sets or queries the amplitude of the sine output.
-        self.amplitude = Command(connection, 'SLVL?', 'SLVL',
+        self.amplitude = Command('SLVL?', 'SLVL',
                                  Float(min=0.004, max=5.))
 
         # Input and filter commands
         # =========================
         #: Sets or queries the input configuration.
-        self.input = Command(connection, 'ISRC?', 'ISRC',
+        self.input = Command('ISRC?', 'ISRC',
                              Mapping({'A': 0, 'A-B': 1, 'I': 2, 'I100': 3}))
         #: Sets or queries the input shield grounding.
-        self.ground = Command(connection, 'IGND?', 'IGND', Boolean)
+        self.ground = Command('IGND?', 'IGND', Boolean)
         #: Sets or queries the input coupling.
-        self.coupling = Command(connection, 'ICPL?', 'ICPL',
+        self.coupling = Command('ICPL?', 'ICPL',
                                 Mapping({'AC': 0, 'DC': 1}))
         #: Sets or queries the input line notch filter status.
-        self.filter = Command(connection, 'ILIN?', 'ILIN',
+        self.filter = Command('ILIN?', 'ILIN',
                               Mapping({'unfiltered': 0, 'notch': 1,
                                        '2xnotch': 2, 'both': 3}))
 
         # Gain and time constant commands
         # ===============================
         #: Sets or queries the sensitivity.
-        self.sensitivity = Command(connection, 'SENS?', 'SENS',
+        self.sensitivity = Command('SENS?', 'SENS',
                                    Integer(min=0, max=26))
         #: Sets or queries the dynamic reserve.
-        self.reserve = Command(connection, 'RMOD?', 'RMOD',
+        self.reserve = Command('RMOD?', 'RMOD',
                                Mapping({'high': 0, 'medium': 1, 'low': 2}))
         #: Sets or queries the time constant.
-        self.time_constant = Command(connection, 'OFLT?', 'OFLT',
+        self.time_constant = Command('OFLT?', 'OFLT',
                                      Integer(min=0, max=19))
         #: Sets or queries the low-pass filter slope.
-        self.slope = Command(connection, 'OFSL?', 'OFSL',
+        self.slope = Command('OFSL?', 'OFSL',
                              Integer(min=0, max=3))
         #: Sets or queries the synchronous filtering mode.
-        self.sync = Command(connection, 'SYNC?', 'SYNC', Boolean)
+        self.sync = Command('SYNC?', 'SYNC', Boolean)
 
         # Display and output commands
         # ===========================
@@ -102,56 +103,56 @@ class SR830(InstrumentBase):
         # Setup commands
         # ==============
         #: Sets or queries the output interface.
-        self.output_interface = Command(connection, 'OUTX?', 'OUTX',
+        self.output_interface = Command('OUTX?', 'OUTX',
                                         Mapping({'RS232': 0, 'GPIB': 1}))
         #: Sets the remote mode override.
-        self.overide_remote = Command(connection, write=('OVRM', Boolean))
+        self.overide_remote = Command(write=('OVRM', Boolean))
         #: Sets or queries the key click state.
-        self.key_click = Command(connection, 'KCLK?', 'KCLK', Boolean)
+        self.key_click = Command('KCLK?', 'KCLK', Boolean)
         #: Sets or queries the alarm state.
-        self.alarm = Command(connection, 'ALRM?', 'ALRM', Boolean)
+        self.alarm = Command('ALRM?', 'ALRM', Boolean)
 
         # Data storage commands
         # =====================
-        self.sample_rate = Command(connection, 'SRAT?', 'SRAT',
+        self.sample_rate = Command('SRAT?', 'SRAT',
                                    Integer(min=0, max=14))
         #: The send command sets or queries the end of buffer mode.
         #: .. note::
         #:    If loop mode is used, the data storage should be paused to avoid
         #:    confusion about which point is the most recent.
-        self.send_mode = Command(connection, 'SEND?', 'SEND',
+        self.send_mode = Command('SEND?', 'SEND',
                                  Mapping({'shot': 0, 'loop': 1}))
 
         # Data transfer commands
         # ======================
         #: Reads the value of x.
-        self.x = Command(connection, ('OUTP? 1', Float))
+        self.x = Command(('OUTP? 1', Float))
         #: Reads the value of y.
-        self.y = Command(connection, ('OUTP? 2', Float))
+        self.y = Command(('OUTP? 2', Float))
         #: Reads the value of r.
-        self.r = Command(connection, ('OUTP? 3', Float))
+        self.r = Command(('OUTP? 3', Float))
         #: Reads the value of theta.
-        self.theta = Command(connection, ('OUTP? 4', Float))
+        self.theta = Command(('OUTP? 4', Float))
         #: Reads the value of channel 1.
-        self.channel1 = Command(connection, ('OUTR? 1', Float))
+        self.channel1 = Command(('OUTR? 1', Float))
         #: Reads the value of channel 2.
-        self.channel2 = Command(connection, ('OUTR? 2', Float))
+        self.channel2 = Command(('OUTR? 2', Float))
         #: Queries the number of data points stored in the internal buffer.
-        self.data_points = Command(connection, ('SPTS?', Integer))
+        self.data_points = Command(('SPTS?', Integer))
         #: Sets or queries the data transfer mode.
         #: .. note::
         #:    Do not use :class:`~SR830.start() to execute the scan, use
         #:    :class:`~SR830.delayed_start instead.
-        self.fast_mode = Command(connection, 'FAST?', 'FAST',
+        self.fast_mode = Command('FAST?', 'FAST',
                                  Mapping({'off': 0, 'DOS': 1, 'Windows': 2}))
 
         # Interface Commands
         # ==================
         #: Queries the device identification string
-        self.idn = Command(connection, '*IDN?',
+        self.idn = Command('*IDN?',
                            type=[String, String, String, String])
         #: Queries or sets the state of the frontpanel.
-        self.state = Command(connection, 'LOCL?', 'LOCL',
+        self.state = Command('LOCL?', 'LOCL',
                              Mapping({'local': 0, 'remote': 1, 'lockout': 2}))
 
     def auto_gain(self):
