@@ -9,7 +9,12 @@ import types
 
 
 class Command(object):
-    def __init__(self, connection, query=None, write=None, type=None, **cfg):
+    _default_cfg = {
+        'separator': ',',
+        'cmd_separator': ' '
+    }
+
+    def __init__(self, query=None, write=None, type=None, connection=None, **cfg):
         """
         Construct a new Command object
 
@@ -54,10 +59,9 @@ class Command(object):
         self._query, self._result_type = self.__init_cmd__(query, type)
         self._write, self._write_parms = self.__init_cmd__(write, type)
 
-        self._cfg = {
-            'separator': ','
-        }
-        self._cfg.update(cfg)
+        self._custom_cfg = dict(cfg)
+        self._cfg = dict(self._default_cfg)
+        self._cfg.update(self._custom_cfg)
 
     def __init_cmd__(self, cmd, default_type):
         def init_cmd(value):
@@ -125,13 +129,32 @@ class Command(object):
         if len(self._write_parms) != len(value):
             raise ValueError('Mismatch in argument number. Required:{}, Received:{}'.format(len(self._write_parms), len(value)))
 
+        cmd_sep = self._cfg['cmd_separator']
+        par_sep = self._cfg['separator']
         args = map(lambda t, v: t.dump(v), self._write_parms, value)
-        cmd = self._write + ' ' + ','.join(args)
+        cmd = self._write + cmd_sep + par_sep.join(args)
         self._connection.write(cmd)
 
 
 class InstrumentBase(object):
-    """Base class of all instruments."""
+    """Base class of all instruments.
+
+    The InstrumentBase class applies some *magic* to simplify the Command
+    interaction. Read access on :class:~.Command attributes is redirected to
+    the :class:`~.Command.query` and write access to the
+    :class:`~.Command.write` member function.
+
+    When a Command is added to a subclass of :class:~.InstrumentBase, the
+    connection is automatically injected into the object unless the connection
+    of the Command is already set. If all Commands of a Instrument need a non
+    standard configuration, it is more convenient to inject it as well. This is
+    done via the cfg parameter.
+    """
+    def __init__(self, connection, cfg=None):
+        """Constructs a InstrumentBase instance."""
+        self.connection = connection
+        self._cfg = cfg
+
     def __getattribute__(self, name):
         """Redirects read access of command attributes to
         the :class:`~.Command.query` function.
@@ -143,11 +166,24 @@ class InstrumentBase(object):
 
     def __setattr__(self, name, value):
         """Redirects write access of command attributes to the
-        :class:`~.Command.write` function.
+        :class:`~.Command.write` function and injects connection, and command
+        config into commands.
         """
+        # Redirect write access
         if hasattr(self, name):
             attr = object.__getattribute__(self, name)
             if isinstance(attr, Command):
                 attr.write(value)
                 return
+        # Inject connection
+        elif isinstance(value, Command):
+            if value._connection is None:
+                value._connection = self.connection
+            if self._cfg:
+                # TODO doesn't feel right...
+                cfg = dict(value._default_cfg)
+                cfg.update(self._cfg)
+                cfg.update(value._custom_cfg)
+                value._cfg = cfg
+
         object.__setattr__(self, name, value)
