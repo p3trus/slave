@@ -30,16 +30,14 @@ class MockConnection(object):
 
 class MockInstrument(InstrumentBase):
     def __init__(self):
-        c = MockConnection()
-
-        self.connection = c
-        self.string = Command(c, 'STRING?', 'STRING', String)
-        self.integer = Command(c, 'INTEGER?', 'INTEGER', Integer)
-        self.float = Command(c, 'FLOAT?', 'FLOAT', Float)
-        self.mapping = Command(c, 'MAPPING?', 'MAPPING',
+        super(MockInstrument, self).__init__(MockConnection())
+        self.string = Command('STRING?', 'STRING', String)
+        self.integer = Command('INTEGER?', 'INTEGER', Integer)
+        self.float = Command('FLOAT?', 'FLOAT', Float)
+        self.mapping = Command('MAPPING?', 'MAPPING',
                                Mapping({'elite': 1337, 'notelite': 1338}))
-        self.read_only = Command(c, ('STRING?', String))
-        self.write_only = Command(c, write=('STRING', String))
+        self.read_only = Command(('STRING?', String))
+        self.write_only = Command(write=('STRING', String))
 
 
 class TestCommand(unittest.TestCase):
