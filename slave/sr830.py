@@ -23,7 +23,7 @@ class SR830(InstrumentBase):
     Stanford Research SR830 Lock-In Amplifier instrument class.
 
     .. todo::
-        Implementation of the DDEF, FPOP, OEXP, AOFF, TRCA, TRCB, ESE, ESR,
+        Implementation of the FPOP, TRCA, TRCB, ESE, ESR,
         SRE, STB, PSC, ERRE, ERRS, LIAE, LIAS commands.
 
     """
@@ -93,7 +93,37 @@ class SR830(InstrumentBase):
 
         # Display and output commands
         # ===========================
-        # TODO: DDEF, FPOP, OEXP, AOFF
+        # TODO: FPOP
+        disp1 = {'X': 0, 'R': 1, 'Xnoise': 2, 'AuxIn1': 3, 'AuxIn2': 4}
+        ratio1 = {'none': 0, 'AuxIn1': 1, 'AuxIn2': 2}
+        #: Set or query the channel 1 display settings.
+        self.ch1_display = Command('DDEF? 1', 'DDEF 1',
+                                   [Mapping(disp1), Mapping(ratio1)])
+
+        disp2 = {'Y': 0, 'Theta': 1, 'Ynoise': 2, 'AuxIn3': 3, 'AuxIn4': 4}
+        ratio2 = {'none': 0, 'AuxIn3': 1, 'AuxIn4': 2}
+        #: Set or query the channel 2 display settings.
+        self.ch1_display = Command('DDEF? 2', 'DDEF 2',
+                                   [Mapping(disp2), Mapping(ratio2)])
+        #: Sets the channel1 output.
+        self.ch1_output = Command('FPOP? 1', 'FPOP 1,',
+                                  Mapping({'CH1': 0, 'X': 1}))
+        #: Sets the channel2 output.
+        self.ch2_output = Command('FPOP? 2', 'FPOP 2,',
+                                  Mapping({'CH2': 0, 'Y': 1}))
+        #:Sets or queries the x value offset and expand.
+        self.x_offset_and_expand = Command('OEXP? 1', 'OEXP 1',
+                                         [Float(min=-105., max=105.),
+                                          Mapping({10: 10, 100: 100})])
+        #:Sets or queries the x value offset and expand.
+        self.y_offset_and_expand = Command('OEXP? 2', 'OEXP 2',
+                                         [Float(min=-105., max=105.),
+                                          Mapping({10: 10, 100: 100})])
+        #:Sets or queries the x value offset and expand
+        self.r_offset_and_expand = Command('OEXP? 3', 'OEXP 3',
+                                         [Float(min=-105., max=105.),
+                                          Mapping({10: 10, 100: 100})])
+
 
         # Aux input and output commands
         # =============================
@@ -134,9 +164,9 @@ class SR830(InstrumentBase):
         #: Reads the value of theta.
         self.theta = Command(('OUTP? 4', Float))
         #: Reads the value of channel 1.
-        self.channel1 = Command(('OUTR? 1', Float))
+        self.ch1 = Command(('OUTR? 1', Float))
         #: Reads the value of channel 2.
-        self.channel2 = Command(('OUTR? 2', Float))
+        self.ch2 = Command(('OUTR? 2', Float))
         #: Queries the number of data points stored in the internal buffer.
         self.data_points = Command(('SPTS?', Integer))
         #: Sets or queries the data transfer mode.
