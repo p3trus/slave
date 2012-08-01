@@ -11,7 +11,7 @@ class Aux(InstrumentBase):
         super(Aux, self).__init__(connection)
         self.id = id = int(id)
         #: Queries the aux input voltages.
-        self.input = Command('OAUX? {0}'.format(id))
+        self.input = Command(('OAUX? {0}'.format(id), Float))
         #: Sets and queries the output voltage.
         self.output = Command('AUXV? {0}'.format(id),
                               'AUXV {0},'.format(id),
@@ -103,7 +103,7 @@ class SR830(InstrumentBase):
         disp2 = {'Y': 0, 'Theta': 1, 'Ynoise': 2, 'AuxIn3': 3, 'AuxIn4': 4}
         ratio2 = {'none': 0, 'AuxIn3': 1, 'AuxIn4': 2}
         #: Set or query the channel 2 display settings.
-        self.ch1_display = Command('DDEF? 2', 'DDEF 2',
+        self.ch2_display = Command('DDEF? 2', 'DDEF 2',
                                    [Mapping(disp2), Mapping(ratio2)])
         #: Sets the channel1 output.
         self.ch1_output = Command('FPOP? 1', 'FPOP 1,',
