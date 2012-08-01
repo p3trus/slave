@@ -3,7 +3,7 @@
 # Slave, (c) 2012, see AUTHORS.  Licensed under the GNU GPL.
 
 from slave.core import Command, InstrumentBase
-from slave.types import Boolean, Float, Integer, Mapping, String
+from slave.types import Boolean, Float, Integer, Mapping, Set, String
 
 
 class Aux(InstrumentBase):
@@ -114,15 +114,15 @@ class SR830(InstrumentBase):
         #:Sets or queries the x value offset and expand.
         self.x_offset_and_expand = Command('OEXP? 1', 'OEXP 1',
                                          [Float(min=-105., max=105.),
-                                          Mapping({0: 0, 10: 10, 100: 100})])
+                                          Set(0, 10, 100)])
         #:Sets or queries the x value offset and expand.
         self.y_offset_and_expand = Command('OEXP? 2', 'OEXP 2',
                                          [Float(min=-105., max=105.),
-                                          Mapping({0: 0, 10: 10, 100: 100})])
+                                          Set(0, 10, 100)])
         #:Sets or queries the x value offset and expand
         self.r_offset_and_expand = Command('OEXP? 3', 'OEXP 3',
                                          [Float(min=-105., max=105.),
-                                          Mapping({0: 0, 10: 10, 100: 100})])
+                                          Set(0, 10, 100)])
 
 
         # Aux input and output commands
