@@ -103,6 +103,22 @@ class Set(Mapping):
         super(Set, self).__init__(dict((k, str(k)) for k in args))
 
 
+class Enum(Mapping):
+    """Represents a one to one mapping to an integer range."""
+    def __init__(self, *args, **kw):
+        """Constructs an Enum type factory.
+
+        :param start: The first integer value of the enumerated sequence.
+        :param step: The step size used in the enumeration.
+
+        """
+        start = int(kw.pop('start', 0))
+        step = int(kw.pop('step', 1))
+        stop = len(args) * step
+        map_ = dict((k, v) for k, v in zip(args, range(start, stop, step)))
+        super(Set, self).__init__(map_)
+
+
 class String(Type):
     def _convert(self, value):
         return str(value)
