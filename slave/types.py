@@ -93,6 +93,14 @@ class Mapping(Type):
         return self._inv[value]
 
 
+class Set(Mapping):
+    """
+    Represents a one to one mapping of each value to its string representation.
+    """
+    def __init__(self, *args):
+        super(Set, self).__init__(dict((k, str(k)) for k in args))
+
+
 class String(Type):
     def _convert(self, value):
         return str(value)
