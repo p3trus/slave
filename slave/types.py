@@ -61,9 +61,9 @@ class Number(Type):
 
     def _validate(self, value):
         if self.min is not None and value < self.min:
-            raise ValueError('Value:{}<Min:{}'.format(value, self.min))
+            raise ValueError('Value:{0}<Min:{0}'.format(value, self.min))
         if self.max is not None and value > self.max:
-            raise ValueError('Value:{}>Max:{}'.format(value, self.max))
+            raise ValueError('Value:{0}>Max:{0}'.format(value, self.max))
 
 
 class Integer(Number):
@@ -83,9 +83,8 @@ class Mapping(Type):
     Represents a one to one mapping of keys and values.
     """
     def __init__(self, map=None):
-        # Note: dict comprehension needs at least python 2.7
-        self._map = {k: str(v) for k, v in map.items()} if map else {}
-        self._inv = {v: k for k, v in self._map.items()}
+        self._map = dict((k, str(v)) for k, v in map.items()) if map else {}
+        self._inv = dict((v, k) for k, v in self._map.items())
         print '\nMAP', self._map, 'X'
         print '\nINV', self._inv, 'X'
 
