@@ -11,10 +11,10 @@ class Aux(InstrumentBase):
         super(Aux, self).__init__(connection)
         self.id = id = int(id)
         #: Queries the aux input voltages.
-        self.input = Command('OAUX? {}'.format(id))
+        self.input = Command('OAUX? {0}'.format(id))
         #: Sets and queries the output voltage.
-        self.output = Command('AUXV? {}'.format(id),
-                              'AUXV {},'.format(id),
+        self.output = Command('AUXV? {0}'.format(id),
+                              'AUXV {0},'.format(id),
                               Float(min=-10.5, max=10.5))
 
 
@@ -128,7 +128,7 @@ class SR830(InstrumentBase):
         # Aux input and output commands
         # =============================
         for id in range(1, 5):
-            setattr(self, 'aux{}'.format(id), Aux(connection, id))
+            setattr(self, 'aux{0}'.format(id), Aux(connection, id))
 
         # Setup commands
         # ==============
@@ -204,7 +204,7 @@ class SR830(InstrumentBase):
 
         """
         signals = {'X': 1, 'Y': 2, 'R': 3}
-        self.connection.ask('AOFF {}'.format(signals[signal]))
+        self.connection.ask('AOFF {0}'.format(signals[signal]))
 
     def trigger(self):
         """Emits a trigger event."""
@@ -234,7 +234,7 @@ class SR830(InstrumentBase):
         """Saves the lock-in setup in the setup buffer."""
         id = int(id)
         if 0 < id < 10:
-            self.connection.write('SSET {}'.format(id))
+            self.connection.write('SSET {0}'.format(id))
         else:
             raise ValueError('Buffer id out of range.')
 
@@ -247,7 +247,7 @@ class SR830(InstrumentBase):
         """
         id = int(id)
         if 0 < id < 10:
-            self.connection.write('RSET {}'.format(id))
+            self.connection.write('RSET {0}'.format(id))
 
     def snap(self, *args):
         """Records up to 6 parameters at a time.
