@@ -114,15 +114,15 @@ class SR830(InstrumentBase):
         #:Sets or queries the x value offset and expand.
         self.x_offset_and_expand = Command('OEXP? 1', 'OEXP 1',
                                          [Float(min=-105., max=105.),
-                                          Mapping({10: 10, 100: 100})])
+                                          Mapping({0: 0, 10: 10, 100: 100})])
         #:Sets or queries the x value offset and expand.
         self.y_offset_and_expand = Command('OEXP? 2', 'OEXP 2',
                                          [Float(min=-105., max=105.),
-                                          Mapping({10: 10, 100: 100})])
+                                          Mapping({0: 0, 10: 10, 100: 100})])
         #:Sets or queries the x value offset and expand
         self.r_offset_and_expand = Command('OEXP? 3', 'OEXP 3',
                                          [Float(min=-105., max=105.),
-                                          Mapping({10: 10, 100: 100})])
+                                          Mapping({0: 0, 10: 10, 100: 100})])
 
 
         # Aux input and output commands
