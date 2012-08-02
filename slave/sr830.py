@@ -147,17 +147,16 @@ class SR830(InstrumentBase):
 
         # Display and output commands
         # ===========================
-        disp1 = ['X', 'R', 'Xnoise', 'AuxIn1', 'AuxIn2']
-        ratio1 = ['none', 'AuxIn1', 'AuxIn2']
         #: Set or query the channel 1 display settings.
         self.ch1_display = Command('DDEF? 1', 'DDEF 1',
-                                   [Enum(disp1), Enum(ratio1)])
-
-        disp2 = ['Y', 'Theta', 'Ynoise', 'AuxIn3', 'AuxIn4']
-        ratio2 = ['none', 'AuxIn3', 'AuxIn4']
+                                   [Enum('X', 'R', 'Xnoise',
+                                         'AuxIn1', 'AuxIn2'),
+                                    Enum('none', 'AuxIn1', 'AuxIn2')])
         #: Set or query the channel 2 display settings.
         self.ch2_display = Command('DDEF? 2', 'DDEF 2',
-                                   [Enum(disp2), Enum(ratio2)])
+                                   [Enum('Y', 'Theta', 'Ynoise',
+                                         'AuxIn3', 'AuxIn4'),
+                                    Enum('none', 'AuxIn3', 'AuxIn4')])
         #: Sets the channel1 output.
         self.ch1_output = Command('FPOP? 1', 'FPOP 1,', Enum('CH1', 'X'))
         #: Sets the channel2 output.
