@@ -58,14 +58,15 @@ class Status(InstrumentBase):
         if mapped:
             get_bit = lambda x, i: bool(x & (1 << i))
             status = {
-                'input overload': get_bit(0),
-                'time const filter overload': get_bit(1),
-                'output overload': get_bit(2),
+                'input overload': get_bit(status, 0),
+                'time const filter overload': get_bit(status, 1),
+                'output overload': get_bit(status, 2),
                 'reference unlock': get_bit(status, 3),
                 'detection frequency range switch': get_bit(status, 4),
                 'indirect tc change': get_bit(status, 5)
             }
         return status
+
 
 class SR830(InstrumentBase):
     """
