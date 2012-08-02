@@ -45,6 +45,7 @@ class Status(InstrumentBase):
         self.indirect_tc_change = Command(('LIAS? 5', Boolean))
         #: Status byte, which is set when the data storage is triggered
         #: (only in external trigger mode).
+        self.triggered = Command(('LIAS? 6', Boolean))
 
     def __call__(self, mapped=True):
         """Returns the lockin status.
@@ -63,7 +64,8 @@ class Status(InstrumentBase):
                 'output overload': get_bit(status, 2),
                 'reference unlock': get_bit(status, 3),
                 'detection frequency range switch': get_bit(status, 4),
-                'indirect tc change': get_bit(status, 5)
+                'indirect tc change': get_bit(status, 5),
+                'triggered': get_bit(status, 6),
             }
         return status
 
