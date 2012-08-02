@@ -116,7 +116,7 @@ class Enum(Mapping):
         step = int(kw.pop('step', 1))
         stop = len(args) * step
         map_ = dict((k, v) for k, v in zip(args, range(start, stop, step)))
-        super(Set, self).__init__(map_)
+        super(Enum, self).__init__(map_)
 
 
 class String(Type):
