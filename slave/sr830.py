@@ -2,8 +2,15 @@
 #
 # Slave, (c) 2012, see AUTHORS.  Licensed under the GNU GPL.
 
+"""
+The sr830 module implements an interface for the Stanford Research SR830.
+"""
+
 from slave.core import Command, InstrumentBase
-from slave.types import Boolean, Float, Integer, Mapping, Set, String
+from slave.types import Boolean, Enum, Float, Integer, Set, String
+
+
+__all__ = ['SR830']
 
 
 class Aux(InstrumentBase):
@@ -18,12 +25,70 @@ class Aux(InstrumentBase):
                               Float(min=-10.5, max=10.5))
 
 
+class Status(InstrumentBase):
+    def __init__(self, connection):
+        super(Status, self).__init__(connection)
+        #: Queries the input overload status byte.
+        self.input_overload = Command(('LIAS? 0', Boolean))
+        #: Queries the time constant filter overload status byte.
+        self.tc_filter_overload = Command(('LIAS? 1', Boolean))
+        #: Queries the output overload status byte.
+        self.output_overload = Command(('LIAS? 2', Boolean))
+        #: Queries the reference unlock status byte.
+        self.reference_unlock = Command(('LIAS? 3', Boolean))
+        #: Status byte which is set when the detection frequency changes its
+        #: range.
+        self.detection_frequency_range_switch = Command(('LIAS? 4', Boolean))
+        #: Status byte which is set, when an indirect time constant change
+        #: occured, e.g. by a change of the dynamic reserve, frequency range,
+        #: filter slope or expand.
+        self.indirect_tc_change = Command(('LIAS? 5', Boolean))
+        #: Status byte, which is set when the data storage is triggered
+        #: (only in external trigger mode).
+
+    def __call__(self, mapped=True):
+        """Returns the lockin status.
+
+        :param mapped: If mapped is False, the raw integer is returned.
+           Otherwise the bits are converted into a dict with bitname, value
+           pairs.
+
+        """
+        status = int(self.connection.ask('LIAS?'))
+        if mapped:
+            get_bit = lambda x, i: bool(x & (1 << i))
+            status = {
+                'input overload': get_bit(0),
+                'time const filter overload': get_bit(1),
+                'output overload': get_bit(2),
+                'reference unlock': get_bit(status, 3),
+                'detection frequency range switch': get_bit(status, 4),
+                'indirect tc change': get_bit(status, 5)
+            }
+        return status
+
 class SR830(InstrumentBase):
     """
     Stanford Research SR830 Lock-In Amplifier instrument class.
 
+    The SR830 provides a simple, yet powerful interface to a Stanford Research
+    SR830 lock-in amplifier.
+
+    E.g.::
+
+        import visa
+        from slave.sr830 import SR830
+        # create a connection with a sr830 instrument via GPIB on channel 8
+        connection = visa.Instrument('GPIB::8')
+        # instantiate the lockin interface.
+        lockin = SR830(connection)
+        # execute a simple measurement
+        for i in range(100):
+            print 'X:', lockin.x
+            time.sleep(1)
+
     .. todo::
-        Implementation of the FPOP, TRCA, TRCB, ESE, ESR,
+        Implementation of the TRCA, TRCB, ESE, ESR,
         SRE, STB, PSC, ERRE, ERRS, LIAE, LIAS commands.
 
     """
@@ -43,74 +108,60 @@ class SR830(InstrumentBase):
                              Float(min=-360., max=729.99))
         #: Sets or queries the reference source
         self.reference = Command('FMOD?', 'FMOD',
-                                 Mapping({'external': 0, 'internal': 1}))
+                                 Enum('external', 'internal'))
         #: Sets or queries the internal reference frequency.
         self.frequency = Command('FREQ?', 'FREQ',
                                  Float(min=0.001, max=102000.))
         #: Sets or triggers the reference trigger mode.
         self.reference_trigger = Command('RSLP?', 'RSLP',
-                                         Mapping({'sine': 0,
-                                                  'rise': 1,
-                                                  'fall': 2}))
+                                         Enum('sine', 'rise', 'fall'))
         #: Sets or queries the detection harmonic.
-        self.harmonic = Command('HARM?', 'HARM',
-                                Integer(min=1, max=19999))
+        self.harmonic = Command('HARM?', 'HARM', Integer(min=1, max=19999))
         #: Sets or queries the amplitude of the sine output.
-        self.amplitude = Command('SLVL?', 'SLVL',
-                                 Float(min=0.004, max=5.))
+        self.amplitude = Command('SLVL?', 'SLVL', Float(min=0.004, max=5.))
 
         # Input and filter commands
         # =========================
         #: Sets or queries the input configuration.
-        self.input = Command('ISRC?', 'ISRC',
-                             Mapping({'A': 0, 'A-B': 1, 'I': 2, 'I100': 3}))
+        self.input = Command('ISRC?', 'ISRC', Enum('A', 'A-B', 'I', 'I100'))
         #: Sets or queries the input shield grounding.
         self.ground = Command('IGND?', 'IGND', Boolean)
         #: Sets or queries the input coupling.
-        self.coupling = Command('ICPL?', 'ICPL',
-                                Mapping({'AC': 0, 'DC': 1}))
+        self.coupling = Command('ICPL?', 'ICPL', Enum('AC', 'DC'))
         #: Sets or queries the input line notch filter status.
         self.filter = Command('ILIN?', 'ILIN',
-                              Mapping({'unfiltered': 0, 'notch': 1,
-                                       '2xnotch': 2, 'both': 3}))
+                              Enum('unfiltered', 'notch', '2xnotch', 'both'))
 
         # Gain and time constant commands
         # ===============================
         #: Sets or queries the sensitivity.
-        self.sensitivity = Command('SENS?', 'SENS',
-                                   Integer(min=0, max=26))
+        self.sensitivity = Command('SENS?', 'SENS', Integer(min=0, max=26))
         #: Sets or queries the dynamic reserve.
-        self.reserve = Command('RMOD?', 'RMOD',
-                               Mapping({'high': 0, 'medium': 1, 'low': 2}))
+        self.reserve = Command('RMOD?', 'RMOD', Enum('high', 'medium', 'low'))
         #: Sets or queries the time constant.
-        self.time_constant = Command('OFLT?', 'OFLT',
-                                     Integer(min=0, max=19))
+        self.time_constant = Command('OFLT?', 'OFLT', Integer(min=0, max=19))
         #: Sets or queries the low-pass filter slope.
-        self.slope = Command('OFSL?', 'OFSL',
-                             Integer(min=0, max=3))
+        self.slope = Command('OFSL?', 'OFSL', Integer(min=0, max=3))
         #: Sets or queries the synchronous filtering mode.
         self.sync = Command('SYNC?', 'SYNC', Boolean)
 
         # Display and output commands
         # ===========================
-        # TODO: FPOP
-        disp1 = {'X': 0, 'R': 1, 'Xnoise': 2, 'AuxIn1': 3, 'AuxIn2': 4}
-        ratio1 = {'none': 0, 'AuxIn1': 1, 'AuxIn2': 2}
+        disp1 = ['X', 'R', 'Xnoise', 'AuxIn1', 'AuxIn2']
+        ratio1 = ['none', 'AuxIn1', 'AuxIn2']
         #: Set or query the channel 1 display settings.
         self.ch1_display = Command('DDEF? 1', 'DDEF 1',
-                                   [Mapping(disp1), Mapping(ratio1)])
+                                   [Enum(disp1), Enum(ratio1)])
 
-        disp2 = {'Y': 0, 'Theta': 1, 'Ynoise': 2, 'AuxIn3': 3, 'AuxIn4': 4}
-        ratio2 = {'none': 0, 'AuxIn3': 1, 'AuxIn4': 2}
+        disp2 = ['Y', 'Theta', 'Ynoise', 'AuxIn3', 'AuxIn4']
+        ratio2 = ['none', 'AuxIn3', 'AuxIn4']
         #: Set or query the channel 2 display settings.
         self.ch2_display = Command('DDEF? 2', 'DDEF 2',
-                                   [Mapping(disp2), Mapping(ratio2)])
+                                   [Enum(disp2), Enum(ratio2)])
         #: Sets the channel1 output.
-        self.ch1_output = Command('FPOP? 1', 'FPOP 1,',
-                                  Mapping({'CH1': 0, 'X': 1}))
+        self.ch1_output = Command('FPOP? 1', 'FPOP 1,', Enum('CH1', 'X'))
         #: Sets the channel2 output.
-        self.ch2_output = Command('FPOP? 2', 'FPOP 2,',
-                                  Mapping({'CH2': 0, 'Y': 1}))
+        self.ch2_output = Command('FPOP? 2', 'FPOP 2,', Enum('CH2', 'Y'))
         #:Sets or queries the x value offset and expand.
         self.x_offset_and_expand = Command('OEXP? 1', 'OEXP 1',
                                          [Float(min=-105., max=105.),
@@ -133,8 +184,7 @@ class SR830(InstrumentBase):
         # Setup commands
         # ==============
         #: Sets or queries the output interface.
-        self.output_interface = Command('OUTX?', 'OUTX',
-                                        Mapping({'RS232': 0, 'GPIB': 1}))
+        self.output_interface = Command('OUTX?', 'OUTX', Enum('RS232', 'GPIB'))
         #: Sets the remote mode override.
         self.overide_remote = Command(write=('OVRM', Boolean))
         #: Sets or queries the key click state.
@@ -144,14 +194,12 @@ class SR830(InstrumentBase):
 
         # Data storage commands
         # =====================
-        self.sample_rate = Command('SRAT?', 'SRAT',
-                                   Integer(min=0, max=14))
+        self.sample_rate = Command('SRAT?', 'SRAT', Integer(min=0, max=14))
         #: The send command sets or queries the end of buffer mode.
         #: .. note::
         #:    If loop mode is used, the data storage should be paused to avoid
         #:    confusion about which point is the most recent.
-        self.send_mode = Command('SEND?', 'SEND',
-                                 Mapping({'shot': 0, 'loop': 1}))
+        self.send_mode = Command('SEND?', 'SEND', Enum('shot', 'loop'))
 
         # Data transfer commands
         # ======================
@@ -174,16 +222,18 @@ class SR830(InstrumentBase):
         #:    Do not use :class:`~SR830.start() to execute the scan, use
         #:    :class:`~SR830.delayed_start instead.
         self.fast_mode = Command('FAST?', 'FAST',
-                                 Mapping({'off': 0, 'DOS': 1, 'Windows': 2}))
+                                 Enum('off', 'DOS', 'Windows'))
 
         # Interface Commands
         # ==================
         #: Queries the device identification string
-        self.idn = Command('*IDN?',
-                           type=[String, String, String, String])
+        self.idn = Command('*IDN?', type=[String, String, String, String])
         #: Queries or sets the state of the frontpanel.
         self.state = Command('LOCL?', 'LOCL',
-                             Mapping({'local': 0, 'remote': 1, 'lockout': 2}))
+                             Enum('local', 'remote', 'lockout'))
+        # Status reporting commands
+        # =========================
+        self.status = Status(connection)
 
     def auto_gain(self):
         """Executes the auto gain command."""
@@ -254,7 +304,8 @@ class SR830(InstrumentBase):
 
         :param *args: Specifies the values to record. Valid ones are 'X', 'Y',
           'R', 'theta', 'AuxIn1', 'AuxIn2', 'AuxIn3', 'AuxIn4', 'Ref', 'CH1'
-          and 'CH2'.
+          and 'CH2'. If none are given 'X' and 'Y' are used.
+
         """
         params = {'X': 1, 'Y': 2, 'R': 3, 'theta': 4, 'AuxIn1': 5, 'AuxIn2': 6,
                   'AuxIn3': 7, 'AuxIn4': 8, 'Ref': 9, 'CH1': 10, 'CH2': 11}
