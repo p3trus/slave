@@ -9,9 +9,10 @@ import warnings
 # e.g. error flags might get cleared.
 try:
     if __IPYTHON__.rc.autocall == 1:
+        warnings.simplefilter('once', RuntimeWarning)
         warnings.warn('Autocall is enabled. Correct execution can not be '
                       'guaranteed. To turn it off call ipython with '
-                      '-autocall 0.')
+                      '-autocall 0.', RuntimeWarning)
 except NameError:
     pass
 
