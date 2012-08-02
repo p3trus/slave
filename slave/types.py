@@ -39,7 +39,7 @@ class Type(object):
 class Boolean(Type):
     """Represents a boolean type. It is serialized in decimal form."""
     def _convert(self, value):
-        return bool(value)
+        return bool(int(value))
 
     def _serialize(self, value):
         return '{:d}'.format(self.convert(value))
