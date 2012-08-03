@@ -25,9 +25,10 @@ class Aux(InstrumentBase):
                               Float(min=-10.5, max=10.5))
 
 
-class Status(InstrumentBase):
+class LockInStatus(InstrumentBase):
+    """Wraps the lock-in status commands."""
     def __init__(self, connection):
-        super(Status, self).__init__(connection)
+        super(LockInStatus, self).__init__(connection)
         #: Queries the input overload status byte.
         self.input_overload = Command(('LIAS? 0', Boolean))
         #: Queries the time constant filter overload status byte.
@@ -69,6 +70,43 @@ class Status(InstrumentBase):
             }
         return status
 
+
+class ErrorStatus(InstrumentBase):
+    def __init__(self, connection):
+        super(ErrorStatus, self).__init__(connection)
+        #: Queries the backup error state.
+        self.backup_error = Command('ERRS? 1', Boolean)
+        #: Queries the RAM error state.
+        self.ram_error = Command('ERRS? 2', Boolean)
+        #: Queries the ROM error state.
+        self.rom_error = Command('ERRS? 4', Boolean)
+        #: Queries the GPIB error state.
+        self.gpib_error = Command('ERRS? 5', Boolean)
+        #: Queries the DSP error state.
+        self.dsp_error = Command('ERRS? 6', Boolean)
+        #: Queries the math error state.
+        self.math_error = Command('ERRS? 7', Boolean)
+
+    def __call__(self, mapped=True):
+        """Returns the lock-in error state.
+
+        :param mapped: If mapped is False, the raw integer is returned.
+           Otherwise the bits are converted into a dict with bitname, value
+           pairs.
+
+        """
+        error = int(self.connection.ask('ERRS?'))
+        if mapped:
+            get_bit = lambda x, i: bool(x & (1 << i))
+            error = {
+                'Backup Error': get_bit(error, 1),
+                'RAM Error': get_bit(error, 2),
+                'ROM Error': get_bit(error, 4),
+                'GPIB Error': get_bit(error, 5),
+                'DSP Error': get_bit(error, 6),
+                'Math Error': get_bit(error, 7),
+            }
+        return error
 
 class SR830(InstrumentBase):
     """
@@ -235,7 +273,8 @@ class SR830(InstrumentBase):
                              Enum('local', 'remote', 'lockout'))
         # Status reporting commands
         # =========================
-        self.status = Status(connection)
+        self.lockin_status = LockInStatus(connection)
+        self.error_status = ErrorStatus(connection)
 
     def auto_gain(self):
         """Executes the auto gain command."""
