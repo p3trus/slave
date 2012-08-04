@@ -108,6 +108,46 @@ class ErrorStatus(InstrumentBase):
             }
         return error
 
+
+class StandardEventStatus(InstrumentBase):
+    """
+    Represents the standard event status.
+
+    The standard event status bits are cleared by reading or explicitly
+    clearing them via the :class:`~SR830.clear` member function.
+
+    """
+    def __init__(self, connection):
+        super(StandardEventStatus, self).__init__(connection)
+        self.input_queue_overflow = Command(('*ESR? 0', Boolean))
+        self.output_queue_overflow = Command(('*ESR? 2', Boolean))
+        self.cmd_exec_failed = Command(('*ESR? 4', Boolean))
+        self.illegal_cmd = Command(('*ESR? 5', Boolean))
+        self.user_interaction = Command(('*ESR? 6', Boolean))
+        self.power_on = Command(('*ESR? 7', Boolean))
+
+    def __call__(self, mapped):
+        """Returns the standard event status.
+
+        :param mapped: If mapped is False, the raw integer is returned.
+           Otherwise the bits are converted into a dict with bitname, value
+           pairs.
+
+        """
+        status = int(self.connection.ask('*ESR?'))
+        if mapped:
+            get_bit = lambda x, i: bool(x & (1 << i))
+            status = {
+                'input queue overflow': get_bit(status, 0),
+                'output queue overflow': get_bit(status, 2),
+                'command execution failed': get_bit(status, 4),
+                'illegal command': get_bit(status, 5),
+                'user interaction': get_bit(status, 6),
+                'power on': get_bit(status, 7),
+            }
+        return status
+
+
 class SR830(InstrumentBase):
     """
     Stanford Research SR830 Lock-In Amplifier instrument class.
@@ -275,6 +315,7 @@ class SR830(InstrumentBase):
         # =========================
         self.lockin_status = LockInStatus(connection)
         self.error_status = ErrorStatus(connection)
+        self.std_event_status = StandardEventStatus(connection)
 
     def auto_gain(self):
         """Executes the auto gain command."""
