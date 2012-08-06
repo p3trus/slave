@@ -122,3 +122,21 @@ class Enum(Mapping):
 class String(Type):
     def _convert(self, value):
         return str(value)
+
+
+class Register(Type):
+    """Represents a binary register, where bits are mapped with a name."""
+    def __init__(self, map):
+        self.__map = dict((str(k), int(v)) for k, v in map.iteritems())
+
+    def _convert(self, value):
+        x = 0
+        for k, v in value.iteritems():
+            if v:  # set bit
+                x |= 1 << self.__map[k]
+        return x
+
+    def load(self, value):
+        bit = lambda x, i: bool(x & (1 << i))
+        value = int(value)
+        return dict((k, bit(value, i)) for k, i in self.__map.iteritems())
