@@ -7,9 +7,21 @@ from slave.types import Boolean, Enum, Integer, Float
 
 
 class SR7225(InstrumentBase):
-    """Represents a Signal Recovery SR7225 lock-in amplifier."""
+    """Represents a Signal Recovery SR7225 lock-in amplifier.
+
+    .. todo::
+
+       * Check the delimiter of SR7225 in use.
+       * Implement ? high speed mode.
+       * Implement propper range checking in sweep_rate command.
+       * Aux input commands.
+
+    """
     def __init__(self, connection):
-        super(SR7225, self).__init__(connection)
+        cfg = {
+            'parm_delimiter': ' ',
+        }
+        super(SR7225, self).__init__(connection, cfg=cfg)
         # Signal channel
         # ==============
         #: Set or query the current mode.
@@ -91,6 +103,78 @@ class SR7225(InstrumentBase):
                                        Enum('x', 'y', 'r', 'phase1', 'phase2',
                                             'noise', 'ratio', 'log ratio'))
 
+        # Instrument Outputs
+        # ==================
+        #: Queries the X demodulator output.
+        self.x = Command('X.', type=Float)
+        #: Queries the Y demodulator output.
+        self.y = Command('Y.', type=Float)
+        #: Queries the X and Y demodulator output.
+        self.xy = Command('XY.', type=Float)
+        #: Queries the magnitude.
+        self.r = Command('MAG.', type=Float)
+        #: Queries the signal phase.
+        self.theta = Command('PHA.', type=Float)
+        #: Queries the magnitude and signal phase.
+        self.theta = Command('MP.', type=Float)
+        #: Queries the ratio equivalent to X/ADC1.
+        self.ratio = Command('RT.', type=Float)
+        #: Queries the ratio equivalent to log(X/ADC1).
+        self.log_ratio = Command('LR.', type=Float)
+        #: Queries the square root of the noise spectral density measured at
+        #: the Y channel output.
+        self.noise = Command('NHZ.', type=Float)
+        #: Queries the noise bandwidth.
+        self.noise_bandwidth = Command('ENBW.', type=Float)
+        #: Queries the noise output, the mean absolute value of the Y channel.
+        self.noise_output = Command('NN.', type=Float)
+        #: Sets/Queries the starmode.
+        self.star = Command('STAR', 'STAR',
+                            Enum('x', 'y', 'r', 'theta',
+                                 'adc1', 'xy', 'rtheta', 'adc12'))
+        # Internal oscillator
+        # ===================
+        #: Sets/Queries the oscillator amplitude.
+        self.amplitude = Command('OA.', 'OA.', Float(min=0., max=5.))
+        #: Sets/Queries the starting amplitude of the amplitude sweep.
+        self.amplitude_start = Command('ASTART.', 'ASTART.',
+                                       Float(min=0., max=5.))
+        #: Sets/Queries the target amplitude of the amplitude sweep.
+        self.amplitude_stop = Command('ASTOP.', 'ASTOP.',
+                                      Float(min=0., max=5.))
+        #: Sets/Queries the amplitude step of the amplitude sweep.
+        self.amplitude_step = Command('ASTEP.', 'ASTEP.',
+                                      Float(min=0., max=5.))
+        #: Sets/Queries the synchronous oscillator mode.
+        self.sync_oscillator = Command('SYNCOSC', 'SYNCOSC', Boolean)
+        #: Sets/Queries the oscillator frequency.
+        self.frequency = Command('OF.', 'OF.', Float(min=0, max=1.2e5))
+        #: Sets/Queries the start frequency of the frequency sweep.
+        self.frequency_start = Command('FSTART.', 'FSTART.',
+                                       Float(min=0, max=1.2e5))
+        #: Sets/Queries the target frequency of the frequency sweep.
+        self.frequency_stop = Command('FSTOP.', 'FSTOP.',
+                                       Float(min=0, max=1.2e5))
+        #: Sets/Queries the frequency step of the frequency sweep.
+        self.frequency_step = Command('FSTEP.', 'FSTEP.',
+                                      [Float(min=0, max=1.2e5),
+                                       Enum('log', 'linear')])
+        #: Sets/Queries the amplitude and frequency sweep step rate
+        self.sweep_rate = Command('SRATE', 'SRATE', Integer(min=0))
+        # Auxiliary Inputs
+        # ================
+        # TODO
+
+        # Output Data Curve Buffer
+        # ========================
+        #: Sets/Queries the curve length.
+        self.curve_buffer_length = Command('LEN', 'LEN', Integer(min=0))
+        #: Sets/Queries the storage intervall in ms.
+        self.storage_intervall = Command('STR', 'STR', Integer(min=0, max=1e9))
+        #: Sets/Queries the event marker.
+        self.event_marker = Command('EVENT', 'EVENT',
+                                    Integer(min=0, max=32767))
+
     def auto_sensitivity(self):
         """Triggers the auto sensitivity mode.
 
@@ -117,3 +201,80 @@ class SR7225(InstrumentBase):
         parameters.
         """
         self.connection.write('LOCK')
+
+    def stop(self):
+        """Stops/Pauses the current sweep."""
+        self.connection.write('SWEEP 0')
+
+    def start_fsweep(self, start=None, stop=None, step=None):
+        """Starts a frequency sweep.
+
+        :param start: Sets the start frequency.
+        :param stop: Sets the target frequency.
+        :param step: Sets the frequency step.
+
+        """
+        if start:
+            self.frequency_start = start
+        if stop:
+            self.frequency_stop = stop
+        if step:
+            self.frequency_step = step
+        self.connection.write('SWEEP 1')
+
+    def start_asweep(self, start=None, stop=None, step=None):
+        """Starts a frequency sweep.
+
+        :param start: Sets the start frequency.
+        :param stop: Sets the target frequency.
+        :param step: Sets the frequency step.
+
+        """
+        if start:
+            self.amplitude_start = start
+        if stop:
+            self.amplitude_stop = stop
+        if step:
+            self.amplitude_step = step
+        self.connection.write('SWEEP 2')
+
+    def start_afsweep(self):
+        """Starts a frequency and amplitude sweep."""
+        self.connection.write('SWEEP 3')
+
+    def reset_curves(self):
+        """Resets the curve storage memory and its status variables."""
+        self.connection.write('NC')
+
+    def take_data(self, continuosly=False):
+        """Starts data acquisition.
+
+        :param continuosly: If False, data is written until the buffer is full.
+           If its True, the data buffer is used as a circular buffer. That
+           means if data acquisition reaches the end of the buffer it
+           continues at the beginning.
+
+        """
+        if continuosly:
+            self.connection.write('TDC')
+        else:
+            self.connection.write('TD')
+
+    def take_data_triggered(self, mode):
+        """Starts triggered data acquisition.
+
+        :param mode: If mode is 'curve', a trigger signal starts the
+           acquisition of a complete curve or set of curves. If its 'point',
+           only a single data point is stored.
+
+        """
+        if mode == 'curve':
+            self.connection.write('TDT 0')
+        elif mode == 'point':
+            self.connection.write('TDT 1')
+        else:
+            raise ValueError('mode must be either "curve" or "point"')
+
+    def halt(self):
+        """Halts the data acquisition."""
+        self.connection.write('HC')
