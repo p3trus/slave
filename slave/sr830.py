@@ -7,7 +7,7 @@ The sr830 module implements an interface for the Stanford Research SR830.
 """
 
 from slave.core import Command, InstrumentBase
-from slave.types import Boolean, Enum, Float, Integer, Set, String
+from slave.types import Boolean, Enum, Float, Integer, Register, Set, String
 
 
 __all__ = ['SR830']
@@ -25,91 +25,113 @@ class Aux(InstrumentBase):
                               Float(min=-10.5, max=10.5))
 
 
-class LockInStatus(InstrumentBase):
-    """Wraps the lock-in status commands."""
+class Status(InstrumentBase):
+    """Wraps a readable and writeable register."""
+    def __init__(self, query, write, register, connection):
+        super(Status, self).__init__(connection)
+        for k, v in register.iteritems():
+            q = query + ' {0}'.format(int(v))
+            w = write + ' {0},'.format(int(v)) if write else None
+            name = k.replace(' ', '_')
+            setattr(self, name, Command(q, w, Boolean))
+            self.value = Command(query, write, Register(register))
+
+    def __call__(self):
+        """returns self.value."""
+        return self.value
+
+
+class ErrorStatus(Status):
     def __init__(self, connection):
-        super(LockInStatus, self).__init__(connection)
-        #: Queries the input overload status byte.
-        self.input_overload = Command(('LIAS? 0', Boolean))
-        #: Queries the time constant filter overload status byte.
-        self.tc_filter_overload = Command(('LIAS? 1', Boolean))
-        #: Queries the output overload status byte.
-        self.output_overload = Command(('LIAS? 2', Boolean))
-        #: Queries the reference unlock status byte.
-        self.reference_unlock = Command(('LIAS? 3', Boolean))
-        #: Status byte which is set when the detection frequency changes its
-        #: range.
-        self.detection_frequency_range_switch = Command(('LIAS? 4', Boolean))
-        #: Status byte which is set, when an indirect time constant change
-        #: occured, e.g. by a change of the dynamic reserve, frequency range,
-        #: filter slope or expand.
-        self.indirect_tc_change = Command(('LIAS? 5', Boolean))
-        #: Status byte, which is set when the data storage is triggered
-        #: (only in external trigger mode).
-        self.triggered = Command(('LIAS? 6', Boolean))
-
-    def __call__(self, mapped=True):
-        """Returns the lockin status.
-
-        :param mapped: If mapped is False, the raw integer is returned.
-           Otherwise the bits are converted into a dict with bitname, value
-           pairs.
-
-        """
-        status = int(self.connection.ask('LIAS?'))
-        if mapped:
-            get_bit = lambda x, i: bool(x & (1 << i))
-            status = {
-                'input overload': get_bit(status, 0),
-                'time const filter overload': get_bit(status, 1),
-                'output overload': get_bit(status, 2),
-                'reference unlock': get_bit(status, 3),
-                'detection frequency range switch': get_bit(status, 4),
-                'indirect tc change': get_bit(status, 5),
-                'triggered': get_bit(status, 6),
-            }
-        return status
+        register = {
+            'backup error': 1,
+            'ram error': 2,
+            'rom error': 4,
+            'gpib error': 5,
+            'dsp error': 6,
+            'math error': 7,
+        }
+        super(ErrorStatus, self).__init__('ERRS?', None,
+                                          register, connection)
 
 
-class ErrorStatus(InstrumentBase):
+class ErrorEnable(Status):
     def __init__(self, connection):
-        super(ErrorStatus, self).__init__(connection)
-        #: Queries the backup error state.
-        self.backup_error = Command('ERRS? 1', Boolean)
-        #: Queries the RAM error state.
-        self.ram_error = Command('ERRS? 2', Boolean)
-        #: Queries the ROM error state.
-        self.rom_error = Command('ERRS? 4', Boolean)
-        #: Queries the GPIB error state.
-        self.gpib_error = Command('ERRS? 5', Boolean)
-        #: Queries the DSP error state.
-        self.dsp_error = Command('ERRS? 6', Boolean)
-        #: Queries the math error state.
-        self.math_error = Command('ERRS? 7', Boolean)
-
-    def __call__(self, mapped=True):
-        """Returns the lock-in error state.
-
-        :param mapped: If mapped is False, the raw integer is returned.
-           Otherwise the bits are converted into a dict with bitname, value
-           pairs.
-
-        """
-        error = int(self.connection.ask('ERRS?'))
-        if mapped:
-            get_bit = lambda x, i: bool(x & (1 << i))
-            error = {
-                'Backup Error': get_bit(error, 1),
-                'RAM Error': get_bit(error, 2),
-                'ROM Error': get_bit(error, 4),
-                'GPIB Error': get_bit(error, 5),
-                'DSP Error': get_bit(error, 6),
-                'Math Error': get_bit(error, 7),
-            }
-        return error
+        register = {
+            'backup error': 1,
+            'ram error': 2,
+            'rom error': 4,
+            'gpib error': 5,
+            'dsp error': 6,
+            'math error': 7,
+        }
+        super(ErrorEnable, self).__init__('ERRE?', 'ERRE',
+                                          register, connection)
 
 
-class StandardEventStatus(InstrumentBase):
+class LockInStatus(Status):
+    def __init__(self, connection):
+        register = {
+            'input overload': 0,
+            'TC filter overload': 1,
+            'output overload': 2,
+            'reference unlock': 3,
+            'frequency range switch': 4,
+            'indirect TC change': 5,
+            'triggered': 6,
+        }
+        super(LockInStatus, self).__init__('LIAS?', None,
+                                           register, connection)
+
+
+class LockInEnable(Status):
+    def __init__(self, connection):
+        register = {
+            'input overload': 0,
+            'TC filter overload': 1,
+            'output overload': 2,
+            'reference unlock': 3,
+            'frequency range switch': 4,
+            'indirect TC change': 5,
+            'triggered': 6,
+        }
+        super(LockInEnable, self).__init__('LIAE?', 'LIAE',
+                                           register, connection)
+
+
+class SerialPollStatus(Status):
+    """Represents the serial poll status register."""
+    def __init__(self, connection):
+        register = {
+            'no scan': 0,
+            'no command': 1,
+            'error': 2,
+            'lockin': 3,
+            'output_buffer': 4,
+            'standard status ': 5,
+            'service request': 6,
+        }
+        super(SerialPollStatus, self).__init__('*STB?', None,
+                                               register, connection)
+
+
+class SerialPollEnable(Status):
+    """Represents the serial poll enable register."""
+    def __init__(self, connection):
+        register = {
+            'no scan': 0,
+            'no command': 1,
+            'error': 2,
+            'lockin': 3,
+            'output_buffer': 4,
+            'standard status ': 5,
+            'service request': 6,
+        }
+        super(SerialPollEnable, self).__init__('*SRE?', '*SRE',
+                                               register, connection)
+
+
+class StandardEventStatus(Status):
     """
     Represents the standard event status.
 
@@ -118,34 +140,31 @@ class StandardEventStatus(InstrumentBase):
 
     """
     def __init__(self, connection):
-        super(StandardEventStatus, self).__init__(connection)
-        self.input_queue_overflow = Command(('*ESR? 0', Boolean))
-        self.output_queue_overflow = Command(('*ESR? 2', Boolean))
-        self.cmd_exec_failed = Command(('*ESR? 4', Boolean))
-        self.illegal_cmd = Command(('*ESR? 5', Boolean))
-        self.user_interaction = Command(('*ESR? 6', Boolean))
-        self.power_on = Command(('*ESR? 7', Boolean))
+        register = {
+            'input queue overflow': 0,
+            'output queue overflow': 2,
+            'execution failed': 4,
+            'illegal command': 5,
+            'user interaction': 6,
+            'power on': 7,
+        }
+        super(StandardEventStatus, self).__init__('*ESR?', None,
+                                                  register, connection)
 
-    def __call__(self, mapped):
-        """Returns the standard event status.
 
-        :param mapped: If mapped is False, the raw integer is returned.
-           Otherwise the bits are converted into a dict with bitname, value
-           pairs.
-
-        """
-        status = int(self.connection.ask('*ESR?'))
-        if mapped:
-            get_bit = lambda x, i: bool(x & (1 << i))
-            status = {
-                'input queue overflow': get_bit(status, 0),
-                'output queue overflow': get_bit(status, 2),
-                'command execution failed': get_bit(status, 4),
-                'illegal command': get_bit(status, 5),
-                'user interaction': get_bit(status, 6),
-                'power on': get_bit(status, 7),
-            }
-        return status
+class StandardEventEnable(Status):
+    """Represents the standard event enable register."""
+    def __init__(self, connection):
+        register = {
+            'input queue overflow': 0,
+            'output queue overflow': 2,
+            'execution failed': 4,
+            'illegal command': 5,
+            'user interaction': 6,
+            'power on': 7,
+        }
+        super(StandardEventEnable, self).__init__('*ESE?', 'ESE',
+                                                  register, connection)
 
 
 class SR830(InstrumentBase):
@@ -167,10 +186,6 @@ class SR830(InstrumentBase):
         for i in range(100):
             print 'X:', lockin.x
             time.sleep(1)
-
-    .. todo::
-        Implementation of the TRCA, TRCB, ESE, ESR,
-        SRE, STB, PSC, ERRE, ERRS, LIAE, LIAS commands.
 
     """
     def __init__(self, connection):
@@ -255,7 +270,6 @@ class SR830(InstrumentBase):
                                          [Float(min=-105., max=105.),
                                           Set(0, 10, 100)])
 
-
         # Aux input and output commands
         # =============================
         for id in range(1, 5):
@@ -311,11 +325,19 @@ class SR830(InstrumentBase):
         #: Queries or sets the state of the frontpanel.
         self.state = Command('LOCL?', 'LOCL',
                              Enum('local', 'remote', 'lockout'))
+
         # Status reporting commands
         # =========================
-        self.lockin_status = LockInStatus(connection)
         self.error_status = ErrorStatus(connection)
+        self.error_enable = ErrorEnable(connection)
+        self.lockin_status = LockInStatus(connection)
+        self.lockin_enable = LockInEnable(connection)
+        self.serial_poll_status = SerialPollStatus(connection)
+        self.serial_poll_enable = SerialPollEnable(connection)
         self.std_event_status = StandardEventStatus(connection)
+        self.std_event_enable = StandardEventEnable(connection)
+        #: Enables or disables the clearing of the status registers on poweron.
+        self.clear_on_poweron = Command('*PSC?', '*PSC', Boolean)
 
     def auto_gain(self):
         """Executes the auto gain command."""
@@ -402,3 +424,17 @@ class SR830(InstrumentBase):
     def clear(self):
         """Clears all status registers."""
         self.connection.write('*CLS')
+
+    def trace(self, buffer, start, length=1):
+        """Reads the points stored in the channel buffer.
+
+        :param buffer: Selects the channel buffer (either 1 or 2).
+        :param start: Selects the bin where the reading starts.
+        :param length: The number of bins to read.
+
+        .. todo::
+           Use binary command TRCB to speed up data transmission.
+        """
+        query = 'TRCA? {0}, {1}, {2}'.format(buffer, start, length)
+        result = self.connection.ask(query)
+        return (float(f) for f in result.split())
