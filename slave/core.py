@@ -10,8 +10,9 @@ import types
 
 class Command(object):
     _default_cfg = {
-        'separator': ',',
-        'cmd_separator': ' '
+        'cmd_separator': ' ',
+        'parm_separator': ',',
+        'result_separator': ',',
     }
 
     def __init__(self, query=None, write=None, type=None, connection=None, **cfg):
@@ -108,7 +109,8 @@ class Command(object):
         return self._parse_result(result)
 
     def _parse_result(self, result):
-        sep = self._cfg['separator']
+        sep = self._cfg['result_separator']
+        # XXX Is stripping the tokens a really good idea?
         result = [i.strip() for i in result.split(sep)]
         parsed = []
         for (val, typ) in izip_longest(result, self._result_type):
@@ -130,7 +132,7 @@ class Command(object):
             raise ValueError('Mismatch in argument number. Required:{0}, Received:{0}'.format(len(self._write_parms), len(value)))
 
         cmd_sep = self._cfg['cmd_separator']
-        par_sep = self._cfg['separator']
+        par_sep = self._cfg['parm_separator']
         args = map(lambda t, v: t.dump(v), self._write_parms, value)
         cmd = self._write + cmd_sep + par_sep.join(args)
         self._connection.write(cmd)
