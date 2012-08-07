@@ -3,7 +3,7 @@
 # Slave, (c) 2012, see AUTHORS.  Licensed under the GNU GPL.
 
 from slave.core import Command, InstrumentBase
-from slave.types import Boolean, Enum, Integer, Float
+from slave.types import Boolean, Enum, Integer, Float, Register
 
 
 class SR7225(InstrumentBase):
@@ -15,6 +15,7 @@ class SR7225(InstrumentBase):
        * Implement ? high speed mode.
        * Implement propper range checking in sweep_rate command.
        * Aux input commands.
+       * Implement DC, DCB, DCT command.
 
     """
     def __init__(self, connection):
@@ -174,6 +175,26 @@ class SR7225(InstrumentBase):
         #: Sets/Queries the event marker.
         self.event_marker = Command('EVENT', 'EVENT',
                                     Integer(min=0, max=32767))
+        #: Queries the curve acquisition status.
+        self.measurement_status = Command(('M', [Enum('no activity',
+                                                      'td running',
+                                                      'tdc running',
+                                                      'td halted',
+                                                      'tdc halted'),
+                                                 Integer, Integer, Integer]))
+        # Computer Interfaces
+        # ===================
+        #: RS232 settings.
+        self.rs232 = Command('RS', 'RS',
+                             [Enum(75, 110, 134.5, 150, 300, 600, 1200, 1800,
+                                   2000, 2400, 4800, 9600, 19200),
+                              Register({'9 bits': 0, 'parity bit': 1,
+                                        'odd parity': 2, 'echo': 3,
+                                        'prompt': 4})])
+        self.gpib = Command('GP', 'GP',
+                            [Integer(min=0, max=31),
+                             Enum('CR', 'CR echo', 'CR, LF', 'CR, LF echo',
+                                  'None', 'None echo')])
 
     def auto_sensitivity(self):
         """Triggers the auto sensitivity mode.
@@ -246,16 +267,16 @@ class SR7225(InstrumentBase):
         """Resets the curve storage memory and its status variables."""
         self.connection.write('NC')
 
-    def take_data(self, continuosly=False):
+    def take_data(self, continuously=False):
         """Starts data acquisition.
 
-        :param continuosly: If False, data is written until the buffer is full.
+        :param continuously: If False, data is written until the buffer is full.
            If its True, the data buffer is used as a circular buffer. That
            means if data acquisition reaches the end of the buffer it
            continues at the beginning.
 
         """
-        if continuosly:
+        if continuously:
             self.connection.write('TDC')
         else:
             self.connection.write('TD')
