@@ -127,7 +127,7 @@ class Command(object):
         or not isinstance(value, collections.Sequence)):
             value = [value]
         if len(self._write_parms) != len(value):
-            raise ValueError('Mismatch in argument number. Required:{}, Received:{}'.format(len(self._write_parms), len(value)))
+            raise ValueError('Mismatch in argument number. Required:{0}, Received:{0}'.format(len(self._write_parms), len(value)))
 
         cmd_sep = self._cfg['cmd_separator']
         par_sep = self._cfg['separator']

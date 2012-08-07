@@ -39,7 +39,7 @@ class Type(object):
 class Boolean(Type):
     """Represents a boolean type. It is serialized in decimal form."""
     def _convert(self, value):
-        return bool(value)
+        return bool(int(value))
 
     def _serialize(self, value):
         return '{:d}'.format(self.convert(value))
@@ -61,9 +61,9 @@ class Number(Type):
 
     def _validate(self, value):
         if self.min is not None and value < self.min:
-            raise ValueError('Value:{}<Min:{}'.format(value, self.min))
+            raise ValueError('Value:{0}<Min:{0}'.format(value, self.min))
         if self.max is not None and value > self.max:
-            raise ValueError('Value:{}>Max:{}'.format(value, self.max))
+            raise ValueError('Value:{0}>Max:{0}'.format(value, self.max))
 
 
 class Integer(Number):
@@ -83,9 +83,8 @@ class Mapping(Type):
     Represents a one to one mapping of keys and values.
     """
     def __init__(self, map=None):
-        # Note: dict comprehension needs at least python 2.7
-        self._map = {k: str(v) for k, v in map.items()} if map else {}
-        self._inv = {v: k for k, v in self._map.items()}
+        self._map = dict((k, str(v)) for k, v in map.items()) if map else {}
+        self._inv = dict((v, k) for k, v in self._map.items())
         print '\nMAP', self._map, 'X'
         print '\nINV', self._inv, 'X'
 
@@ -96,6 +95,48 @@ class Mapping(Type):
         return self._inv[value]
 
 
+class Set(Mapping):
+    """
+    Represents a one to one mapping of each value to its string representation.
+    """
+    def __init__(self, *args):
+        super(Set, self).__init__(dict((k, str(k)) for k in args))
+
+
+class Enum(Mapping):
+    """Represents a one to one mapping to an integer range."""
+    def __init__(self, *args, **kw):
+        """Constructs an Enum type factory.
+
+        :param start: The first integer value of the enumerated sequence.
+        :param step: The step size used in the enumeration.
+
+        """
+        start = int(kw.pop('start', 0))
+        step = int(kw.pop('step', 1))
+        stop = len(args) * step
+        map_ = dict((k, v) for k, v in zip(args, range(start, stop, step)))
+        super(Enum, self).__init__(map_)
+
+
 class String(Type):
     def _convert(self, value):
         return str(value)
+
+
+class Register(Type):
+    """Represents a binary register, where bits are mapped with a name."""
+    def __init__(self, map):
+        self.__map = dict((str(k), int(v)) for k, v in map.iteritems())
+
+    def _convert(self, value):
+        x = 0
+        for k, v in value.iteritems():
+            if v:  # set bit
+                x |= 1 << self.__map[k]
+        return x
+
+    def load(self, value):
+        bit = lambda x, i: bool(x & (1 << i))
+        value = int(value)
+        return dict((k, bit(value, i)) for k, i in self.__map.iteritems())

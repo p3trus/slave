@@ -3,7 +3,7 @@
 # Slave, (c) 2012, see AUTHORS.  Licensed under the GNU GPL.
 import unittest
 
-from slave.types import Integer, Float
+from slave.types import Integer, Float, Register
 
 
 class TypeCheck(object):
@@ -39,6 +39,14 @@ class TestInteger(unittest.TestCase, NumberCheck):
         self._serialized = str(self._value)
         self._type = Integer(min=-10, max=10)
 
+
+class TestRegister(unittest.TestCase, TypeCheck):
+    def setUp(self):
+        self._value = {'first': True, 'second': False,
+                       'third': False, 'fourth': True}
+        self._serialized = str(9)
+        self._type = Register({'first': 0, 'second': 1,
+                               'third': 2, 'fourth': 3})
 
 if __name__ == '__main__':
     unittest.main()
