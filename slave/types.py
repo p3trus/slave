@@ -42,7 +42,7 @@ class Boolean(Type):
         return bool(int(value))
 
     def _serialize(self, value):
-        return '{:d}'.format(self.convert(value))
+        return '{0:d}'.format(self.convert(value))
 
 
 class Number(Type):
