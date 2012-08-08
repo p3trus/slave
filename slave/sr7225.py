@@ -3,7 +3,7 @@
 # Slave, (c) 2012, see AUTHORS.  Licensed under the GNU GPL.
 
 from slave.core import Command, InstrumentBase
-from slave.types import Boolean, Enum, Integer, Float, Register
+from slave.types import Boolean, Enum, Integer, Float, Register, Set, String
 
 
 class SR7225(InstrumentBase):
@@ -13,9 +13,10 @@ class SR7225(InstrumentBase):
 
        * Check the delimiter of SR7225 in use.
        * Implement ? high speed mode.
-       * Implement propper range checking in sweep_rate command.
-       * Aux input commands.
+       * Implement proper range checking in sweep_rate command.
        * Implement DC, DCB, DCT command.
+       * Use Enum for adc_trigger mode.
+       * Use Register for srq_mask Command instead of Integer.
 
     """
     def __init__(self, connection):
@@ -164,8 +165,12 @@ class SR7225(InstrumentBase):
         self.sweep_rate = Command('SRATE', 'SRATE', Integer(min=0))
         # Auxiliary Inputs
         # ================
-        # TODO
-
+        #: Read the auxiliary analog-to-digital input 1.
+        self.adc1 = Command('ADC. 1', type=Float)
+        #: Read the auxiliary analog-to-digital input 1.
+        self.adc2 = Command('ADC. 2', type=Float)
+        #: Sets/Queries the adc trigger mode.
+        self.adc_trigger_mode = Command('TADC', type=Integer(min=0, max=13))
         # Output Data Curve Buffer
         # ========================
         #: Sets/Queries the curve length.
@@ -195,6 +200,45 @@ class SR7225(InstrumentBase):
                             [Integer(min=0, max=31),
                              Enum('CR', 'CR echo', 'CR, LF', 'CR, LF echo',
                                   'None', 'None echo')])
+        #: Sets/Queries the ascii code of the delimiter.
+        self.delimiter = Command('DD', 'DD', Set(13, *range(31, 126)))
+        status_byte = {
+            'cmd complete': 0,
+            'invalid cmd': 1,
+            'cmd param error': 2,
+            'reference unlock': 3,
+            'overload': 4,
+            'new adc values after external trigger': 5,
+            'asserted srq': 6,
+            'data available': 7
+        }
+        #: Queries the status byte.
+        self.status = Command('ST', type=Register(status_byte))
+        overload_byte = {
+            'ch1 output overload': 1,
+            'ch2 output overload': 2,
+            'y output overload': 3,
+            'x output overload': 4,
+            'input overload': 6,
+            'reference unlock': 7,
+        }
+        #: Queries the overload status.
+        self.overload_status = Command('N', type=Register(overload_byte))
+        #: Sets/Queries the service request mask.
+        self.srq_mask = Command('MSK', 'MSK', Integer(min=0, max=255))
+        #: Sets/Queries the remote mode.
+        self.remote = Command('REMOTE', 'REMOTE', Boolean)
+        # Instrument identification
+        # =========================
+        #: Queries the instrument id.
+        self.id = Command('ID', type=String)
+        #: Queries the firmware revision.
+        self.revision = Command('REV', type=String)
+        #: Queries the firmware version.
+        self.version = Command('VER', type=String)
+        #: Sets/Queries the front panel LED's and LCD backlight state.
+        self.lights = Command('LTS', 'LTS', Boolean)
+        #:
 
     def auto_sensitivity(self):
         """Triggers the auto sensitivity mode.
@@ -299,3 +343,13 @@ class SR7225(InstrumentBase):
     def halt(self):
         """Halts the data acquisition."""
         self.connection.write('HC')
+
+    def reset(self, complete=False):
+        """Resets the lock-in to factory defaults.
+
+        :param complete: If True all settings are reseted to factory defaults.
+           If it's False, all settings are reseted to factory defaults with the
+           exception of communication and LCD contrast settings.
+
+        """
+        self.connection.write('ADF {0:d}'.format(complete))
