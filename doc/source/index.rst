@@ -6,10 +6,15 @@
 Welcome to Slave's documentation!
 =================================
 
+This is the documentation of the Slave library.
+
 Contents:
 
 .. toctree::
    :maxdepth: 2
+
+   intro
+   tutorial
 
 
 
