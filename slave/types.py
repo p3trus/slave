@@ -42,7 +42,7 @@ class Boolean(Type):
         return bool(int(value))
 
     def _serialize(self, value):
-        return '{0:d}'.format(self.convert(value))
+        return '{0:d}'.format(self._convert(value))
 
 
 class Number(Type):
@@ -54,6 +54,7 @@ class Number(Type):
         :param max: Maximal value a constructed object can have.
 
         """
+        super(Number, self).__init__()
         # evaluates to min/max if min/max is None and to it's conversion
         # otherwise.
         self.min = min and self._convert(min)
@@ -82,8 +83,9 @@ class Mapping(Type):
     """
     Represents a one to one mapping of keys and values.
     """
-    def __init__(self, map=None):
-        self._map = dict((k, str(v)) for k, v in map.items()) if map else {}
+    def __init__(self, mapping):
+        super(Mapping, self).__init__()
+        self._map = dict((k, str(v)) for k, v in mapping.items())
         self._inv = dict((v, k) for k, v in self._map.items())
         print '\nMAP', self._map, 'X'
         print '\nINV', self._inv, 'X'
@@ -126,8 +128,9 @@ class String(Type):
 
 class Register(Type):
     """Represents a binary register, where bits are mapped with a name."""
-    def __init__(self, map):
-        self.__map = dict((str(k), int(v)) for k, v in map.iteritems())
+    def __init__(self, mapping):
+        super(Register, self).__init__()
+        self.__map = dict((str(k), int(v)) for k, v in mapping.iteritems())
 
     def _convert(self, value):
         x = 0
