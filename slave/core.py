@@ -1,7 +1,27 @@
 #  -*- coding: utf-8 -*-
 #
 # Slave, (c) 2012, see AUTHORS.  Licensed under the GNU GPL.
+"""
+The core module contains several helper classes to ease instrument control.
 
+Implementing an instrument interface is pretty straight forward. A simple
+implementation might look like::
+
+    from slave.core import InstrumentBase, Command
+    from slave.types import Integer
+
+
+    class MyInstrument(InstrumentBase):
+        def __init__(self, connection):
+            super(MyInstrument, self).__init__(connection)
+            # A simple query and writeable command, which takes and writes an
+            # Integer
+            self.my_cmd = Command('QRY?', 'WRT', Integer)
+            # A query and writeable command that converts a string parameter to
+            # int and vice versa.
+            self.my_cmd2 = Command('QRY2?, 'WRT2', Enum('first', 'second')
+
+"""
 import collections
 from itertools import izip_longest
 
@@ -54,6 +74,11 @@ class Command(object):
 
           If the query result type or the write parameter type is set, it is
           preferred.
+
+        .. note::
+
+           It is neccessary that the class, implementing the command, is
+           inheriting from the :class:.~InstrumentBase class.
 
         """
         self._connection = connection
