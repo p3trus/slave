@@ -2,7 +2,7 @@
 Getting Started
 ===============
 
-The main goal of slave was making it easier to communicate with scientific
+The main goal of slave is to make it easier to communicate with scientific
 instruments. Slave tries to ease the implementation of new instruments and
 comes with a variety of ready-to-use implementations.
 
