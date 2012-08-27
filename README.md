@@ -6,7 +6,9 @@ instruments. Slave tries to ease the implementation of new instruments and
 comes with a variety of ready-to-use implementations. A simple measurement
 script, using [pyvisa][] for the GPIB connection, might look like
 
+```python
     import time
+
     import visa
     from slave.sr830 import SR830
 
@@ -20,8 +22,7 @@ script, using [pyvisa][] for the GPIB connection, might look like
     for i in range(60):
         print lockin.x
         time.sleep(1) # delay for 1s.
-
-
+```
 
 Requirements
 ------------
