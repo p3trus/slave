@@ -15,7 +15,8 @@ class Command(object):
         'result_separator': ',',
     }
 
-    def __init__(self, query=None, write=None, type=None, connection=None, **cfg):
+    def __init__(self, query=None, write=None,
+                 type=None, connection=None, **cfg):
         """
         Construct a new Command object
 
@@ -129,7 +130,9 @@ class Command(object):
         or not isinstance(value, collections.Sequence)):
             value = [value]
         if len(self._write_parms) != len(value):
-            raise ValueError('Mismatch in argument number. Required:{0}, Received:{0}'.format(len(self._write_parms), len(value)))
+            s = 'Required:{0}, Received:{1}'.format(len(self._write_parms),
+                                                    len(value))
+            raise ValueError('Argument number mismatch. ' + s)
 
         cmd_sep = self._cfg['cmd_separator']
         par_sep = self._cfg['parm_separator']

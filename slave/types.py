@@ -87,8 +87,6 @@ class Mapping(Type):
         super(Mapping, self).__init__()
         self._map = dict((k, str(v)) for k, v in mapping.items())
         self._inv = dict((v, k) for k, v in self._map.items())
-        print '\nMAP', self._map, 'X'
-        print '\nINV', self._inv, 'X'
 
     def _convert(self, value):
         return self._map[value]
