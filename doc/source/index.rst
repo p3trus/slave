@@ -6,7 +6,8 @@
 Welcome to Slave's documentation!
 =================================
 
-This is the documentation of the Slave library.
+This is the documentation of the Slave library. It provides an interface to
+several scientific instruments and simplifies the implementation of new ones.
 
 Contents:
 
@@ -14,8 +15,6 @@ Contents:
    :maxdepth: 2
 
    intro
-   tutorial
-
 
 
 Indices and tables
