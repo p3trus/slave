@@ -230,12 +230,22 @@ class SR830(InstrumentBase):
 
         # Gain and time constant commands
         # ===============================
-        #: Sets or queries the sensitivity.
-        self.sensitivity = Command('SENS?', 'SENS', Integer(min=0, max=26))
+        #: Sets or queries the sensitivity in units of volt.
+        self.sensitivity = Command('SENS?', 'SENS',
+                                   Enum(2e-9, 5e-9, 10e-9, 20e-9, 50e-9,
+                                        100e-9, 200e-9, 500e-9, 1e-6, 2e-6,
+                                        5e-6, 10e-6, 20e-6, 50e-6, 100e-6,
+                                        200e-6, 500e-6, 1e-3, 2e-3, 5e-3,
+                                        10e-3, 20e-3, 50e-3, 100e-3, 200e-3,
+                                        500e-3, 1))
         #: Sets or queries the dynamic reserve.
         self.reserve = Command('RMOD?', 'RMOD', Enum('high', 'medium', 'low'))
-        #: Sets or queries the time constant.
-        self.time_constant = Command('OFLT?', 'OFLT', Integer(min=0, max=19))
+        #: Sets or queries the time constant in seconds.
+        self.time_constant = Command('OFLT?', 'OFLT',
+                                     Enum(10e-6, 30e-6, 100e-6, 300e-6, 1e-3,
+                                          3e-3, 10e-3, 30e-3, 100e-3, 300e-3,
+                                          1, 3, 10, 30, 100, 300, 1e3, 3e3,
+                                          10e3, 30e3))
         #: Sets or queries the low-pass filter slope.
         self.slope = Command('OFSL?', 'OFSL', Integer(min=0, max=3))
         #: Sets or queries the synchronous filtering mode.
