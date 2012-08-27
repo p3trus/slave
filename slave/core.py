@@ -1,7 +1,27 @@
 #  -*- coding: utf-8 -*-
 #
 # Slave, (c) 2012, see AUTHORS.  Licensed under the GNU GPL.
+"""
+The core module contains several helper classes to ease instrument control.
 
+Implementing an instrument interface is pretty straight forward. A simple
+implementation might look like::
+
+    from slave.core import InstrumentBase, Command
+    from slave.types import Integer
+
+
+    class MyInstrument(InstrumentBase):
+        def __init__(self, connection):
+            super(MyInstrument, self).__init__(connection)
+            # A simple query and writeable command, which takes and writes an
+            # Integer.
+            self.my_cmd = Command('QRY?', 'WRT', Integer)
+            # A query and writeable command that converts a string parameter to
+            # int and vice versa.
+            self.my_cmd2 = Command('QRY2?', 'WRT2', Enum('first', 'second'))
+
+"""
 import collections
 from itertools import izip_longest
 
@@ -56,6 +76,11 @@ class Command(object):
           If the query result type or the write parameter type is set, it is
           preferred.
 
+        .. note::
+
+           It is neccessary that the class, implementing the command, is
+           inheriting from the :class:`.~InstrumentBase` class.
+
         """
         self._connection = connection
         self._query, self._result_type = self.__init_cmd__(query, type)
@@ -73,6 +98,7 @@ class Command(object):
                 raise ValueError()
 
         def to_instance(value):
+            """If value is a class, it is converted to an instance of it."""
             if isinstance(value, types.Type):
                 return value
             elif isinstance(value, type) and issubclass(value, types.Type):
@@ -104,6 +130,7 @@ class Command(object):
         return cmd_, type_
 
     def query(self):
+        """Queries the connection and returns the parsed result."""
         if self._query is None:
             raise AttributeError('Command is not queryable.')
         result = self._connection.ask(self._query)
@@ -124,6 +151,7 @@ class Command(object):
         return parsed
 
     def write(self, value):
+        """Constructs the cmd string and writes it to the connection."""
         if self._write is None:
             raise AttributeError('Command is not writeable.')
         if (isinstance(value, basestring)
@@ -145,11 +173,11 @@ class InstrumentBase(object):
     """Base class of all instruments.
 
     The InstrumentBase class applies some *magic* to simplify the Command
-    interaction. Read access on :class:~.Command attributes is redirected to
-    the :class:`~.Command.query` and write access to the
-    :class:`~.Command.write` member function.
+    interaction. Read access on :class:`~.Command` attributes is redirected to
+    the :class:`Command.query`, write access to the :class:`Command.write
+    member function.
 
-    When a Command is added to a subclass of :class:~.InstrumentBase, the
+    When a Command is added to a subclass of :class:`~.InstrumentBase`, the
     connection is automatically injected into the object unless the connection
     of the Command is already set. If all Commands of a Instrument need a non
     standard configuration, it is more convenient to inject it as well. This is
@@ -162,7 +190,7 @@ class InstrumentBase(object):
 
     def __getattribute__(self, name):
         """Redirects read access of command attributes to
-        the :class:`~.Command.query` function.
+        the :class:`~Command.query` function.
         """
         attr = object.__getattribute__(self, name)
         if isinstance(attr, Command):
@@ -171,7 +199,7 @@ class InstrumentBase(object):
 
     def __setattr__(self, name, value):
         """Redirects write access of command attributes to the
-        :class:`~.Command.write` function and injects connection, and command
+        :class:`~Command.write` function and injects connection, and command
         config into commands.
         """
         # Redirect write access
