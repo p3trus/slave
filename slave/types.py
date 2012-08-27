@@ -46,6 +46,7 @@ class Boolean(Type):
 
 
 class Number(Type):
+    """Represents a abstract number type, allowing range checks."""
     def __init__(self, min=None, max=None):
         """
         Constructs a Number type factory.
@@ -81,6 +82,11 @@ class Float(Number):
 class Mapping(Type):
     """
     Represents a one to one mapping of keys and values.
+
+    The Mapping represents a one to one mapping of keys and values. The keys
+    represent the value on the user side, and the values represent the value on
+    the instrument side.
+
     """
     def __init__(self, map=None):
         self._map = dict((k, str(v)) for k, v in map.items()) if map else {}
@@ -120,6 +126,7 @@ class Enum(Mapping):
 
 
 class String(Type):
+    """Represents python's string type."""
     def _convert(self, value):
         return str(value)
 
