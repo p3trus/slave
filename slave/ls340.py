@@ -86,18 +86,27 @@ class LS340(InstrumentBase):
         loop.
     :ivar loop2: Am instance of the Loop class, representing the second control
         loop.
+    :ivar logging: A Boolean value, enabling or disabling data logging.
 
     """
     def __init__(self, connection):
         super(LS340, self).__init__(connection)
-
-        self.beeper = Command('BEEP?', 'BEEP', Boolean)
+        # Common Commands
+        # ===============
         self.idn = Command(('*IDN?', [String, String, String, String]))
+        # Control Commands
+        # ================
         self.loop1 = Loop(connection, 1)
         self.loop2 = Loop(connection, 2)
+        self.range = Command('RANGE?', 'RANGE', Integer(min=0, max=5))
+        # System Commands
+        # ===============
+        self.beeper = Command('BEEP?', 'BEEP', Boolean)
         self.mode = Command('MODE?', 'MODE',
                             Enum('local', 'remote', 'lockout', start=1))
-        self.range = Command('RANGE?', 'RANGE', Integer(min=0, max=5))
+        # Data Logging Commands
+        # =====================
+        self.logging = Command('LOG?', 'LOG', Boolean)
 
     def clear(self):
         """
