@@ -76,21 +76,28 @@ class LS340(InstrumentBase):
 
     :param connection: An object, modeling the connection interface, used to
         communicate with the real instrument.
+    :ivar beeper: A boolean value representing the beeper state.
+    :ivar idn: A list of strings representing the manufacturer, model number,
+        serial number and firmware date in this order.
+    :ivar mode: Represents the interface mode. Valid entries are
+        *'local', 'remote', 'lockout'*.
+    :ivar range: The heater range.
+    :ivar loop1: An instance of the Loop class, representing the first control
+        loop.
+    :ivar loop2: Am instance of the Loop class, representing the second control
+        loop.
 
     """
     def __init__(self, connection):
         super(LS340, self).__init__(connection)
-        #: Sets/Queries if the beeper is enabled/disabled.
+
         self.beeper = Command('BEEP?', 'BEEP', Boolean)
-        #: Sets/Queries the remote interface mode.
+        self.idn = Command(('*IDN?', [String, String, String, String]))
+        self.loop1 = Loop(connection, 1)
+        self.loop2 = Loop(connection, 2)
         self.mode = Command('MODE?', 'MODE',
                             Enum('local', 'remote', 'lockout', start=1))
-        #: Sets/Queries the heater range.
         self.range = Command('RANGE?', 'RANGE', Integer(min=0, max=5))
-        #: First control loop
-        self.loop1 = Loop(connection, 1)
-        #: Second control loop.
-        self.loop2 = Loop(connection, 2)
 
     def clear(self):
         """
