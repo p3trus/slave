@@ -117,11 +117,15 @@ class LS340(InstrumentBase):
         """
         self.connection.write('*CLS')
 
+    def clear_alarm(self):
+        """Clears the alarm status for all inputs."""
+        self.connection.write('ALMRST')
+
     def reset(self):
         """Resets the lock-in to power up settings."""
         self.connection.write('*RST')
 
-    def self_test(self):
+    def test(self):
         """Performs a self test operation.
 
         :returns: A boolean value, `True` if all tests passed and `False` if an
