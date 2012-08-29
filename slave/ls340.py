@@ -76,7 +76,9 @@ class LS340(InstrumentBase):
 
     :param connection: An object, modeling the connection interface, used to
         communicate with the real instrument.
-    :ivar beeper: A boolean value representing the beeper state.
+    :ivar beeper: A boolean value representing the beeper mode. `True` means
+        enabled, `False` means disabled.
+    :ivar beeping: A Integer value representing the current beeper status.
     :ivar idn: A list of strings representing the manufacturer, model number,
         serial number and firmware date in this order.
     :ivar mode: Represents the interface mode. Valid entries are
@@ -102,6 +104,7 @@ class LS340(InstrumentBase):
         # System Commands
         # ===============
         self.beeper = Command('BEEP?', 'BEEP', Boolean)
+        self.beeping = Command(('BEEPST?', Integer))
         self.mode = Command('MODE?', 'MODE',
                             Enum('local', 'remote', 'lockout', start=1))
         # Data Logging Commands
