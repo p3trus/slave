@@ -11,6 +11,33 @@ from slave.core import Command, InstrumentBase
 from slave.types import Boolean, Enum, Float, Integer, Register, Set, String
 
 
+class Input(InstrumentBase):
+    """Represents a LS340 input channel.
+
+    :param connection: A connection object.
+    :param name: A string value indicating the input in use.
+    :ivar alarm: The alarm configuration, represented by the following list
+        *[<enabled>, <source>, <high value>, <low value>, <latch>, <relay>]*,
+        where:
+         * *<enabled>* Enables or disables the alarm.
+         * *<source>* Specifies the input data to check.
+         * *<high value>* Sets the upper limit, where the high alarm sets off.
+         * *<low value>* Sets the lower limit, where the low alarm sets off.
+         * *<latch>* Enables or disables a latched alarm.
+         * *<relay>* Specifies if the alarm can affect the relays.
+    :ivar alarm_status: The high and low alarm status, represented by the
+        following list: *[<high status>, <low status>]*.
+    """
+    def __init__(self, connection, name):
+        super(Input, self).__init__(connection)
+        self.name = name
+        self.alarm = Command('ALARM?', 'ALARM',
+                             [Boolean,
+                              Enum('kelvin', 'celsius', 'sensor', 'linear'),
+                              Float, Float, Boolean, Boolean])
+        self.alarm_status = Command(('ALARMST?', [Boolean, Boolean]))
+
+
 class Loop(InstrumentBase):
     """Represents a LS340 control loop.
 
