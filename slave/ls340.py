@@ -80,6 +80,11 @@ class LS340(InstrumentBase):
         enabled, `False` means disabled.
     :ivar beeping: A Integer value representing the current beeper status.
     :ivar busy: A Boolean representing the instrument busy status.
+    :ivar com: The serial interface configuration, represented by the following
+        list: *[<terminator>, <baud rate>, <parity>]*.
+         * *<terminator>* valid entries are `"CRLF"`,`"LFCR"`, `"CR"`, `"LF"`
+         * *<baud rate>* valid entries are 300, 1200, 2400, 4800, 9600, 19200
+         * *<parity>* valid entries are 1, 2, 3. See LS340 manual for meaning.
     :ivar idn: A list of strings representing the manufacturer, model number,
         serial number and firmware date in this order.
     :ivar mode: Represents the interface mode. Valid entries are
@@ -107,6 +112,10 @@ class LS340(InstrumentBase):
         self.beeper = Command('BEEP?', 'BEEP', Boolean)
         self.beeping = Command(('BEEPST?', Integer))
         self.busy = Command(('BUSY?', Boolean))
+        self.com = Command('COMM?', 'COMM',
+                            [Enum('CRLF', 'LFCR', 'CR', 'LF', start=1),
+                             Enum(300, 1200, 2400, 4800, 9600, 19200, start=1),
+                             Set(1, 2, 3)])
         self.mode = Command('MODE?', 'MODE',
                             Enum('local', 'remote', 'lockout', start=1))
         # Data Logging Commands
