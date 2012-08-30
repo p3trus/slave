@@ -19,14 +19,17 @@ class Input(InstrumentBase):
     :ivar alarm: The alarm configuration, represented by the following list
         *[<enabled>, <source>, <high value>, <low value>, <latch>, <relay>]*,
         where:
-         * *<enabled>* Enables or disables the alarm.
-         * *<source>* Specifies the input data to check.
-         * *<high value>* Sets the upper limit, where the high alarm sets off.
-         * *<low value>* Sets the lower limit, where the low alarm sets off.
-         * *<latch>* Enables or disables a latched alarm.
-         * *<relay>* Specifies if the alarm can affect the relays.
+        * *<enabled>* Enables or disables the alarm.
+        * *<source>* Specifies the input data to check.
+        * *<high value>* Sets the upper limit, where the high alarm sets off.
+        * *<low value>* Sets the lower limit, where the low alarm sets off.
+        * *<latch>* Enables or disables a latched alarm.
+        * *<relay>* Specifies if the alarm can affect the relays.
     :ivar alarm_status: The high and low alarm status, represented by the
         following list: *[<high status>, <low status>]*.
+    :ivar celsius: The input value in celsius.
+    :ivar filter: The input filter parameters, represented by the following
+        list: *[<enable>, <points>, <window>]*.
     """
     def __init__(self, connection, name):
         super(Input, self).__init__(connection)
@@ -36,6 +39,12 @@ class Input(InstrumentBase):
                               Enum('kelvin', 'celsius', 'sensor', 'linear'),
                               Float, Float, Boolean, Boolean])
         self.alarm_status = Command(('ALARMST?', [Boolean, Boolean]))
+        self.celsius = Command(('CRDG?', Float))
+        self.filter = Command(
+                              'FILTER? {0}'.format(name),
+                              'FILTER {0}'.format(name),
+                              [Boolean, Integer(min=0),
+                               Integer(min=0, max=100)])
 
 
 class Loop(InstrumentBase):
