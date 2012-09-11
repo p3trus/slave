@@ -11,6 +11,9 @@ from slave.core import Command, InstrumentBase
 from slave.types import Boolean, Enum, Float, Integer, Register, Set, String
 
 
+__all__ = ['scanner', 'LS340']
+
+
 class Input(InstrumentBase):
     """Represents a LS340 input channel.
 
@@ -33,18 +36,52 @@ class Input(InstrumentBase):
     """
     def __init__(self, connection, name):
         super(Input, self).__init__(connection)
-        self.name = name
-        self.alarm = Command('ALARM?', 'ALARM',
+        self.name = name = str(name)
+        self.alarm = Command('ALARM? {0}'.format(name),
+                             'ALARM {0}'.format(name),
                              [Boolean,
                               Enum('kelvin', 'celsius', 'sensor', 'linear'),
                               Float, Float, Boolean, Boolean])
         self.alarm_status = Command(('ALARMST?', [Boolean, Boolean]))
         self.celsius = Command(('CRDG?', Float))
-        self.filter = Command(
-                              'FILTER? {0}'.format(name),
+        self.filter = Command('FILTER? {0}'.format(name),
                               'FILTER {0}'.format(name),
                               [Boolean, Integer(min=0),
                                Integer(min=0, max=100)])
+
+
+class Output(InstrumentBase):
+    """Represents a LS340 analog output.
+
+    :param connection: A connection object.
+    :param channel: The analog output channel. Valid are either 1 or 2.
+
+    :ivar analog: The analog output parameters, represented by the following
+        list: *[<bipolar>, <mode>, <input>, <source>, <high>, <low>, <manual>]*
+        where:
+        * *<bipolar>* Enables bipolar output.
+        * *<mode>* Valid entries are `'off'`, `'input'`, `'manual'`, `'loop'`.
+          `'loop'` is only valid for the output channel 2.
+        * *<input>* Selects the input to monitor. (Has no effect if mode is not
+          `'input'`)
+        * *<source>* Selects the input data, either `'kelvin'`, `'celsius'`,
+          `'sensor'` or `'linear'`.
+
+    """
+    def __init__(self, connection, channel):
+        super(Output, self).__init__(connection)
+        if not channel in (1, 2):
+            raise ValueError('Invalid Channel number. Valid are either 1 or 2')
+        self.channel = channel
+        self.analog = Command('ANALOG? {0}'.format(channel),
+                              'ANALOG {0}'.format(channel),
+                              [Boolean,
+                               Enum('off', 'input', 'manual', 'loop'),
+                               #INPUT,
+                               Enum('kelvin', 'celsius', 'sensor', 'linear',
+                                    start=1),
+                               Float, Float, Float])
+        self.value = Command(('AOUT? {0}'.format(channel), Float))
 
 
 class Loop(InstrumentBase):
@@ -103,6 +140,40 @@ class Loop(InstrumentBase):
                                 'SETP {0}'.format(idx), Float)
 
 
+class Scanner(InstrumentBase):
+    """Represents a scanner option for the ls340 temperature controller.
+
+    :ivar channels: A tuple with all channel names.
+
+    """
+    def __init__(self, connection, channels):
+        super(Scanner, self).__init__(connection)
+        self.channels = tuple(channels)
+        for channel in channels:
+            setattr(self, channel.lower(), Input(connection, channel))
+
+
+def scanner(model):
+    """A factory function used to create the different scanner instances.
+
+    :param model: A string representing the different scanner models supported
+        by the ls340 temperature controller. Valid entries are:
+
+        * `"3462"`, The dual standard input option card.
+        * `"3464"`, The dual thermocouple input option card.
+        * `"3465"`, The single capacitance input option card.
+        * `"3468"`, The eight channel input option card.
+
+    """
+    channels = {
+        '3462': ('C', 'D'),
+        '3464': ('C', 'D'),
+        '3465': ('C'),
+        '3468': ('C1', 'C2', 'C3', 'C4', 'D1', 'D2', 'D3', 'D4')
+    }
+    return Scanner(channels[model])
+
+
 class LS340(InstrumentBase):
     """
     Represents a Lakeshore model LS340 temperature controller.
@@ -112,19 +183,28 @@ class LS340(InstrumentBase):
 
     :param connection: An object, modeling the connection interface, used to
         communicate with the real instrument.
+    :param scanner: Sets a scanner option. See :meth:`~slave.ls340.scanner` for
+        the available scanner options.
+
+    :ivar a: Input channel a.
+    :ivar b: Input channel b.
+    :ivar output1: First output channel.
+    :ivar output2: Second output channel.
     :ivar beeper: A boolean value representing the beeper mode. `True` means
         enabled, `False` means disabled.
     :ivar beeping: A Integer value representing the current beeper status.
     :ivar busy: A Boolean representing the instrument busy status.
     :ivar com: The serial interface configuration, represented by the following
         list: *[<terminator>, <baud rate>, <parity>]*.
-         * *<terminator>* valid entries are `"CRLF"`,`"LFCR"`, `"CR"`, `"LF"`
-         * *<baud rate>* valid entries are 300, 1200, 2400, 4800, 9600, 19200
-         * *<parity>* valid entries are 1, 2, 3. See LS340 manual for meaning.
+
+        * *<terminator>* valid entries are `"CRLF"`, `"LFCR"`, `"CR"`, `"LF"`
+        * *<baud rate>* valid entries are 300, 1200, 2400, 4800, 9600, 19200
+        * *<parity>* valid entries are 1, 2, 3. See LS340 manual for meaning.
+
     :ivar idn: A list of strings representing the manufacturer, model number,
         serial number and firmware date in this order.
     :ivar mode: Represents the interface mode. Valid entries are
-        *'local', 'remote', 'lockout'*.
+        `"local"`, `"remote"`, `"lockout"`.
     :ivar range: The heater range.
     :ivar loop1: An instance of the Loop class, representing the first control
         loop.
@@ -133,8 +213,13 @@ class LS340(InstrumentBase):
     :ivar logging: A Boolean value, enabling or disabling data logging.
 
     """
-    def __init__(self, connection):
+    def __init__(self, connection, scanner=None):
         super(LS340, self).__init__(connection)
+        self.scanner = scanner
+        self.a = Input(connection, 'A')
+        self.b = Input(connection, 'B')
+        self.output1 = Output(connection, 1)
+        self.output2 = Output(connection, 2)
         # Common Commands
         # ===============
         self.idn = Command(('*IDN?', [String, String, String, String]))
