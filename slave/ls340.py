@@ -33,6 +33,8 @@ class Input(InstrumentBase):
     :ivar celsius: The input value in celsius.
     :ivar filter: The input filter parameters, represented by the following
         list: *[<enable>, <points>, <window>]*.
+    :ivar set: The input setup parameters, represented by the following list:
+        *[<enable>, <compensation>]*
     """
     def __init__(self, connection, name):
         super(Input, self).__init__(connection)
@@ -48,6 +50,9 @@ class Input(InstrumentBase):
                               'FILTER {0}'.format(name),
                               [Boolean, Integer(min=0),
                                Integer(min=0, max=100)])
+        self.set = Command('INSET? {0}'.format(name),
+                           'INSET {0}'.format(name),
+                           [Boolean, Enum('off', 'on', 'pause')])
 
 
 class Output(InstrumentBase):
@@ -66,6 +71,11 @@ class Output(InstrumentBase):
           `'input'`)
         * *<source>* Selects the input data, either `'kelvin'`, `'celsius'`,
           `'sensor'` or `'linear'`.
+        * *<high>* Represents the data value at which 100% is reached.
+        * *<low>* Represents the data value at which the minimum value is
+            reached (-100% for bipolar, 0% otherwise).
+        * *<manual>* Represents the data value of the analog output in manual
+            mode.
 
     """
     def __init__(self, connection, channel):
@@ -265,5 +275,6 @@ class LS340(InstrumentBase):
 
         :returns: A boolean value, `True` if all tests passed and `False` if an
             error occurred.
+
         """
         return bool(int(self.connection.ask('*TST')))
