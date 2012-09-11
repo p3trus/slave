@@ -301,6 +301,7 @@ class SR830(InstrumentBase):
         self.sample_rate = Command('SRAT?', 'SRAT', Integer(min=0, max=14))
         #: The send command sets or queries the end of buffer mode.
         #: .. note::
+        #:
         #:    If loop mode is used, the data storage should be paused to avoid
         #:    confusion about which point is the most recent.
         self.send_mode = Command('SEND?', 'SEND', Enum('shot', 'loop'))
@@ -323,6 +324,7 @@ class SR830(InstrumentBase):
         self.data_points = Command(('SPTS?', Integer))
         #: Sets or queries the data transfer mode.
         #: .. note::
+        #:
         #:    Do not use :class:`~SR830.start() to execute the scan, use
         #:    :class:`~SR830.delayed_start instead.
         self.fast_mode = Command('FAST?', 'FAST',
@@ -416,7 +418,7 @@ class SR830(InstrumentBase):
     def snap(self, *args):
         """Records up to 6 parameters at a time.
 
-        :param *args: Specifies the values to record. Valid ones are 'X', 'Y',
+        :param args: Specifies the values to record. Valid ones are 'X', 'Y',
           'R', 'theta', 'AuxIn1', 'AuxIn2', 'AuxIn3', 'AuxIn4', 'Ref', 'CH1'
           and 'CH2'. If none are given 'X' and 'Y' are used.
 
