@@ -45,6 +45,7 @@ class Input(InstrumentBase):
         * *<range>* The input range.
     :ivar kelvin: The kelvin reading.
     :ivar linear: The linear equation data.
+    :ivar linear_status: The linear status register.
 
     """
     def __init__(self, connection, name):
