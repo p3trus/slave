@@ -44,6 +44,7 @@ class Input(InstrumentBase):
         * *<excitation>* The input excitation.
         * *<range>* The input range.
     :ivar kelvin: The kelvin reading.
+    :ivar linear: The linear equation data.
 
     """
     def __init__(self, connection, name):
@@ -83,6 +84,9 @@ class Input(InstrumentBase):
                                         '50mV', '100mV', '250mV', '500mV',
                                         '1V', '2.5V', '5V', '7.5V', start=0)])
         self.kelvin = Command(('KRDG? {0}'.format(name), Float))
+        self.linear = Command(('LDAT? {0}'.format(name), Float))
+        # TODO use register instead of Integer
+        self.linear_status = Command(('LDATST? {0}'.format(name), Integer))
 
 
 class Output(InstrumentBase):
