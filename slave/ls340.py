@@ -43,6 +43,7 @@ class Input(InstrumentBase):
         * *<coefficient>* The input coefficient.
         * *<excitation>* The input excitation.
         * *<range>* The input range.
+    :ivar kelvin: The kelvin reading.
 
     """
     def __init__(self, connection, name):
@@ -81,6 +82,7 @@ class Input(InstrumentBase):
                                    Enum('1mV', '2.5mV', '5mV', '10mV', '25mV',
                                         '50mV', '100mV', '250mV', '500mV',
                                         '1V', '2.5V', '5V', '7.5V', start=0)])
+        self.kelvin = Command(('KRDG?', Float))
 
 
 class Output(InstrumentBase):
