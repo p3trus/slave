@@ -55,7 +55,7 @@ class Input(InstrumentBase):
                               Enum('kelvin', 'celsius', 'sensor', 'linear'),
                               Float, Float, Boolean, Boolean])
         self.alarm_status = Command(('ALARMST?', [Boolean, Boolean]))
-        self.celsius = Command(('CRDG?', Float))
+        self.celsius = Command(('CRDG? {0}'.format(name), Float))
         self.filter = Command('FILTER? {0}'.format(name),
                               'FILTER {0}'.format(name),
                               [Boolean, Integer(min=0),
@@ -82,7 +82,7 @@ class Input(InstrumentBase):
                                    Enum('1mV', '2.5mV', '5mV', '10mV', '25mV',
                                         '50mV', '100mV', '250mV', '500mV',
                                         '1V', '2.5V', '5V', '7.5V', start=0)])
-        self.kelvin = Command(('KRDG?', Float))
+        self.kelvin = Command(('KRDG? {0}'.format(name), Float))
 
 
 class Output(InstrumentBase):
