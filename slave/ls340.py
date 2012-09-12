@@ -36,6 +36,13 @@ class Input(InstrumentBase):
     :ivar set: The input setup parameters, represented by the following list:
         *[<enable>, <compensation>]*
     :ivar curve: The input curve number. An Integer in the range [0-60].
+    :ivar input_type: The input type configuration, represented by the
+        list: *[<type>, <units>, <coefficient>, <excitation>, <range>]*, where
+        * *<type>* Is the input sensor type.
+        * *<units>* Specifies the input sensor units.
+        * *<coefficient>* The input coefficient.
+        * *<excitation>* The input excitation.
+        * *<range>* The input range.
 
     """
     def __init__(self, connection, name):
@@ -58,6 +65,22 @@ class Input(InstrumentBase):
         self.curve = Command('INCRV? {0}'.format(name),
                              'INCRV {0}'.format(name),
                              Integer(min=0, max=60))
+        self.input_type = Command('INTYPE? {0}'.format(name),
+                                  'INTYPE {0}'.format(name),
+                                  [Enum('special', 'Si', 'GaAlAs',
+                                        'Pt100 250 Ohm', 'Pt100 500 Ohm',
+                                        'Pt1000', 'RhFe', 'Carbon-Glass',
+                                        'Cernox', 'RuOx', 'Ge', 'Capacitor',
+                                        'Thermocouple'),
+                                   Enum('special', 'volt', 'ohm'),
+                                   Enum('special', '-', '+'),
+                                   # XXX Volt and Ampere?
+                                   Enum('off', '30nA', '100nA', '300nA', '1uA',
+                                        '3uA', '10uA', '30uA', '100uA',
+                                        '300uA', '1mA', '10mV', '1mV'),
+                                   Enum('1mV', '2.5mV', '5mV', '10mV', '25mV',
+                                        '50mV', '100mV', '250mV', '500mV',
+                                        '1V', '2.5V', '5V', '7.5V', start=0)])
 
 
 class Output(InstrumentBase):
