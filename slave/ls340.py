@@ -35,6 +35,8 @@ class Input(InstrumentBase):
         list: *[<enable>, <points>, <window>]*.
     :ivar set: The input setup parameters, represented by the following list:
         *[<enable>, <compensation>]*
+    :ivar curve: The input curve number. An Integer in the range [0-60].
+
     """
     def __init__(self, connection, name):
         super(Input, self).__init__(connection)
@@ -53,6 +55,9 @@ class Input(InstrumentBase):
         self.set = Command('INSET? {0}'.format(name),
                            'INSET {0}'.format(name),
                            [Boolean, Enum('off', 'on', 'pause')])
+        self.curve = Command('INCRV? {0}'.format(name),
+                             'INCRV {0}'.format(name),
+                             Integer(min=0, max=60))
 
 
 class Output(InstrumentBase):
