@@ -174,7 +174,7 @@ class InstrumentBase(object):
 
     The InstrumentBase class applies some *magic* to simplify the Command
     interaction. Read access on :class:`~.Command` attributes is redirected to
-    the :class:`Command.query`, write access to the :class:`Command.write
+    the :class:`Command.query`, write access to the :class:`Command.write`
     member function.
 
     When a Command is added to a subclass of :class:`~.InstrumentBase`, the
