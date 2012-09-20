@@ -17,3 +17,5 @@ except NameError:
     pass
 
 del warnings
+
+__version__ = '0.1.0'
