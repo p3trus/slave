@@ -2,7 +2,7 @@
 #
 # E21, (c) 2012, see AUTHORS.  Licensed under the GNU GPL.
 from slave.core import Command, InstrumentBase
-from slave.types import Boolean, Float, Mapping, Set, String
+from slave.types import Boolean, Float, Mapping, Register, Set, String
 
 
 class Range(InstrumentBase):
@@ -50,6 +50,14 @@ class MPS4G(InstrumentBase):
         to 10.00.
     :ivar magnet_voltage: The magnet voltage in the range -10.00 to 10.00.
     :ivar magnet_voltage: The output voltage in the range -12.80 to 12.80.
+    :ivar standard_event_status: The standard event status register.
+    :ivar standard_event_status_enable: The standard event status enable
+        register.
+    :ivar id: The identification, represented by the following tuple
+        *(<manufacturer>, <model>, <serial>, <firmware>, <build>)*
+    :ivar operation_completed: The operation complete bit.
+    :ivar status: The status register.
+    :ivar service_request_enable: The service request enable register.
 
     """
     def __init__(self, connection):
@@ -68,6 +76,28 @@ class MPS4G(InstrumentBase):
         self.voltage_limit = Command('VLIM?', 'VLIM', Float(min=0., max=10.))
         self.magnet_voltage = Command(('VMAG?', Float(min=-10., max=10.)))
         self.output_voltage = Command(('VMAG?', Float(min=-12.8, max=12.8)))
+        ESR = Register({'operation complete': 0,
+                        'request control': 1,
+                        'query error': 2,
+                        'device error': 3,
+                        'execution error': 4,
+                        'command error': 5,
+                        'user request': 6,
+                        'power on': 7})
+        self.standard_event_status = Command(('*ESR?', ESR))
+        self.standard_event_status_enable = Command('*ESE?', '*ESE', ESR)
+        self.id = Command(('*IDN?', [String, String, String, String, String]))
+        self.operation_completed = (('*OPC?', Boolean))
+        STB = Register({'sweep mode active': 0,
+                        'standby mode active': 1,
+                        'quench condition present': 2,
+                        'power module failure': 3,
+                        'message available': 4,
+                        'extended status byte': 5,
+                        'master summary status': 6,
+                        'menu mode': 7})
+        self.status = Command(('*STB?', STB))
+        self.service_request_enable = Command('*SRE?', '*SRE', STB)
 
     def clear(self):
         """Clears the status."""
@@ -88,3 +118,37 @@ class MPS4G(InstrumentBase):
     def locked(self):
         """Sets the front panel in locked remote mode."""
         self.connection.write('RWLOCK')
+
+    def complete_operation(self):
+        """
+        Sets the operation complete bit in the standard event status register.
+        """
+        self.connection.write('*OPC')
+
+    def reset(self):
+        """Resets the instrument.
+
+        Implemented for compliance with IEEE Std 488.2-1992, but does not
+        change the power supply operation due to safety concerns.
+
+        """
+        self.connection.write('*RST')
+
+    def test(self):
+        """Queries the self test.
+
+        Implemented for compliance with IEEE Std 488.2-1992, but does not
+        change the power supply operation due to safety concerns.
+
+        """
+        return bool(self.connection.ask('*TST?'))
+
+    def wait_to_continue(self):
+        """The wait to continue command.
+
+        Implemented for compliance with IEEE Std 488.2-1992, but since the
+        4GMPS only implements sequential commands, the no-operation pending
+        flag is always `True`.
+
+        """
+        self.connection.write('*WAI')
