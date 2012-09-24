@@ -5,6 +5,10 @@ from slave.core import Command, InstrumentBase
 from slave.types import Boolean, Float, Mapping, Register, Set, String
 
 
+#: A list with all valid shim identifiers.
+SHIMS = ['Z', 'Z2', 'Z3', 'Z4', 'X', 'Y', 'ZX', 'ZY', 'C2', 'S2', 'Z2X', 'Z2Y']
+
+
 class Range(InstrumentBase):
     """Represents a MPS4G current range.
 
@@ -28,12 +32,53 @@ class Range(InstrumentBase):
                             Float)
 
 
+class Shim(InstrumentBase):
+    """Represents a Shim option of the 4GMPS.
+
+    :param connection: A connection object.
+    :param shim: The identifier of the shim.
+    :ivar limit: The current limit of the shim.
+    :ivar status: Represents the shim status, `True`if it's enabled, `False`
+        otherwise.
+    :ivar current: The magnet current of the shim. Queriing returns a value,
+        unit tuple. While setting the current, the unit is omited. The value
+        must be supplied in the configured units (ampere, kilo gauss).
+
+    """
+    def __init__(self, connection, shim):
+        super(Shim, self).__init__(connection)
+        if not shim in SHIMS:
+            raise ValueError('Invalid shim identifier, '
+                             'must be one of {0}'.format(SHIMS))
+        self._shim = shim = str(shim)
+        self.limit = Command('SLIM?', 'SLIM', Float(min=-30., max=30.))
+        state = {
+            True: '{0} Enabled'.format(shim),
+            False: '{0} Disabled'.format(shim)
+        }
+        self.status = Command(('SHIM?',
+                               Mapping(state)))
+        self.current = Command(('IMAG? {0}'.format(shim), [Float, String]),
+                               ('IMAG {0}'.format(shim), Float))
+
+    def disable(self):
+        """Disables the shim."""
+        self.connection.write('SHIM Disable {0}'.format(self._shim))
+
+    def select(self):
+        """Selects the shim as the current active shim."""
+        self.connection.write('SHIM {0}'.format(self._shim))
+
+
 class MPS4G(InstrumentBase):
     """Represents the Cryomagnetics, inc. 4G Magnet Power Supply.
 
     :param connection: A connection object.
     :ivar channel: The selected channel.
     :ivar error: The error response mode of the usb interface.
+    :ivar current: The magnet current.Queriing returns a value, unit tuple.
+        While setting the current, the unit is omited. The value must be
+        supplied in the configured units (ampere, kilo gauss).
     :ivar output_current: The power supply output current.
     :ivar lower_limit: The lower current limit. Queriing returns a value, unit
         tuple. While setting the lower current limit, the unit is omited. The
@@ -62,12 +107,20 @@ class MPS4G(InstrumentBase):
     :ivar service_request_enable: The service request enable register.
 
     """
-    def __init__(self, connection):
+    def __init__(self, connection, shims=None):
         super(MPS4G, self).__init__(connection)
+        if shims:
+            if isinstance(shims, basestring):
+                shims = [shims]
+            for shim in list(shims):
+                setattr(self, str(shim), Shim(connection, shim))
+
         self.channel = Command('CHAN?', 'CHAN', Set(1, 2))
         self.error = Command('ERROR?', 'ERROR', Boolean)
+        self.current = Command(('IMAG?', [Float, String]),
+                               ('IMAG', Float))
         self.output_current = Command(('IOUT?', [Float, String]))
-        self.lower_limit = Command(('LLIM?', [Float, String],),
+        self.lower_limit = Command(('LLIM?', [Float, String]),
                                    ('LLIM', Float))
         self.mode = Command(('MODE?', String))
         self.name = Command('NAME?', 'NAME', String)
@@ -75,7 +128,8 @@ class MPS4G(InstrumentBase):
                                      Mapping({True: 'ON', False: 'OFF'}))
         for idx in range(0, 5):
             setattr(self, 'range{0}'.format(idx), Range(connection, idx))
-        self.upper_limit = Command('ULIM?', 'ULIM', Float)
+        self.upper_limit = Command(('ULIM?', [Float, String]),
+                                   ('ULIM', Float))
         self.unit = Command('UNITS?', 'UNITS', Set('A', 'G'))
         self.voltage_limit = Command('VLIM?', 'VLIM', Float(min=0., max=10.))
         self.magnet_voltage = Command(('VMAG?', Float(min=-10., max=10.)))
@@ -156,3 +210,11 @@ class MPS4G(InstrumentBase):
 
         """
         self.connection.write('*WAI')
+
+    def disable_shims(self):
+        """Disables all shims."""
+        self.connection.write('SHIM Disable All')
+
+    def enable_shims(self):
+        """Enables all shims."""
+        self.connection.write('SHIM Enable All')
