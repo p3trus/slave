@@ -2,7 +2,7 @@
 #
 # E21, (c) 2012, see AUTHORS.  Licensed under the GNU GPL.
 from slave.core import Command, InstrumentBase
-from slave.types import Boolean, Float, Mapping, String
+from slave.types import Boolean, Float, Mapping, Set, String
 
 
 class Range(InstrumentBase):
@@ -41,6 +41,15 @@ class MPS4G(InstrumentBase):
         is in the range of 0 to 16 characters.
     :ivar switch_heater: The state of the persistent switch heater. If `True`
         the heater is switched on and off otherwise.
+    :ivar upper_limit: The upper current limit. Queriing returns a value, unit
+        tuple. While setting the upper current limit, the unit is omited. The
+        value must be supplied in the configured units (ampere, kilo gauss).
+    :ivar unit: The unit used for all input and display operations. Must be
+        either `'A'` or `'G'` meaning Ampere or Gauss.
+    :ivar voltage_limit: The output voltage limit. Must be in the range of 0.00
+        to 10.00.
+    :ivar magnet_voltage: The magnet voltage in the range -10.00 to 10.00.
+    :ivar magnet_voltage: The output voltage in the range -12.80 to 12.80.
 
     """
     def __init__(self, connection):
@@ -54,6 +63,15 @@ class MPS4G(InstrumentBase):
                                      Mapping({True: 'ON', False: 'OFF'}))
         for idx in range(0, 5):
             setattr(self, 'range{0}'.format(idx), Range(connection, idx))
+        self.upper_limit = Command('ULIM?', 'ULIM', Float)
+        self.unit = Command('UNITS?', 'UNITS', Set('A', 'G'))
+        self.voltage_limit = Command('VLIM?', 'VLIM', Float(min=0., max=10.))
+        self.magnet_voltage = Command(('VMAG?', Float(min=-10., max=10.)))
+        self.output_voltage = Command(('VMAG?', Float(min=-12.8, max=12.8)))
+
+    def clear(self):
+        """Clears the status."""
+        self.connection.write('*CLS')
 
     def local(self):
         """Sets the front panel in local mode."""
