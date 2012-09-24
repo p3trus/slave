@@ -32,11 +32,13 @@ class MPS4G(InstrumentBase):
     """Represents the Cryomagnetics, inc. 4G Magnet Power Supply.
 
     :param connection: A connection object.
+    :ivar channel: The selected channel.
     :ivar error: The error response mode of the usb interface.
     :ivar output_current: The power supply output current.
     :ivar lower_limit: The lower current limit. Queriing returns a value, unit
         tuple. While setting the lower current limit, the unit is omited. The
         value must be supplied in the configured units (ampere, kilo gauss).
+    :ivar mode: The selected operation mode, either `'Shim'` or `'Manual'`.
     :ivar name: The name of the currently selected coil. The length of the name
         is in the range of 0 to 16 characters.
     :ivar switch_heater: The state of the persistent switch heater. If `True`
@@ -62,10 +64,12 @@ class MPS4G(InstrumentBase):
     """
     def __init__(self, connection):
         super(MPS4G, self).__init__(connection)
+        self.channel = Command('CHAN?', 'CHAN', Set(1, 2))
         self.error = Command('ERROR?', 'ERROR', Boolean)
         self.output_current = Command(('IOUT?', [Float, String]))
         self.lower_limit = Command(('LLIM?', [Float, String],),
                                    ('LLIM', Float))
+        self.mode = Command(('MODE?', String))
         self.name = Command('NAME?', 'NAME', String)
         self.switch_heater = Command('PSHTR?', 'PSHTR',
                                      Mapping({True: 'ON', False: 'OFF'}))
