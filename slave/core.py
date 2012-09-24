@@ -148,7 +148,7 @@ class Command(object):
 
         if len(parsed) == 1:
             return parsed[0]
-        return parsed
+        return tuple(parsed)
 
     def write(self, value):
         """Constructs the cmd string and writes it to the connection."""
