@@ -105,6 +105,7 @@ class MPS4G(InstrumentBase):
     :ivar operation_completed: The operation complete bit.
     :ivar status: The status register.
     :ivar service_request_enable: The service request enable register.
+    :ivar sweep_status: A string representing the current sweep status.
 
     """
     def __init__(self, connection, shims=None):
@@ -156,6 +157,7 @@ class MPS4G(InstrumentBase):
                         'menu mode': 7})
         self.status = Command(('*STB?', STB))
         self.service_request_enable = Command('*SRE?', '*SRE', STB)
+        self.sweep_status = Command(('SWEEP?', String))
 
     def clear(self):
         """Clears the status."""
@@ -218,3 +220,23 @@ class MPS4G(InstrumentBase):
     def enable_shims(self):
         """Enables all shims."""
         self.connection.write('SHIM Enable All')
+
+    def sweep(self, mode, speed=None):
+        """Starts the output current sweep.
+
+        :param mode: The sweep mode. Valid entries are `'UP'`, `'DOWN'`,
+            `'PAUSE'`or `'ZERO'`. If in shim mode, `'LIMIT'` is valid as well.
+        :param speed: The sweeping speed. Valid entries are `'FAST'`, `'SLOW'`
+            or `None`.
+
+        """
+        sweep_modes = ['UP', 'DOWN', 'PAUSE', 'ZERO', 'LIMIT']
+        sweep_speed = ['SLOW', 'FAST', None]
+        if not mode in sweep_modes:
+            raise ValueError('Invalid sweep mode.')
+        if not speed in sweep_speed:
+            raise ValueError('Invalid sweep speed.')
+        if speed is None:
+            self.connection.write('SWEEP {0}'.format(mode))
+        else:
+            self.connection.write('SWEEP {0} {1}'.format(mode, speed))
