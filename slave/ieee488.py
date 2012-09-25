@@ -36,6 +36,8 @@ EVENT_STATUS_BYTE = {
     7: 'power on',
 }
 
+PARALLEL_POLL_REGISTER = dict((i, str(i)) for i in range(8, 16))
+
 
 def __construct_register(reg, default_reg):
     """Constructs a register dict."""
@@ -89,10 +91,10 @@ class IEEE488(InstrumentBase):
     * "*WAI" - See IEEE Std 488.2-1992 section 10.39
 
     """
-    def __init__(self, connection, esb=None, stb=None):
-        super(IEEE488, self).__init__(connection)
-        esb = __construct_register(esb, EVENT_STATUS_BYTE)
-        stb = __construct_register(stb, STATUS_BYTE)
+    def __init__(self, connection, esb=None, stb=None, *args, **kw):
+        super(IEEE488, self).__init__(connection, *args, **kw)
+        self._esb = esb = __construct_register(esb, EVENT_STATUS_BYTE)
+        self._stb = stb = __construct_register(stb, STATUS_BYTE)
 
         self.event_status = Command(('*ESR?', Register(esb)))
         self.event_status_enable = Command('*ESE?', '*ESE', Register(esb))
@@ -145,6 +147,39 @@ class PowerOn(object):
     * "*PSC?" - See IEEE Std 488.2-1992 section 10.26
 
     """
-    def __init__(self):
-        super(PowerOn, self).__init__()
+    def __init__(self, *args, **kw):
+        super(PowerOn, self).__init__(*args, **kw)
         self.poweron_status_clear = Command('*PSC?', '*PSC', Boolean)
+
+
+class ParallelPoll(object):
+    """A mixin class, implementing the optional parallel poll common commands.
+
+    :param ppr: A dictionary mapping the 8-16 bit wide parallel poll register.
+        Integers in the range 8 to 15 are valid keys. If present they replace
+        the default values.
+    :ivar individual_status: Represents the state of the IEEE 488.1 "ist" local
+        message in the device.
+    :ivar parallel_poll_enable: A dictionary representing the 16 bit parallel
+        poll enable register.
+
+    .. note:: This is a mixin class designed to work with the IEEE488 class.
+
+    The IEEE Std 488.2-1992 defines the following optional parallel poll common
+    commands:
+
+    * "*IST?" - See IEEE Std 488.2-1992 section 10.15
+    * "*PRE" - See IEEE Std 488.2-1992 section 10.23
+    * "*PRE?" - See IEEE Std 488.2-1992 section 10.24
+
+    These are mandatory for devices implementing the PP1 subset.
+
+    """
+    def __init__(self, ppr=None, *args, **kw):
+        super(ParallelPoll, self).__init__(*args, **kw)
+        ppr = __construct_register(ppr, PARALLEL_POLL_REGISTER)
+        # The first 8 bits represent the status byte.
+        ppr.update(self._stb)
+        self._ppr = ppr
+        self.parallel_poll_enable = Command('*PRE?', 'PRE', Register(ppr))
+        self.individual_status = Command(('*IST?', Boolean))
