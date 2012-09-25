@@ -315,3 +315,60 @@ class TriggerMacro(object):
     def __init__(self, *args, **kw):
         super(TriggerMacro, self).__init__(*args, **kw)
         self.trigger_macro = Command('*DDT?', '*DDT', String)
+
+
+class Macro(object):
+    """A mixin class, implementing the optional macro commands.
+
+    :ivar trigger_macro: 
+
+    .. note::This is a mixin class designed to work with the IEEE488 class.
+
+    The IEEE Std 488.2-1992 defines the following optional macro commands:
+
+    * "*DMC" - See IEEE Std 488.2-1992 section 10.7
+    * "*EMC" - See IEEE Std 488.2-1992 section 10.8
+    * "*EMC?" - See IEEE Std 488.2-1992 section 10.9
+    * "*GMC?" - See IEEE Std 488.2-1992 section 10.13
+    * "*LMC?" - See IEEE Std 488.2-1992 section 10.16
+    * "*PMC" - See IEEE Std 488.2-1992 section 10.22
+
+    """
+    def __init__(self, *args, **kw):
+        super(Macro, self).__init__(*args, **kw)
+        self.macro_commands_enabled = Command(('EMC?', Boolean))
+
+    def define_macro(self, macro):
+        """Executes the define macro command.
+
+        :param macro: A macro string, e.g.
+            `'"SETUP1",#221VOLT 14.5;CURLIM 2E-3'`
+
+            .. note:: The macro string is not validated.
+
+        """
+        self.connection.write('*DMC {0}'.format(macro))
+
+    def disable_macro_commands(self):
+        """Disables all macro commands."""
+        self.connection.write('*EMC 0')
+
+    def enable_macro_commands(self):
+        """Enables all macro commands."""
+        self.connection.write('*EMC 1')
+
+    def get_macro(self, label):
+        """Returns the macro.
+
+        :param label: The label of the requested macro.
+
+        """
+        return str(self.connection.write('*GMC? {0}'.format(label)))
+
+    def macro_labels(self):
+        """Returns the currently defined macro labels."""
+        return str(self.connection.ask('*LMC?'))
+
+    def purge_macros(self):
+        """Deletes all previously defined macros."""
+        self.connection.write('*PMC')
