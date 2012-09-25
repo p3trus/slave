@@ -185,6 +185,7 @@ class InstrumentBase(object):
     """
     def __init__(self, connection, cfg=None):
         """Constructs a InstrumentBase instance."""
+        super(InstrumentBase, self).__init__()
         self.connection = connection
         self._cfg = cfg
 
