@@ -9,6 +9,18 @@ The minimal required interface is implemented by the IEEE488 class. Optional
 command groups a provided by mixin classes. They should not be used on their
 own.
 
+Usage::
+
+    from slave.ieee488 import IEEE488, PowerOn
+
+    class CustomInstrument(IEEE488, PowerOn):
+        '''A custom instrument compliant with the IEEE Std 488.2-1992,
+        supporting the optional PowerOn commands.
+        '''
+        def __init__(self, connection)
+            super(CustomInstrument, self).__init__(connection)
+            # Implement custom commands.
+
 """
 from slave.core import Command, InstrumentBase
 from slave.types import Boolean, Register, String
@@ -229,3 +241,77 @@ class ProtectedUserData(object):
     def __init__(self, *args, **kw):
         super(ProtectedUserData, self).__init__(*args, **kw)
         self.protected_user_data = Command('*RDT?', 'RDT', String)
+
+
+class Calibration(object):
+    """A mixin class, implementing the optional calibration command.
+
+    :ivar protected_user_data: The protected user data. This is information
+        unique to the device, such as calibration date, usage time,
+        environmental conditions and inventory control numbers.
+
+    .. note:: This is a mixin class designed to work with the IEEE488 class.
+
+    The IEEE Std 488.2-1992 defines the following optional calibration command:
+
+    * "*CAL?" - See IEEE Std 488.2-1992 section 10.2
+
+    """
+    def __init__(self, *args, **kw):
+        super(Calibration, self).__init__(*args, **kw)
+
+    def calibrate(self):
+        """Performs a internal self-calibration.
+
+        :returns: An integer in the range -32767 to + 32767 representing the
+            result. A value of zero indicates that the calibration completed
+            without errors.
+
+        """
+        return int(self.connection.ask('*CAL?'))
+
+
+class Trigger(object):
+    """A mixin class, implementing the optional trigger command.
+
+    :ivar protected_user_data: The protected user data. This is information
+        unique to the device, such as calibration date, usage time,
+        environmental conditions and inventory control numbers.
+
+    .. note:: This is a mixin class designed to work with the IEEE488 class.
+
+    The IEEE Std 488.2-1992 defines the following optional trigger command:
+
+    * "*TRG" - See IEEE Std 488.2-1992 section 10.37
+
+    It is mandatory for devices implementing the DT1 subset.
+
+    """
+    def __init__(self, *args, **kw):
+        super(Trigger, self).__init__(*args, **kw)
+
+    def trigger(self):
+        """Creates a trigger event."""
+        self.connection.write('*TRG')
+
+
+class TriggerMacro(object):
+    """A mixin class, implementing the optional trigger macro commands.
+
+    :ivar trigger_macro: The trigger macro, e.g. `'#217TRIG WFM;MEASWFM?'`.
+
+    .. note::
+
+        This is a mixin class designed to work with the IEEE488 class
+        and the Trigger mixin.
+
+    The IEEE Std 488.2-1992 defines the following optional trigger macro
+    commands:
+
+    * "*DDT" - See IEEE Std 488.2-1992 section 10.4
+    * "*DDT?" - See IEEE Std 488.2-1992 section 10.5
+
+    """
+    def __init__(self, *args, **kw):
+        super(TriggerMacro, self).__init__(*args, **kw)
+        self.trigger_macro = Command('*DDT?', '*DDT', String)
