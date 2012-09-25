@@ -208,3 +208,24 @@ class ResourceDescription(object):
     def __init__(self, *args, **kw):
         super(ResourceDescription, self).__init__(*args, **kw)
         self.resource_description = Command('*RDT?', '*RDT', String)
+
+
+class ProtectedUserData(object):
+    """A mixin class, implementing the protected user data commands.
+
+    :ivar protected_user_data: The protected user data. This is information
+        unique to the device, such as calibration date, usage time,
+        environmental conditions and inventory control numbers.
+
+    .. note:: This is a mixin class designed to work with the IEEE488 class.
+
+    The IEEE Std 488.2-1992 defines the following optional protected user data
+    commands:
+
+    * "*RDT" - See IEEE Std 488.2-1992 section 10.27
+    * "*RDT?" - See IEEE Std 488.2-1992 section 10.28
+
+    """
+    def __init__(self, *args, **kw):
+        super(ProtectedUserData, self).__init__(*args, **kw)
+        self.protected_user_data = Command('*RDT?', 'RDT', String)
