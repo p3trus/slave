@@ -183,8 +183,9 @@ class InstrumentBase(object):
     standard configuration, it is more convenient to inject it as well. This is
     done via the cfg parameter.
     """
-    def __init__(self, connection, cfg=None):
+    def __init__(self, connection, cfg=None, *args, **kw):
         """Constructs a InstrumentBase instance."""
+        super(InstrumentBase, self).__init__(*args, **kw)
         self.connection = connection
         self._cfg = cfg
 

@@ -127,8 +127,28 @@ class Enum(Mapping):
 
 class String(Type):
     """Represents python's string type."""
+    def __init__(self, min=None, max=None):
+        """
+        Constructs a Number type factory.
+
+        :param min: Minimal length a string object can have.
+        :param max: Maximal length a string object can have.
+
+        """
+        super(String, self).__init__()
+        # evaluates to min/max if min/max is None and to it's conversion
+        # otherwise.
+        self.min = min and self._convert(min)
+        self.max = max and self._convert(max)
+
     def _convert(self, value):
         return str(value)
+
+    def _validate(self, value):
+        if self.min is not None and len(value) < self.min:
+            raise ValueError('len({0})<Min:{0}'.format(value, self.min))
+        if self.max is not None and len(value) > self.max:
+            raise ValueError('len({0})>Max:{0}'.format(value, self.max))
 
 
 class Register(Type):
