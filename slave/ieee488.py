@@ -11,7 +11,7 @@ own.
 
 """
 from slave.core import Command, InstrumentBase
-from slave.types import Boolean, Register
+from slave.types import Boolean, Register, String
 
 
 STATUS_BYTE = {
@@ -140,6 +140,8 @@ class PowerOn(object):
         serial poll enable registers will retain their status when power is
         restored to the device and will be cleared if it is set to `True`.
 
+    .. note:: This is a mixin class designed to work with the IEEE488 class
+
     The IEEE Std 488.2-1992 defines the following optional power-on common
     commands:
 
@@ -183,3 +185,26 @@ class ParallelPoll(object):
         self._ppr = ppr
         self.parallel_poll_enable = Command('*PRE?', 'PRE', Register(ppr))
         self.individual_status = Command(('*IST?', Boolean))
+
+
+class ResourceDescription(object):
+    """A mixin class, implementing the optional resource description common
+    commands.
+
+    :ivar resource_description: Represents the content of the resource
+        description memory.
+
+        .. note:: Writing does not perform any validation.
+
+    .. note:: This is a mixin class designed to work with the IEEE488 class.
+
+    The IEEE Std 488.2-1992 defines the following optional resource description
+    common commands:
+
+    * "*RDT" - See IEEE Std 488.2-1992 section 10.30
+    * "*RDT?" - See IEEE Std 488.2-1992 section 10.31
+
+    """
+    def __init__(self, *args, **kw):
+        super(ResourceDescription, self).__init__(*args, **kw)
+        self.resource_description = Command('*RDT?', '*RDT', String)
