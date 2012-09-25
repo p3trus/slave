@@ -128,3 +128,23 @@ class IEEE488(InstrumentBase):
 
         """
         self.connection.write('*WAI')
+
+
+class PowerOn(object):
+    """A mixin class, implementing the optional power-on common commands.
+
+    :ivar poweron_status_clear: Represents the power-on status clear flag. If
+        it is `False` the event status enable, service request enable and
+        serial poll enable registers will retain their status when power is
+        restored to the device and will be cleared if it is set to `True`.
+
+    The IEEE Std 488.2-1992 defines the following optional power-on common
+    commands:
+
+    * "*PSC" - See IEEE Std 488.2-1992 section 10.25
+    * "*PSC?" - See IEEE Std 488.2-1992 section 10.26
+
+    """
+    def __init__(self):
+        super(PowerOn, self).__init__()
+        self.poweron_status_clear = Command('*PSC?', '*PSC', Boolean)
