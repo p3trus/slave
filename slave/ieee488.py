@@ -23,7 +23,7 @@ Usage::
 
 """
 from slave.core import Command, InstrumentBase
-from slave.types import Boolean, Register, String
+from slave.types import Boolean, Integer, Register, String
 
 
 STATUS_BYTE = {
@@ -320,7 +320,7 @@ class TriggerMacro(object):
 class Macro(object):
     """A mixin class, implementing the optional macro commands.
 
-    :ivar trigger_macro: 
+    :ivar macro_commands_enabled: Enables or disables the expansion of macros.
 
     .. note::This is a mixin class designed to work with the IEEE488 class.
 
@@ -388,5 +388,116 @@ class ObjectIdentification(object):
 
     """
     def __init__(self, *args, **kw):
-        super(Macro, self).__init__(*args, **kw)
+        super(ObjectIdentification, self).__init__(*args, **kw)
         self.macro_commands_enabled = Command(('*OPT?', String))
+
+
+class StoredSetting(object):
+    """A mixin class, implementing the optional stored setting commands.
+
+    .. note::This is a mixin class designed to work with the IEEE488 class.
+
+    The IEEE Std 488.2-1992 defines the following optional stored setting
+    commands:
+
+    * `*RCL` - See IEEE Std 488.2-1992 section 10.29
+    * `*SAV` - See IEEE Std 488.2-1992 section 10.33
+
+    """
+    def __init__(self, *args, **kw):
+        super(StoredSetting, self).__init__(*args, **kw)
+
+    def recall(self):
+        """Restores the current settings from a copy stored in local memory."""
+        self.connection.write('*RCL')
+
+    def save(self):
+        """Stores the current settings of a device in local memory."""
+        self.connection.write('*SAV')
+
+
+class Learn(object):
+    """A mixin class, implementing the optional learn command.
+
+    .. note::This is a mixin class designed to work with the IEEE488 class.
+
+    The IEEE Std 488.2-1992 defines the following optional learn command:
+
+    * `*LRN?` - See IEEE Std 488.2-1992 section 10.17
+
+    """
+    def __init__(self, *args, **kw):
+        super(Learn, self).__init__(*args, **kw)
+
+    def learn(self):
+        """Executes the learn command.
+
+        :returns: A string containing a sequence of *response message units*.
+            These can be used as *program message units* to recover the state
+            of the device at the time this command was executed.
+
+        """
+        return str(self.connection.ask('*LRN?'))
+
+
+class SystemConfiguration(object):
+    """A mixin class, implementing the optional system configuration commands.
+
+    .. note::This is a mixin class designed to work with the IEEE488 class.
+
+    The IEEE Std 488.2-1992 defines the following optional system configuration
+    commands:
+
+    * `*AAD` - See IEEE Std 488.2-1992 section 10.1
+    * `*DLF` - See IEEE Std 488.2-1992 section 10.6
+
+    """
+    def __init__(self, *args, **kw):
+        super(SystemConfiguration, self).__init__(*args, **kw)
+
+    def accept_address(self):
+        """Executes the accept address command."""
+        self.connection.write('*AAD')
+
+    def disable_listener(self):
+        """Executes the disable listener command."""
+        self.connection.write('*DLF')
+
+
+class PassingControl(object):
+    """A mixin class, implementing the optional passing control command.
+
+    .. note::This is a mixin class designed to work with the IEEE488 class.
+
+    The IEEE Std 488.2-1992 defines the following optional passing control
+    command:
+
+    * `*PCB` - See IEEE Std 488.2-1992 section 10.21
+
+    """
+    def __init__(self, *args, **kw):
+        super(PassingControl, self).__init__(*args, **kw)
+
+    def pass_control_back(self, primary, secondary):
+        """The address to which the controll is to be passed back.
+
+        Tells a potential controller device the address to which the control is
+        to be passed back.
+
+        :param primary: An integer in the range 0 to 30 representing the
+            primary address of the controller sending the command.
+        :param secondary: An integer in the range of 0 to 30 representing the
+            secondary address of the controller sending the command. If it is
+            missing, it indicates that the controller sending this command does
+            not have extended addressing.
+
+        """
+        if secondary is None:
+            cmd = Command(write=('*PCB', Integer(min=0, max=30)),
+                          connection=self.connection)
+            cmd.write(primary)
+        else:
+            type_ = [Integer(min=0, max=30), Integer(min=0, max=30)]
+            cmd = Command(write=('*PCB', type_),
+                          connection=self.connection)
+            cmd.write((primary, secondary))
