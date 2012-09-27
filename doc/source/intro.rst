@@ -1,11 +1,3 @@
-
-Getting Started
-===============
-
-The main goal of slave is to make it easier to communicate with scientific
-instruments. Slave tries to ease the implementation of new instruments and
-comes with a variety of ready-to-use implementations.
-
 Basic usage
 -----------
 
@@ -37,6 +29,24 @@ The last step is to start the actual measurement::
     for i in range(60):
         print lockin.x
         time.sleep(1) # delay for 1s.
+
+Putting it all together we get a small 12 line script, capable of performing a
+complete measurement.
+
+::
+
+    #!/usr/bin/env python
+    import time
+
+    import visa
+    from slave.sr830 import SR830
+
+    lockin = SR830(visa.instrument('GPIB::08'))
+    lockin.reserve = 'high'
+    lockin.time_constant = 3
+    for i in range(60):
+        print lockin.x
+        time.sleep(1)
 
 The connection object
 ---------------------

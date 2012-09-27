@@ -17,6 +17,14 @@ slave Package
     :undoc-members:
     :show-inheritance:
 
+:mod:`cryomagnetics` Module
+---------------------------
+
+.. automodule:: slave.cryomagnetics
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 :mod:`sr830` Module
 -------------------
 
