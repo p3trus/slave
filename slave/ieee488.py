@@ -336,7 +336,7 @@ class Macro(object):
     """
     def __init__(self, *args, **kw):
         super(Macro, self).__init__(*args, **kw)
-        self.macro_commands_enabled = Command(('EMC?', Boolean))
+        self.macro_commands_enabled = Command(('*EMC?', Boolean))
 
     def define_macro(self, macro):
         """Executes the define macro command.
@@ -372,3 +372,21 @@ class Macro(object):
     def purge_macros(self):
         """Deletes all previously defined macros."""
         self.connection.write('*PMC')
+
+
+class ObjectIdentification(object):
+    """A mixin class, implementing the optional object identification command.
+
+    :ivar object_identification: Identifies reportable device options.
+
+    .. note::This is a mixin class designed to work with the IEEE488 class.
+
+    The IEEE Std 488.2-1992 defines the following optional object
+    identification command:
+
+    * `*OPT?` - See IEEE Std 488.2-1992 section 10.20
+
+    """
+    def __init__(self, *args, **kw):
+        super(Macro, self).__init__(*args, **kw)
+        self.macro_commands_enabled = Command(('*OPT?', String))
