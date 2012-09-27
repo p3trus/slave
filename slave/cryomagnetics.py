@@ -37,8 +37,9 @@ class Shim(InstrumentBase):
 
     :param connection: A connection object.
     :param shim: The identifier of the shim.
+
     :ivar limit: The current limit of the shim.
-    :ivar status: Represents the shim status, `True`if it's enabled, `False`
+    :ivar status: Represents the shim status, `True` if it's enabled, `False`
         otherwise.
     :ivar current: The magnet current of the shim. Queriing returns a value,
         unit tuple. While setting the current, the unit is omited. The value

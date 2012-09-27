@@ -9,12 +9,27 @@ Welcome to Slave's documentation!
 This is the documentation of the Slave library. It provides an interface to
 several scientific instruments and simplifies the implementation of new ones.
 
-Contents:
+
+Getting Started
+---------------
+The main goal of slave is to make it easier to communicate with scientific
+instruments. Slave tries to ease the implementation of new instruments and
+comes with a variety of ready-to-use implementations.
 
 .. toctree::
    :maxdepth: 2
 
    intro
+
+Reference
+---------
+
+The slave api is completely documented. And can be found below.
+
+.. toctree::
+   :maxdepth: 2
+
+   slave
 
 
 Indices and tables
