@@ -25,6 +25,14 @@ slave Package
     :undoc-members:
     :show-inheritance:
 
+:mod:`ieee488` Module
+---------------------
+
+.. automodule:: slave.ieee488
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 :mod:`sr830` Module
 -------------------
 

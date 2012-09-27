@@ -17,7 +17,7 @@ Usage::
         '''A custom instrument compliant with the IEEE Std 488.2-1992,
         supporting the optional PowerOn commands.
         '''
-        def __init__(self, connection)
+        def __init__(self, connection):
             super(CustomInstrument, self).__init__(connection)
             # Implement custom commands.
 
@@ -82,25 +82,25 @@ class IEEE488(InstrumentBase):
     A IEEE Std 488.2-1992 compliant interface must implement the following
     status reporting commands:
 
-    * "*CLS" - See IEEE Std 488.2-1992 section 10.3
-    * "*ESE" - See IEEE Std 488.2-1992 section 10.10
-    * "*ESE?" - See IEEE Std 488.2-1992 section 10.11
-    * "*ESR" - See IEEE Std 488.2-1992 section 10.12
-    * "*SRE" - See IEEE Std 488.2-1992 section 10.34
-    * "*SRE?" - See IEEE Std 488.2-1992 section 10.35
-    * "*STB?" - See IEEE Std 488.2-1992 section 10.36
+    * `*CLS` - See IEEE Std 488.2-1992 section 10.3
+    * `*ESE` - See IEEE Std 488.2-1992 section 10.10
+    * `*ESE?` - See IEEE Std 488.2-1992 section 10.11
+    * `*ESR` - See IEEE Std 488.2-1992 section 10.12
+    * `*SRE` - See IEEE Std 488.2-1992 section 10.34
+    * `*SRE?` - See IEEE Std 488.2-1992 section 10.35
+    * `*STB?` - See IEEE Std 488.2-1992 section 10.36
 
     In addition, the following internal operation common commands are required:
 
-    * "*IDN?" - See IEEE Std 488.2-1992 section 10.14
-    * "*RST" - See IEEE Std 488.2-1992 section 10.32
-    * "*TST?" - See IEEE Std 488.2-1992 section 10.38
+    * `*IDN?` - See IEEE Std 488.2-1992 section 10.14
+    * `*RST` - See IEEE Std 488.2-1992 section 10.32
+    * `*TST?` - See IEEE Std 488.2-1992 section 10.38
 
     Furthermore the following synchronisation commands are required:
 
-    * "*OPC" - See IEEE Std 488.2-1992 section 10.18
-    * "*OPC?" - See IEEE Std 488.2-1992 section 10.19
-    * "*WAI" - See IEEE Std 488.2-1992 section 10.39
+    * `*OPC` - See IEEE Std 488.2-1992 section 10.18
+    * `*OPC?` - See IEEE Std 488.2-1992 section 10.19
+    * `*WAI` - See IEEE Std 488.2-1992 section 10.39
 
     """
     def __init__(self, connection, esb=None, stb=None, *args, **kw):
@@ -157,8 +157,8 @@ class PowerOn(object):
     The IEEE Std 488.2-1992 defines the following optional power-on common
     commands:
 
-    * "*PSC" - See IEEE Std 488.2-1992 section 10.25
-    * "*PSC?" - See IEEE Std 488.2-1992 section 10.26
+    * `*PSC` - See IEEE Std 488.2-1992 section 10.25
+    * `*PSC?` - See IEEE Std 488.2-1992 section 10.26
 
     """
     def __init__(self, *args, **kw):
@@ -182,9 +182,9 @@ class ParallelPoll(object):
     The IEEE Std 488.2-1992 defines the following optional parallel poll common
     commands:
 
-    * "*IST?" - See IEEE Std 488.2-1992 section 10.15
-    * "*PRE" - See IEEE Std 488.2-1992 section 10.23
-    * "*PRE?" - See IEEE Std 488.2-1992 section 10.24
+    * `*IST?` - See IEEE Std 488.2-1992 section 10.15
+    * `*PRE` - See IEEE Std 488.2-1992 section 10.23
+    * `*PRE?` - See IEEE Std 488.2-1992 section 10.24
 
     These are mandatory for devices implementing the PP1 subset.
 
@@ -213,8 +213,8 @@ class ResourceDescription(object):
     The IEEE Std 488.2-1992 defines the following optional resource description
     common commands:
 
-    * "*RDT" - See IEEE Std 488.2-1992 section 10.30
-    * "*RDT?" - See IEEE Std 488.2-1992 section 10.31
+    * `*RDT` - See IEEE Std 488.2-1992 section 10.30
+    * `*RDT?` - See IEEE Std 488.2-1992 section 10.31
 
     """
     def __init__(self, *args, **kw):
@@ -234,8 +234,8 @@ class ProtectedUserData(object):
     The IEEE Std 488.2-1992 defines the following optional protected user data
     commands:
 
-    * "*RDT" - See IEEE Std 488.2-1992 section 10.27
-    * "*RDT?" - See IEEE Std 488.2-1992 section 10.28
+    * `*RDT` - See IEEE Std 488.2-1992 section 10.27
+    * `*RDT?` - See IEEE Std 488.2-1992 section 10.28
 
     """
     def __init__(self, *args, **kw):
@@ -254,7 +254,7 @@ class Calibration(object):
 
     The IEEE Std 488.2-1992 defines the following optional calibration command:
 
-    * "*CAL?" - See IEEE Std 488.2-1992 section 10.2
+    * `*CAL?` - See IEEE Std 488.2-1992 section 10.2
 
     """
     def __init__(self, *args, **kw):
@@ -282,7 +282,7 @@ class Trigger(object):
 
     The IEEE Std 488.2-1992 defines the following optional trigger command:
 
-    * "*TRG" - See IEEE Std 488.2-1992 section 10.37
+    * `*TRG` - See IEEE Std 488.2-1992 section 10.37
 
     It is mandatory for devices implementing the DT1 subset.
 
@@ -308,8 +308,8 @@ class TriggerMacro(object):
     The IEEE Std 488.2-1992 defines the following optional trigger macro
     commands:
 
-    * "*DDT" - See IEEE Std 488.2-1992 section 10.4
-    * "*DDT?" - See IEEE Std 488.2-1992 section 10.5
+    * `*DDT` - See IEEE Std 488.2-1992 section 10.4
+    * `*DDT?` - See IEEE Std 488.2-1992 section 10.5
 
     """
     def __init__(self, *args, **kw):
@@ -326,12 +326,12 @@ class Macro(object):
 
     The IEEE Std 488.2-1992 defines the following optional macro commands:
 
-    * "*DMC" - See IEEE Std 488.2-1992 section 10.7
-    * "*EMC" - See IEEE Std 488.2-1992 section 10.8
-    * "*EMC?" - See IEEE Std 488.2-1992 section 10.9
-    * "*GMC?" - See IEEE Std 488.2-1992 section 10.13
-    * "*LMC?" - See IEEE Std 488.2-1992 section 10.16
-    * "*PMC" - See IEEE Std 488.2-1992 section 10.22
+    * `*DMC` - See IEEE Std 488.2-1992 section 10.7
+    * `*EMC` - See IEEE Std 488.2-1992 section 10.8
+    * `*EMC?` - See IEEE Std 488.2-1992 section 10.9
+    * `*GMC?` - See IEEE Std 488.2-1992 section 10.13
+    * `*LMC?` - See IEEE Std 488.2-1992 section 10.16
+    * `*PMC` - See IEEE Std 488.2-1992 section 10.22
 
     """
     def __init__(self, *args, **kw):
