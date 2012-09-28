@@ -333,7 +333,7 @@ class SR830(InstrumentBase):
         # Interface Commands
         # ==================
         #: Queries the device identification string
-        self.idn = Command('*IDN?', type=[String, String, String, String])
+        self.idn = Command('*IDN?', type_=[String, String, String, String])
         #: Queries or sets the state of the frontpanel.
         self.state = Command('LOCL?', 'LOCL',
                              Enum('local', 'remote', 'lockout'))

@@ -28,6 +28,14 @@ from itertools import izip, izip_longest
 import slave.types
 
 
+class SimulatedConnection(object):
+    def ask(self, value):
+        return ''
+
+    def write(self, value):
+        pass
+
+
 class Command(object):
     """Represents an instrument command.
 
@@ -80,7 +88,7 @@ class Command(object):
     }
 
     def __init__(self, query=None, write=None, type_=None,
-                 connection=None, cfg=None):
+                 connection=None, cfg=None, simulate=False):
         def to_instance(x):
             """If x is a type class, it is converted to an instance of it."""
             if isinstance(x, slave.types.Type):
@@ -139,6 +147,18 @@ class Command(object):
         self._custom_cfg = dict(cfg) if cfg else {}
         self._cfg = dict(self._default_cfg)
         self._cfg.update(self._custom_cfg)
+
+    @property
+    def connection(self):
+        return self._connection
+
+    @connection.setter
+    def connection(self, value):
+        if isinstance(value, SimulatedConnection):
+            self._buffer = None
+            self.query = self.__simulate_query
+            self.write = self.__simulate_write
+        self._connection = value
 
     def program_message_unit(self, header, datas, types):
         """Constructs a program message unit.
@@ -235,6 +255,29 @@ class Command(object):
                 val = typ.load(val)
             parsed_data.append(val)
         return header, tuple(parsed_data)
+
+    def __simulate_query(self, datas=None):
+        if not self._query:
+            raise AttributeError('Command is not queryable')
+        # TODO: validate datas
+        if self._buffer is None or self._write is None:
+            # generate values from response type
+            self._buffer = tuple(t.dump(t.simulate()) for t in self._response_type)
+        res = tuple(t.load(v) for v, t in izip(self._buffer, self._response_type))
+                # Return single value instead of 1-tuple
+        if len(res) == 1:
+            return res[0]
+        else:
+            return res
+
+    def __simulate_write(self, datas=None):
+        if (not isinstance(datas, collections.Sequence) or
+            isinstance(datas, basestring)):
+            datas = (datas,)
+        if len(datas) != len(self._write_type):
+            raise ValueError('Number of datas must match the number of types.')
+
+        self._buffer = [t.dump(v) for v, t in izip(datas, self._write_type)]
 
 
 class InstrumentBase(object):
