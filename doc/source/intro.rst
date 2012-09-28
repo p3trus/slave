@@ -1,5 +1,5 @@
 Basic usage
------------
+===========
 
 The easiest way to use the slave library is in combination with already
 implemented instruments and best shown with an example. In the following
@@ -53,10 +53,31 @@ The connection object
 
 Slave makes heavy use of an object, referred to as connection. It represents
 the connection to the real instrument, e.g. serial, gpib, usb, ... and is not
-implemented by Slave itself. Slave was build with pyvisa in mind, but is not
+implemented by Slave itself. Slave was build with `pyvisa`_ in mind, but is not
 restricted to it as long as the connection object fulfills the requirements.
 
 These are:
  * a `write()` member function, taking a command string.
  * a `ask()` member function, taking a command string and returning a string
    response.
+
+.. _pyvisa: http://pyvisa.sourceforge.net/
+
+Simulation mode
+---------------
+
+Slave has a simple build in Simulation mode. This is usefull for testing higher
+level applications using slave. In simulation mode you can use the devices
+without a real connection. The communication is simulated randomly. Creating a 
+device in simulation mode is easy and shown below using the
+:class:`~.slave.sr830.SR830` device.
+::
+
+    from slave.core import SimulatedConnection
+    from slave.sr830 import SR830
+
+    lockin = SR830(SimulatedConnection())
+    print lockin.x # Will output a random float
+
+Instead of a real connection object, you pass in a
+:class:`~.slave.core.SimulatedConnection`.

@@ -1,0 +1,113 @@
+{%- extends "basic/layout.html" %}
+{%- set script_files = script_files + [
+  '_static/jquery.ba-hashchange.js',
+  '_static/jquery.hoverscroll.js',
+  '_static/bootstrap.js',
+  '_static/bootstrap.scrollspy.js',
+  '_static/bootstrap-sphinx.js',
+] %}
+{%- set css_files = [
+  '_static/jquery.hoverscroll.css',
+  '_static/bootstrap.css',
+  '_static/bootstrap-responsive.css',
+  '_static/bootstrap-sphinx.css',
+] + css_files %}
+
+{# Sidebar: Rework into our Boostrap nav section. #}
+{% macro navBar() %}
+  <div id="navbar" class="navbar navbar-inverse no-js">
+    <div class="navbar-inner">
+      <div class="container-fluid">
+        <a class="brand" href="{{ pathto(master_doc) }}">{{ project|e }}</a>
+        <span class="navbar-text pull-left"></span>
+        <ul class="nav">
+          <li class="divider-vertical"></li>
+          <li><b class="navbar-text">{{ version|e }}</b></li>
+          {% block sidebartoc %}
+            {% include "globaltoc.html" %}
+            {% if theme_page_toc_position == 'nav' %}
+              {% include "localtoc.html" %}
+            {% endif %}
+          {% endblock %}
+          {% block sidebarrel %}
+            {% include "relations.html" %}
+          {% endblock %}
+          {% block sidebarsourcelink %}
+            {%- if theme_sourcelink_position == 'nav' %}
+            <li>{% include "sourcelink.html" %}</li>
+            {%- endif %}
+          {% endblock %}
+        </ul>
+        {% block sidebarsearch %}
+          {% include "searchbox.html" %}
+        {% endblock %}
+      </div>
+    </div>
+  </div>
+{% endmacro %}
+
+{%- block extrahead %}
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+{% endblock %}
+
+{% block header %}{{ navBar() }}{% endblock %}
+
+{# Silence the sidebar's, relbar's #}
+{% block sidebar1 %}{% endblock %}
+{% block sidebar2 %}{% endblock %}
+{% block relbar1 %}{% endblock %}
+{% block relbar2 %}{% endblock %}
+
+{%- block content %}
+  {%- set sidebar = theme_page_toc_position.startswith('sidebar-') %}
+  <div class="body container{% if sidebar %}-fluid{% endif %}">
+  <div {% if sidebar %}class="row-fluid"{% endif %}>
+    {%- if theme_page_toc_position == 'sidebar-left' %}
+      <div class="page-toc page-sidebar span3 visible-desktop">
+        <div class="well">{{ toc }}</div>
+      </div>
+    {%- endif %}
+    <div class="content {% if sidebar %}span9{% endif %}">
+      {# Note: theme_page_toc_position == 'subnav' handled by translator #}
+      {% block body %} {% endblock %}
+    </div>
+    {%- if theme_page_toc_position == 'sidebar-right' %}
+      <div class="page-toc page-sidebar span3 visible-desktop">
+        <div class="well">{{ toc }}</div>
+      </div>
+    {%- endif %}
+  </div>
+</div>
+{%- endblock %}
+
+{%- block footer %}
+<footer class="footer">
+  <div class="container">
+    <p class="pull-right">
+      {%- if theme_sourcelink_position == 'footer' %}
+      {% include "sourcelink.html" %} /
+      {%- endif %}
+      <a href="#">Back to top</a>
+    </p>
+    <p>
+    {%- if show_copyright %}
+      {%- if hasdoc('copyright') %}
+        {% trans path=pathto('copyright'), copyright=copyright|e %}&copy; <a href="{{ path }}">Copyright</a> {{ copyright }}.{% endtrans %}<br/>
+      {%- else %}
+        {% trans copyright=copyright|e %}&copy; Copyright {{ copyright }}{% endtrans %}<br/>
+      {%- endif %}
+    {%- endif %}
+    {%- if last_updated %}
+      {% trans last_updated=last_updated|e %}Last updated on {{ last_updated }}{% endtrans %}<br/>
+    {%- endif %}
+    {%- if show_sphinx %}
+      {% trans sphinx_version=sphinx_version|e %}Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> {{ sphinx_version }}{% endtrans %}
+      {%- if theme_show_bootstrap %}
+      with the <a href="https://github.com/ervandew/sphinx-bootstrap-theme">Bootstrap Theme</a>
+      {%- endif %}
+      <br/>
+    {%- endif %}
+    </p>
+  </div>
+</footer>
+{%- endblock %}

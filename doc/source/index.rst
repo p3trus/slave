@@ -3,15 +3,16 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
+#################################
 Welcome to Slave's documentation!
-=================================
+#################################
 
 This is the documentation of the Slave library. It provides an interface to
 several scientific instruments and simplifies the implementation of new ones.
 
-
 Getting Started
----------------
+===============
+
 The main goal of slave is to make it easier to communicate with scientific
 instruments. Slave tries to ease the implementation of new instruments and
 comes with a variety of ready-to-use implementations.
@@ -20,9 +21,11 @@ comes with a variety of ready-to-use implementations.
    :maxdepth: 2
 
    intro
+   custom_device
+
 
 Reference
----------
+=========
 
 The slave api is completely documented. And can be found below.
 
@@ -30,7 +33,6 @@ The slave api is completely documented. And can be found below.
    :maxdepth: 2
 
    slave
-
 
 Indices and tables
 ==================
