@@ -1,6 +1,8 @@
 #  -*- coding: utf-8 -*-
 #
 # E21, (c) 2012, see AUTHORS.  Licensed under the GNU GPL.
+import random
+import string
 
 
 class Type(object):
@@ -12,6 +14,10 @@ class Type(object):
 
     def load(self, value):
         return self._convert(value)
+
+    def simulate(self):
+        """Calculates a valid value, represented by this class."""
+        raise NotImplementedError()
 
     def _convert(self, value):
         """Converts value to the type represented by this class."""
@@ -44,6 +50,10 @@ class Boolean(Type):
     def _serialize(self, value):
         return '{0:d}'.format(self._convert(value))
 
+    def simulate(self):
+        """Costructs a random boolean and returns it."""
+        return random.randint(0,1)
+
 
 class Number(Type):
     """Represents a abstract number type, allowing range checks."""
@@ -73,11 +83,21 @@ class Integer(Number):
     def _convert(self, value):
         return int(value)
 
+    def simulate(self):
+        min_ = -999 if self.min is None else self.min
+        max_ = 1000 if self.max is None else self.max
+        return random.randint(min_, max_)
+
 
 class Float(Number):
     """Represents a floating point type."""
     def _convert(self, value):
         return float(value)
+
+    def simulate(self):
+        min_ = -999. if self.min is None else self.min
+        max_ = 1000. if self.max is None else self.max
+        return random.uniform(min_, max_)
 
 
 class Mapping(Type):
@@ -99,6 +119,10 @@ class Mapping(Type):
 
     def load(self, value):
         return self._inv[value]
+
+    def simulate(self):
+        """Returns a randomly chosen key of the mapping."""
+        return random.choice(self._map.keys())
 
 
 class Set(Mapping):
@@ -150,6 +174,20 @@ class String(Type):
         if self.max is not None and len(value) > self.max:
             raise ValueError('len({0})>Max:{0}'.format(value, self.max))
 
+    def simulate(self):
+        """Returns a randomly constructed string.
+
+        Simulate randomly constructs a string with a length between min and
+        max. If min is not present, a minimum length of 1 is assumed, if max
+        is not present a maximum length of 10 is used.
+        """
+        min_ = 1 if self.min is None else self.min
+        max_ = 10 if self.max is None else self.max
+        # XXX What if self.min > 10 and self.max == None?
+        n = random.randint(min_, max_)
+        chars = string.ascii_letters + string.digits
+        return ''.join(random.choice(chars) for x in range(n))
+
 
 class Register(Type):
     """Represents a binary register, where bits are mapped with a name."""
@@ -168,3 +206,9 @@ class Register(Type):
         bit = lambda x, i: bool(x & (1 << i))
         value = int(value)
         return dict((k, bit(value, i)) for k, i in self.__map.iteritems())
+
+    def simulate(self):
+        """Returns a dictionary representing the mapped register with random
+        values.
+        """
+        return dict((k, random.randint(0, 1)) for k in self.__map)

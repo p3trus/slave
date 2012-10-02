@@ -2,6 +2,7 @@
 #
 # E21, (c) 2012, see AUTHORS.  Licensed under the GNU GPL.
 from slave.core import Command, InstrumentBase
+from slave.iec60488 import IEC60488
 from slave.types import Boolean, Float, Mapping, Register, Set, String
 
 
@@ -71,7 +72,7 @@ class Shim(InstrumentBase):
         self.connection.write('SHIM {0}'.format(self._shim))
 
 
-class MPS4G(InstrumentBase):
+class MPS4G(IEC60488):
     """Represents the Cryomagnetics, inc. 4G Magnet Power Supply.
 
     :param connection: A connection object.
@@ -110,7 +111,14 @@ class MPS4G(InstrumentBase):
 
     """
     def __init__(self, connection, shims=None):
-        super(MPS4G, self).__init__(connection)
+        stb = {
+            0: 'sweep mode active',
+            1: 'standby mode active',
+            2: 'quench condition present',
+            3: 'power module failure',
+            7: 'menu mode',
+        }
+        super(MPS4G, self).__init__(connection, stb=stb)
         if shims:
             if isinstance(shims, basestring):
                 shims = [shims]
@@ -136,33 +144,7 @@ class MPS4G(InstrumentBase):
         self.voltage_limit = Command('VLIM?', 'VLIM', Float(min=0., max=10.))
         self.magnet_voltage = Command(('VMAG?', Float(min=-10., max=10.)))
         self.output_voltage = Command(('VMAG?', Float(min=-12.8, max=12.8)))
-        ESR = Register({'operation complete': 0,
-                        'request control': 1,
-                        'query error': 2,
-                        'device error': 3,
-                        'execution error': 4,
-                        'command error': 5,
-                        'user request': 6,
-                        'power on': 7})
-        self.standard_event_status = Command(('*ESR?', ESR))
-        self.standard_event_status_enable = Command('*ESE?', '*ESE', ESR)
-        self.id = Command(('*IDN?', [String, String, String, String, String]))
-        self.operation_completed = (('*OPC?', Boolean))
-        STB = Register({'sweep mode active': 0,
-                        'standby mode active': 1,
-                        'quench condition present': 2,
-                        'power module failure': 3,
-                        'message available': 4,
-                        'extended status byte': 5,
-                        'master summary status': 6,
-                        'menu mode': 7})
-        self.status = Command(('*STB?', STB))
-        self.service_request_enable = Command('*SRE?', '*SRE', STB)
         self.sweep_status = Command(('SWEEP?', String))
-
-    def clear(self):
-        """Clears the status."""
-        self.connection.write('*CLS')
 
     def local(self):
         """Sets the front panel in local mode."""
@@ -179,40 +161,6 @@ class MPS4G(InstrumentBase):
     def locked(self):
         """Sets the front panel in locked remote mode."""
         self.connection.write('RWLOCK')
-
-    def complete_operation(self):
-        """
-        Sets the operation complete bit in the standard event status register.
-        """
-        self.connection.write('*OPC')
-
-    def reset(self):
-        """Resets the instrument.
-
-        Implemented for compliance with IEEE Std 488.2-1992, but does not
-        change the power supply operation due to safety concerns.
-
-        """
-        self.connection.write('*RST')
-
-    def test(self):
-        """Queries the self test.
-
-        Implemented for compliance with IEEE Std 488.2-1992, but does not
-        change the power supply operation due to safety concerns.
-
-        """
-        return bool(self.connection.ask('*TST?'))
-
-    def wait_to_continue(self):
-        """The wait to continue command.
-
-        Implemented for compliance with IEEE Std 488.2-1992, but since the
-        4GMPS only implements sequential commands, the no-operation pending
-        flag is always `True`.
-
-        """
-        self.connection.write('*WAI')
 
     def disable_shims(self):
         """Disables all shims."""
