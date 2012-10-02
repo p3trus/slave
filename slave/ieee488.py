@@ -78,6 +78,10 @@ class IEEE488(InstrumentBase):
         enable register.
     :ivar status: A dictonary representing the 8 bit status byte.
     :ivar status_enable: A dictionary representing the status enable register.
+    :ivar operation_complete: The operation complete flag.
+    :ivar identification: The device identification represented by the
+        following tuple
+        `(<manufacturer>, <model>, <serial number>, <firmware level>)`.
 
     A IEEE Std 488.2-1992 compliant interface must implement the following
     status reporting commands:
@@ -112,6 +116,8 @@ class IEEE488(InstrumentBase):
         self.event_status_enable = Command('*ESE?', '*ESE', Register(esb))
         self.status = Command(('*STB?', Register(stb)))
         self.operation_complete = Command(('*OPC?', Boolean))
+        self.identification = Command(('*IDN?',
+                                       [String, String, String, String]))
 
     def clear(self):
         """Clears the status data structure."""
