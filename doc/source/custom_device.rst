@@ -76,23 +76,23 @@ The `IEC 60488-2`_ requires the existance of several commands which are
 logically grouped.
 
 Reporting Commands
- * `*CLS` - Clears the data status structure [#]_.
- * `*ESE` - Write the event status enable register [#]_.
- * `*ESE?` - Query the event status enable register [#]_.
- * `*ESR?` - Query the standard event status register [#]_.
- * `*SRE` - Write the status enable register [#]_.
- * `*SRE?` - Query the status enable register [#]_.
- * `*STB` - Query the status register [#]_.
+ * `*CLS` - Clears the data status structure [#]_ .
+ * `*ESE` - Write the event status enable register [#]_ .
+ * `*ESE?` - Query the event status enable register [#]_ .
+ * `*ESR?` - Query the standard event status register [#]_ .
+ * `*SRE` - Write the status enable register [#]_ .
+ * `*SRE?` - Query the status enable register [#]_ .
+ * `*STB` - Query the status register [#]_ .
 
 Internal operation commands
- * `*IDN?` - Identification query [#]_.
- * `*RST` -  Perform a device reset [#]_.
- * `*TST?` - Perform internal self-test [#]_.
+ * `*IDN?` - Identification query [#]_ .
+ * `*RST` -  Perform a device reset [#]_ .
+ * `*TST?` - Perform internal self-test [#]_ .
 
 Synchronisation commands
- * `*OPC` - Set operation complete flag high [#]_.
- * `*OPC?` -  Query operation complete flag [#]_.
- * `*WAI` - Wait to continue [#]_.
+ * `*OPC` - Set operation complete flag high [#]_ .
+ * `*OPC?` -  Query operation complete flag [#]_ .
+ * `*WAI` - Wait to continue [#]_ .
 
 To ease development, these are implemented in the
 :class:`~.IEEE488` base class. To implement a `IEC 60488-2`_
@@ -113,16 +113,59 @@ Optional Commands
 
 Despite the required commands, there are several optional command groups
 defined. The standard requires that if one command is used, it's complete
-group must be implemented. The optional commands are
+group must be implemented. These are
 
 Power on common commands
- * `*PSC` - Set the power-on status clear bit [#]_.
- * `*PSC?` - Query the power-on status clear bit [#]_.
+ * `*PSC` - Set the power-on status clear bit [#]_ .
+ * `*PSC?` - Query the power-on status clear bit [#]_ .
 
 Parallel poll common commands
- * `*IST?` - Query the individual status message bit [#]_.
- * `*PRE` - Set the parallel poll enable register [#]_.
- * `*PRE?` - Query the parallel poll enable register [#]_.
+ * `*IST?` - Query the individual status message bit [#]_ .
+ * `*PRE` - Set the parallel poll enable register [#]_ .
+ * `*PRE?` - Query the parallel poll enable register [#]_ .
+
+Resource description common commands
+ * `*RDT` - Store the resource description in the device [#]_ .
+ * `*RDT?` - Query the stored resource description [#]_ .
+
+Protected user data commands
+ * `*PUD` - Store protected user data in the device [#]_ .
+ * `*PUD?` - Query the protected user data [#]_ .
+
+Calibration command
+ * `*CAL?` - Perform internal self calibration [#]_ .
+
+Trigger command
+ * `*TRG` - Execute trigger command [#]_ .
+
+Trigger macro commands
+ * `*DDT` - Define device trigger [#]_ .
+ * `*DDT?` - Define device trigger query [#]_ .
+
+Macro Commands
+ * `*DMC` - Define device trigger [#]_ .
+ * `*EMC` - Define device trigger query [#]_ .
+ * `*EMC?` - Define device trigger [#]_ .
+ * `*GMC?` - Define device trigger query [#]_ .
+ * `*LMC?` - Define device trigger [#]_ .
+ * `*PMC` - Define device trigger query [#]_ .
+
+Option Identification command
+ * `*OPT?` - Option identification query [#]_ .
+
+Stored settings commands
+ * `*RCL` - Restore device settings from local memory [#]_ .
+ * `*SAV` - Store current settings of the device in local memory [#]_ .
+
+Learn command
+ * `*LRN?` - Learn device setup query [#]_ .
+
+System configuration commands
+ * `*AAD` - Accept address command [#]_ .
+ * `*DLF` - Disable listener function command [#]_ .
+
+Passing control command
+ * `*PCB` - Pass control back [#]_ .
 
 The optional command groups are implemented as Mixin classes. A device
 supporting required `IEC 60488-2`_ commands as well as the optional Power-on
@@ -134,7 +177,7 @@ commands is implemented as follows::
     class CustomDevice(IEEE488, PowerOn):
         pass
 
-.. rubric:: Footnotes
+----
 
 .. [#] IEC 60488-2:2004(E) section 10.3
 .. [#] IEC 60488-2:2004(E) section 10.10
@@ -154,5 +197,26 @@ commands is implemented as follows::
 .. [#] IEC 60488-2:2004(E) section 10.15
 .. [#] IEC 60488-2:2004(E) section 10.23
 .. [#] IEC 60488-2:2004(E) section 10.24
+.. [#] IEC 60488-2:2004(E) section 10.30
+.. [#] IEC 60488-2:2004(E) section 10.31
+.. [#] IEC 60488-2:2004(E) section 10.27
+.. [#] IEC 60488-2:2004(E) section 10.28
+.. [#] IEC 60488-2:2004(E) section 10.2
+.. [#] IEC 60488-2:2004(E) section 10.37
+.. [#] IEC 60488-2:2004(E) section 10.4
+.. [#] IEC 60488-2:2004(E) section 10.5
+.. [#] IEC 60488-2:2004(E) section 10.7
+.. [#] IEC 60488-2:2004(E) section 10.8
+.. [#] IEC 60488-2:2004(E) section 10.9
+.. [#] IEC 60488-2:2004(E) section 10.13
+.. [#] IEC 60488-2:2004(E) section 10.16
+.. [#] IEC 60488-2:2004(E) section 10.22
+.. [#] IEC 60488-2:2004(E) section 10.20
+.. [#] IEC 60488-2:2004(E) section 10.29
+.. [#] IEC 60488-2:2004(E) section 10.33
+.. [#] IEC 60488-2:2004(E) section 10.17
+.. [#] IEC 60488-2:2004(E) section 10.1
+.. [#] IEC 60488-2:2004(E) section 10.6
+.. [#] IEC 60488-2:2004(E) section 10.21
 
 .. _IEC 60488-2: http://dx.doi.org/10.1109/IEEESTD.2004.95390
