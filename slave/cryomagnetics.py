@@ -2,7 +2,7 @@
 #
 # E21, (c) 2012, see AUTHORS.  Licensed under the GNU GPL.
 from slave.core import Command, InstrumentBase
-from slave.ieee488 import IEEE488
+from slave.iec60488 import IEC60488
 from slave.types import Boolean, Float, Mapping, Register, Set, String
 
 
@@ -72,7 +72,7 @@ class Shim(InstrumentBase):
         self.connection.write('SHIM {0}'.format(self._shim))
 
 
-class MPS4G(IEEE488):
+class MPS4G(IEC60488):
     """Represents the Cryomagnetics, inc. 4G Magnet Power Supply.
 
     :param connection: A connection object.

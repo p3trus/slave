@@ -3,18 +3,18 @@
 # Slave, (c) 2012, see AUTHORS.  Licensed under the GNU GPL.
 
 """
-The ieee488 module implements a IEEE Std 488.2-1992 compliant interface.
+The iec60488 module implements a IEC 60488-2:2004(E) compliant interface.
 
-The minimal required interface is implemented by the IEEE488 class. Optional
+The minimal required interface is implemented by the IEC60488 class. Optional
 command groups a provided by mixin classes. They should not be used on their
 own.
 
 Usage::
 
-    from slave.ieee488 import IEEE488, PowerOn
+    from slave.IEC60488 import IEC60488, PowerOn
 
-    class CustomInstrument(IEEE488, PowerOn):
-        '''A custom instrument compliant with the IEEE Std 488.2-1992,
+    class CustomInstrument(IEC60488, PowerOn):
+        '''A custom instrument compliant with the IEC 60488-2:2004(E),
         supporting the optional PowerOn commands.
         '''
         def __init__(self, connection):
@@ -62,8 +62,9 @@ def __construct_register(reg, default_reg):
     return x
 
 
-class IEEE488(InstrumentBase):
-    """The IEEE488 class implements a IEEE Std 488.2-1992 compliant base class.
+class IEC60488(InstrumentBase):
+    """The IEC60488 class implements a IEC 60488-2:2004(E) compliant base
+    class.
 
     :param connection: A connection object.
     :param esb: A dictionary mapping the 8 bit standard event status register.
@@ -83,32 +84,32 @@ class IEEE488(InstrumentBase):
         following tuple
         `(<manufacturer>, <model>, <serial number>, <firmware level>)`.
 
-    A IEEE Std 488.2-1992 compliant interface must implement the following
+    A IEC 60488-2:2004(E) compliant interface must implement the following
     status reporting commands:
 
-    * `*CLS` - See IEEE Std 488.2-1992 section 10.3
-    * `*ESE` - See IEEE Std 488.2-1992 section 10.10
-    * `*ESE?` - See IEEE Std 488.2-1992 section 10.11
-    * `*ESR` - See IEEE Std 488.2-1992 section 10.12
-    * `*SRE` - See IEEE Std 488.2-1992 section 10.34
-    * `*SRE?` - See IEEE Std 488.2-1992 section 10.35
-    * `*STB?` - See IEEE Std 488.2-1992 section 10.36
+    * `*CLS` - See IEC 60488-2:2004(E) section 10.3
+    * `*ESE` - See IEC 60488-2:2004(E) section 10.10
+    * `*ESE?` - See IEC 60488-2:2004(E) section 10.11
+    * `*ESR` - See IEC 60488-2:2004(E) section 10.12
+    * `*SRE` - See IEC 60488-2:2004(E) section 10.34
+    * `*SRE?` - See IEC 60488-2:2004(E) section 10.35
+    * `*STB?` - See IEC 60488-2:2004(E) section 10.36
 
     In addition, the following internal operation common commands are required:
 
-    * `*IDN?` - See IEEE Std 488.2-1992 section 10.14
-    * `*RST` - See IEEE Std 488.2-1992 section 10.32
-    * `*TST?` - See IEEE Std 488.2-1992 section 10.38
+    * `*IDN?` - See IEC 60488-2:2004(E) section 10.14
+    * `*RST` - See IEC 60488-2:2004(E) section 10.32
+    * `*TST?` - See IEC 60488-2:2004(E) section 10.38
 
     Furthermore the following synchronisation commands are required:
 
-    * `*OPC` - See IEEE Std 488.2-1992 section 10.18
-    * `*OPC?` - See IEEE Std 488.2-1992 section 10.19
-    * `*WAI` - See IEEE Std 488.2-1992 section 10.39
+    * `*OPC` - See IEC 60488-2:2004(E) section 10.18
+    * `*OPC?` - See IEC 60488-2:2004(E) section 10.19
+    * `*WAI` - See IEC 60488-2:2004(E) section 10.39
 
     """
     def __init__(self, connection, esb=None, stb=None, *args, **kw):
-        super(IEEE488, self).__init__(connection, *args, **kw)
+        super(IEC60488, self).__init__(connection, *args, **kw)
         self._esb = esb = __construct_register(esb, EVENT_STATUS_BYTE)
         self._stb = stb = __construct_register(stb, STATUS_BYTE)
 
@@ -158,13 +159,13 @@ class PowerOn(object):
         serial poll enable registers will retain their status when power is
         restored to the device and will be cleared if it is set to `True`.
 
-    .. note:: This is a mixin class designed to work with the IEEE488 class
+    .. note:: This is a mixin class designed to work with the IEC60488 class
 
-    The IEEE Std 488.2-1992 defines the following optional power-on common
+    The IEC 60488-2:2004(E) defines the following optional power-on common
     commands:
 
-    * `*PSC` - See IEEE Std 488.2-1992 section 10.25
-    * `*PSC?` - See IEEE Std 488.2-1992 section 10.26
+    * `*PSC` - See IEC 60488-2:2004(E) section 10.25
+    * `*PSC?` - See IEC 60488-2:2004(E) section 10.26
 
     """
     def __init__(self, *args, **kw):
@@ -183,14 +184,14 @@ class ParallelPoll(object):
     :ivar parallel_poll_enable: A dictionary representing the 16 bit parallel
         poll enable register.
 
-    .. note:: This is a mixin class designed to work with the IEEE488 class.
+    .. note:: This is a mixin class designed to work with the IEC60488 class.
 
-    The IEEE Std 488.2-1992 defines the following optional parallel poll common
+    The IEC 60488-2:2004(E) defines the following optional parallel poll common
     commands:
 
-    * `*IST?` - See IEEE Std 488.2-1992 section 10.15
-    * `*PRE` - See IEEE Std 488.2-1992 section 10.23
-    * `*PRE?` - See IEEE Std 488.2-1992 section 10.24
+    * `*IST?` - See IEC 60488-2:2004(E) section 10.15
+    * `*PRE` - See IEC 60488-2:2004(E) section 10.23
+    * `*PRE?` - See IEC 60488-2:2004(E) section 10.24
 
     These are mandatory for devices implementing the PP1 subset.
 
@@ -214,13 +215,13 @@ class ResourceDescription(object):
 
         .. note:: Writing does not perform any validation.
 
-    .. note:: This is a mixin class designed to work with the IEEE488 class.
+    .. note:: This is a mixin class designed to work with the IEC60488 class.
 
-    The IEEE Std 488.2-1992 defines the following optional resource description
+    The IEC 60488-2:2004(E) defines the following optional resource description
     common commands:
 
-    * `*RDT` - See IEEE Std 488.2-1992 section 10.30
-    * `*RDT?` - See IEEE Std 488.2-1992 section 10.31
+    * `*RDT` - See IEC 60488-2:2004(E) section 10.30
+    * `*RDT?` - See IEC 60488-2:2004(E) section 10.31
 
     """
     def __init__(self, *args, **kw):
@@ -235,13 +236,13 @@ class ProtectedUserData(object):
         unique to the device, such as calibration date, usage time,
         environmental conditions and inventory control numbers.
 
-    .. note:: This is a mixin class designed to work with the IEEE488 class.
+    .. note:: This is a mixin class designed to work with the IEC60488 class.
 
-    The IEEE Std 488.2-1992 defines the following optional protected user data
+    The IEC 60488-2:2004(E) defines the following optional protected user data
     commands:
 
-    * `*RDT` - See IEEE Std 488.2-1992 section 10.27
-    * `*RDT?` - See IEEE Std 488.2-1992 section 10.28
+    * `*RDT` - See IEC 60488-2:2004(E) section 10.27
+    * `*RDT?` - See IEC 60488-2:2004(E) section 10.28
 
     """
     def __init__(self, *args, **kw):
@@ -256,11 +257,11 @@ class Calibration(object):
         unique to the device, such as calibration date, usage time,
         environmental conditions and inventory control numbers.
 
-    .. note:: This is a mixin class designed to work with the IEEE488 class.
+    .. note:: This is a mixin class designed to work with the IEC60488 class.
 
-    The IEEE Std 488.2-1992 defines the following optional calibration command:
+    The IEC 60488-2:2004(E) defines the following optional calibration command:
 
-    * `*CAL?` - See IEEE Std 488.2-1992 section 10.2
+    * `*CAL?` - See IEC 60488-2:2004(E) section 10.2
 
     """
     def __init__(self, *args, **kw):
@@ -284,11 +285,11 @@ class Trigger(object):
         unique to the device, such as calibration date, usage time,
         environmental conditions and inventory control numbers.
 
-    .. note:: This is a mixin class designed to work with the IEEE488 class.
+    .. note:: This is a mixin class designed to work with the IEC60488 class.
 
-    The IEEE Std 488.2-1992 defines the following optional trigger command:
+    The IEC 60488-2:2004(E) defines the following optional trigger command:
 
-    * `*TRG` - See IEEE Std 488.2-1992 section 10.37
+    * `*TRG` - See IEC 60488-2:2004(E) section 10.37
 
     It is mandatory for devices implementing the DT1 subset.
 
@@ -308,14 +309,14 @@ class TriggerMacro(object):
 
     .. note::
 
-        This is a mixin class designed to work with the IEEE488 class
+        This is a mixin class designed to work with the IEC60488 class
         and the Trigger mixin.
 
-    The IEEE Std 488.2-1992 defines the following optional trigger macro
+    The IEC 60488-2:2004(E) defines the following optional trigger macro
     commands:
 
-    * `*DDT` - See IEEE Std 488.2-1992 section 10.4
-    * `*DDT?` - See IEEE Std 488.2-1992 section 10.5
+    * `*DDT` - See IEC 60488-2:2004(E) section 10.4
+    * `*DDT?` - See IEC 60488-2:2004(E) section 10.5
 
     """
     def __init__(self, *args, **kw):
@@ -328,16 +329,16 @@ class Macro(object):
 
     :ivar macro_commands_enabled: Enables or disables the expansion of macros.
 
-    .. note::This is a mixin class designed to work with the IEEE488 class.
+    .. note::This is a mixin class designed to work with the IEC60488 class.
 
-    The IEEE Std 488.2-1992 defines the following optional macro commands:
+    The IEC 60488-2:2004(E) defines the following optional macro commands:
 
-    * `*DMC` - See IEEE Std 488.2-1992 section 10.7
-    * `*EMC` - See IEEE Std 488.2-1992 section 10.8
-    * `*EMC?` - See IEEE Std 488.2-1992 section 10.9
-    * `*GMC?` - See IEEE Std 488.2-1992 section 10.13
-    * `*LMC?` - See IEEE Std 488.2-1992 section 10.16
-    * `*PMC` - See IEEE Std 488.2-1992 section 10.22
+    * `*DMC` - See IEC 60488-2:2004(E) section 10.7
+    * `*EMC` - See IEC 60488-2:2004(E) section 10.8
+    * `*EMC?` - See IEC 60488-2:2004(E) section 10.9
+    * `*GMC?` - See IEC 60488-2:2004(E) section 10.13
+    * `*LMC?` - See IEC 60488-2:2004(E) section 10.16
+    * `*PMC` - See IEC 60488-2:2004(E) section 10.22
 
     """
     def __init__(self, *args, **kw):
@@ -385,12 +386,12 @@ class ObjectIdentification(object):
 
     :ivar object_identification: Identifies reportable device options.
 
-    .. note::This is a mixin class designed to work with the IEEE488 class.
+    .. note::This is a mixin class designed to work with the IEC60488 class.
 
-    The IEEE Std 488.2-1992 defines the following optional object
+    The IEC 60488-2:2004(E) defines the following optional object
     identification command:
 
-    * `*OPT?` - See IEEE Std 488.2-1992 section 10.20
+    * `*OPT?` - See IEC 60488-2:2004(E) section 10.20
 
     """
     def __init__(self, *args, **kw):
@@ -401,13 +402,13 @@ class ObjectIdentification(object):
 class StoredSetting(object):
     """A mixin class, implementing the optional stored setting commands.
 
-    .. note::This is a mixin class designed to work with the IEEE488 class.
+    .. note::This is a mixin class designed to work with the IEC60488 class.
 
-    The IEEE Std 488.2-1992 defines the following optional stored setting
+    The IEC 60488-2:2004(E) defines the following optional stored setting
     commands:
 
-    * `*RCL` - See IEEE Std 488.2-1992 section 10.29
-    * `*SAV` - See IEEE Std 488.2-1992 section 10.33
+    * `*RCL` - See IEC 60488-2:2004(E) section 10.29
+    * `*SAV` - See IEC 60488-2:2004(E) section 10.33
 
     """
     def __init__(self, *args, **kw):
@@ -425,11 +426,11 @@ class StoredSetting(object):
 class Learn(object):
     """A mixin class, implementing the optional learn command.
 
-    .. note::This is a mixin class designed to work with the IEEE488 class.
+    .. note::This is a mixin class designed to work with the IEC60488 class.
 
-    The IEEE Std 488.2-1992 defines the following optional learn command:
+    The IEC 60488-2:2004(E) defines the following optional learn command:
 
-    * `*LRN?` - See IEEE Std 488.2-1992 section 10.17
+    * `*LRN?` - See IEC 60488-2:2004(E) section 10.17
 
     """
     def __init__(self, *args, **kw):
@@ -449,13 +450,13 @@ class Learn(object):
 class SystemConfiguration(object):
     """A mixin class, implementing the optional system configuration commands.
 
-    .. note::This is a mixin class designed to work with the IEEE488 class.
+    .. note::This is a mixin class designed to work with the IEC60488 class.
 
-    The IEEE Std 488.2-1992 defines the following optional system configuration
+    The IEC 60488-2:2004(E) defines the following optional system configuration
     commands:
 
-    * `*AAD` - See IEEE Std 488.2-1992 section 10.1
-    * `*DLF` - See IEEE Std 488.2-1992 section 10.6
+    * `*AAD` - See IEC 60488-2:2004(E) section 10.1
+    * `*DLF` - See IEC 60488-2:2004(E) section 10.6
 
     """
     def __init__(self, *args, **kw):
@@ -473,12 +474,12 @@ class SystemConfiguration(object):
 class PassingControl(object):
     """A mixin class, implementing the optional passing control command.
 
-    .. note::This is a mixin class designed to work with the IEEE488 class.
+    .. note::This is a mixin class designed to work with the IEC60488 class.
 
-    The IEEE Std 488.2-1992 defines the following optional passing control
+    The IEC 60488-2:2004(E) defines the following optional passing control
     command:
 
-    * `*PCB` - See IEEE Std 488.2-1992 section 10.21
+    * `*PCB` - See IEC 60488-2:2004(E) section 10.21
 
     """
     def __init__(self, *args, **kw):
