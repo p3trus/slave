@@ -5,7 +5,7 @@ First steps
 -----------
 
 Implementing a custom device driver is straight forward. The code below shows a
-simple class  supporting a single query and writeable command.
+simple class supporting a single query and writeable command.
 ::
 
     from slave.core import Command, InstrumentBase
@@ -16,13 +16,53 @@ simple class  supporting a single query and writeable command.
             super(CustomDevice, self).__init__(connection) # Don't forget this!
             self.cmd = Command('QUERY?', 'WRITE', Integer)
 
-The first step is deriving from :class:`~.slave.core.InstrumentBase`. It
+The first step is deriving from :class:`~.InstrumentBase`. It
 applies some magic to redirect attribute read and write access to the 
-:meth:`~.slave.core.Command.query` and :meth:`~.slave.core.Command.write`
-methods of the :class:`~.salve.core.Command` class.
+:meth:`~.Command.query` and :meth:`~.Command.write` methods of the 
+:class:`~.Command` class.
 
 The next step is implementing the commands itself. This is done in the
-`.__init__()` method via the :class:`~.slave.core.Command` class.
+`.__init__()` method via the :class:`~.Command` class.
+
+The Command class
+-----------------
+
+The :class:`~.Command` class is at the heart of slave. It converts
+user input into the appropriate command and parses the response.
+The initializer takes five arguments, these are
+
+ * query
+ * write
+ * type
+ * connection
+ * cfg
+
+The usage is best shown by a simple example.
+::
+
+    from slave.core import Command, InstrumentBase
+    from slave.types import Integer
+
+    class CustomDevice(InstrumentBase):
+        def __init__(self, connection):
+            super(CustomDevice, self).__init__(connection)
+            # A read only command, returning an integer.
+            self.readable = Command('QUERY?', type=Integer())
+            # A write only command, taking an integer.
+            self.writeable = Command(write='WRITE', type=Integer(min=0, max=10))
+            # A read and writeable command, taking and returning an integer.
+            self.read_and_write = Command('QUERY?', 'WRITE', Integer)
+
+So lets have a look at the readable attribute. 'QUERY?', the first argument of
+the :class:`~.Command`, is the string sent to the instrument. `Integer`
+specifies the return value. It is one of many special classes defined in the
+:mod:`slave.types` module. These are responsible for parsing and validation of
+the input and output. Similarly `writeable` is a write-only attribute, taking
+an integer in the range 0 to 10.
+
+Most of the time you can forget about connection and cfg. When using the
+:class:`~.Command` as an instance variable, the :class:`~.InstrumentBase` base
+class automatically injects the config and the connection object.
 
 IEC 60488-2
 -----------
@@ -55,7 +95,7 @@ Synchronisation commands
  * `*WAI` - Wait to continue [#]_.
 
 To ease development, these are implemented in the
-:class:`~.slave.ieee488.IEEE488` base class. To implement a `IEC 60488-2`_
+:class:`~.IEEE488` base class. To implement a `IEC 60488-2`_
 compliant device driver, you only have to inherit from it and implement the
 device specific commands, e.g::
 
@@ -72,12 +112,17 @@ Optional Commands
 ^^^^^^^^^^^^^^^^^
 
 Despite the required commands, there are several optional command groups
-available. The standard requires that if one command is used, it's complete
+defined. The standard requires that if one command is used, it's complete
 group must be implemented. The optional commands are
 
 Power on common commands
  * `*PSC` - Set the power-on status clear bit [#]_.
  * `*PSC?` - Query the power-on status clear bit [#]_.
+
+Parallel poll common commands
+ * `*IST?` - Query the individual status message bit [#]_.
+ * `*PRE` - Set the parallel poll enable register [#]_.
+ * `*PRE?` - Query the parallel poll enable register [#]_.
 
 The optional command groups are implemented as Mixin classes. A device
 supporting required `IEC 60488-2`_ commands as well as the optional Power-on
@@ -98,7 +143,7 @@ commands is implemented as follows::
 .. [#] IEC 60488-2:2004(E) section 10.34
 .. [#] IEC 60488-2:2004(E) section 10.35
 .. [#] IEC 60488-2:2004(E) section 10.36
-.. [#] IEC 60488-2:2004(E) section 10.14	
+.. [#] IEC 60488-2:2004(E) section 10.14
 .. [#] IEC 60488-2:2004(E) section 10.32
 .. [#] IEC 60488-2:2004(E) section 10.38
 .. [#] IEC 60488-2:2004(E) section 10.18
@@ -106,5 +151,8 @@ commands is implemented as follows::
 .. [#] IEC 60488-2:2004(E) section 10.39
 .. [#] IEC 60488-2:2004(E) section 10.25
 .. [#] IEC 60488-2:2004(E) section 10.26
+.. [#] IEC 60488-2:2004(E) section 10.15
+.. [#] IEC 60488-2:2004(E) section 10.23
+.. [#] IEC 60488-2:2004(E) section 10.24
 
 .. _IEC 60488-2: http://dx.doi.org/10.1109/IEEESTD.2004.95390
