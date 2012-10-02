@@ -100,9 +100,9 @@ compliant device driver, you only have to inherit from it and implement the
 device specific commands, e.g::
 
     from slave.core import Command
-    from slave.ieee488 import IEEE488
+    from slave.iec60488 import IEC60488
 
-    class CustomDevice(IEEE488):
+    class CustomDevice(IEC60488):
         pass
 
 This is everything you need to do to implement the required `IEC 60488-2`_
@@ -172,9 +172,9 @@ supporting required `IEC 60488-2`_ commands as well as the optional Power-on
 commands is implemented as follows::
 
     from slave.core import Command
-    from slave.ieee488 import IEEE488, PowerOn
+    from slave.iec60488 import IEC60488, PowerOn
 
-    class CustomDevice(IEEE488, PowerOn):
+    class CustomDevice(IEC60488, PowerOn):
         pass
 
 ----
