@@ -25,10 +25,10 @@ slave Package
     :undoc-members:
     :show-inheritance:
 
-:mod:`ieee488` Module
----------------------
+:mod:`iec60488` Module
+----------------------
 
-.. automodule:: slave.ieee488
+.. automodule:: slave.iec60488
     :members:
     :undoc-members:
     :show-inheritance:
