@@ -81,6 +81,7 @@ class Command(object):
 
     """
     _default_cfg = {
+        'program header prefix': '',
         'program header separator': ' ',
         'program data separator': ',',
         'response header separator': ' ',
@@ -169,16 +170,16 @@ class Command(object):
 
         The following algorithm is used to construct the program message unit::
 
-            +---------+    +-----------+    +---------+
-            | Program |    | Program   |    | Program |
-            | Header  +--->| Header    +--->| Data    +-+->
-            +---------+    | Separator | ^  +---------+ |
-                           +-----------+ |              |
-                                         | +-----------+|
-                                         | | Program   ||
-                                         +-+ Data      <+
-                                           | Separator |
-                                           +-----------+
+            +---------+    +---------+    +-----------+    +---------+
+            | Program |    | Program |    | Program   |    | Program |
+            | Header  |--->| Header  +--->| Header    +--->| Data    +-+->
+            | Prefix  |    +---------+    | Separator | ^  +---------+ |
+            +---------+                   +-----------+ |              |
+                                                        | +-----------+|
+                                                        | | Program   ||
+                                                        +-+ Data      <+
+                                                          | Separator |
+                                                          +-----------+
 
         """
         if (not isinstance(datas, collections.Sequence) or
@@ -187,10 +188,11 @@ class Command(object):
         if len(datas) != len(types):
             raise ValueError('Number of datas must match the number of types.')
 
+        php = self._cfg['program header prefix']
         phs = self._cfg['program header separator']
         pds = self._cfg['program data separator']
         program_data = [t.dump(v) for v, t in izip(datas, types)]
-        return header + phs + pds.join(program_data)
+        return php + header + phs + pds.join(program_data)
 
     def write(self, datas=None):
         """Generates and sends a command message unit.

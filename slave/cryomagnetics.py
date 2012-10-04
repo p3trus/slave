@@ -3,7 +3,7 @@
 # E21, (c) 2012, see AUTHORS.  Licensed under the GNU GPL.
 from slave.core import Command, InstrumentBase
 from slave.iec60488 import IEC60488
-from slave.types import Boolean, Float, Mapping, Register, Set, String
+from slave.types import Boolean, Float, Mapping, Set, String
 
 
 #: A list with all valid shim identifiers.
@@ -76,6 +76,9 @@ class MPS4G(IEC60488):
     """Represents the Cryomagnetics, inc. 4G Magnet Power Supply.
 
     :param connection: A connection object.
+    :param channel: This parameter is used to set the MPS4G in single channel
+        mode. Valid entries are `None`, `1` and `2`.
+
     :ivar channel: The selected channel.
     :ivar error: The error response mode of the usb interface.
     :ivar current: The magnet current.Queriing returns a value, unit tuple.
@@ -110,7 +113,7 @@ class MPS4G(IEC60488):
     :ivar sweep_status: A string representing the current sweep status.
 
     """
-    def __init__(self, connection, shims=None):
+    def __init__(self, connection, shims=None, channel=None):
         stb = {
             0: 'sweep mode active',
             1: 'standby mode active',
@@ -118,14 +121,27 @@ class MPS4G(IEC60488):
             3: 'power module failure',
             7: 'menu mode',
         }
-        super(MPS4G, self).__init__(connection, stb=stb)
+        if not channel in (None, 1, 2):
+            raise ValueError('Invalid channel. Must be either None, 1 or 2.')
+        if channel:
+            # if single channel mode is required, set the channel on every
+            # command to avoid errors.
+            cfg = {'program header prefix': 'CHAN {0};'.format(channel)}
+        else:
+            cfg = {}
+        super(MPS4G, self).__init__(connection, stb=stb, cfg=cfg)
         if shims:
             if isinstance(shims, basestring):
                 shims = [shims]
             for shim in list(shims):
                 setattr(self, str(shim), Shim(connection, shim))
 
-        self.channel = Command('CHAN?', 'CHAN', Set(1, 2))
+        if channel:
+            # Channel is read only if channel is fixed
+            self.channel = Command(('CHAN?', Set(1, 2)))
+        else:
+            self.channel = Command('CHAN?', 'CHAN', Set(1, 2))
+
         self.error = Command('ERROR?', 'ERROR', Boolean)
         self.current = Command(('IMAG?', [Float, String]),
                                ('IMAG', Float))
