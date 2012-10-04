@@ -8,7 +8,8 @@ temperature controller.
 """
 
 from slave.core import Command, InstrumentBase
-from slave.types import Boolean, Enum, Float, Integer, Register, Set, String
+from slave.iec60488 import IEC60488
+from slave.types import Boolean, Enum, Float, Integer, Set
 
 
 __all__ = ['scanner', 'LS340']
@@ -219,7 +220,7 @@ def scanner(model):
     return Scanner(channels[model])
 
 
-class LS340(InstrumentBase):
+class LS340(IEC60488):
     """
     Represents a Lakeshore model LS340 temperature controller.
 
@@ -265,9 +266,6 @@ class LS340(InstrumentBase):
         self.b = Input(connection, 'B')
         self.output1 = Output(connection, 1)
         self.output2 = Output(connection, 2)
-        # Common Commands
-        # ===============
-        self.idn = Command(('*IDN?', [String, String, String, String]))
         # Control Commands
         # ================
         self.loop1 = Loop(connection, 1)
@@ -288,28 +286,6 @@ class LS340(InstrumentBase):
         # =====================
         self.logging = Command('LOG?', 'LOG', Boolean)
 
-    def clear(self):
-        """
-        Clears the interface.
-
-        The clear member function clears the status byte register, the standard
-        event status register and all pending operations.
-        """
-        self.connection.write('*CLS')
-
     def clear_alarm(self):
         """Clears the alarm status for all inputs."""
         self.connection.write('ALMRST')
-
-    def reset(self):
-        """Resets the lock-in to power up settings."""
-        self.connection.write('*RST')
-
-    def test(self):
-        """Performs a self test operation.
-
-        :returns: A boolean value, `True` if all tests passed and `False` if an
-            error occurred.
-
-        """
-        return bool(int(self.connection.ask('*TST')))
