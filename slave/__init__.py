@@ -13,7 +13,7 @@ try:
         warnings.warn('Autocall is enabled. Correct execution can not be '
                       'guaranteed. To turn it off call ipython with '
                       '-autocall 0.', RuntimeWarning)
-except NameError:
+except (NameError, AttributeError):
     pass
 
 del warnings
