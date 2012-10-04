@@ -4,6 +4,9 @@
 
 """
 The sr830 module implements an interface for the Stanford Research SR830.
+
+The SR830 lock in amplifier is an IEEE Std. 488-2 1987 compliant device.
+
 """
 
 from slave.core import Command, InstrumentBase
@@ -34,7 +37,7 @@ class Status(InstrumentBase):
             w = write + ' {0},'.format(int(v)) if write else None
             name = k.replace(' ', '_')
             setattr(self, name, Command(q, w, Boolean))
-            self.value = Command(query, write, Register(register))
+        self.value = Command(query, write, Register(register))
 
     def __call__(self):
         """returns self.value."""
@@ -333,7 +336,7 @@ class SR830(InstrumentBase):
         # Interface Commands
         # ==================
         #: Queries the device identification string
-        self.idn = Command('*IDN?', type=[String, String, String, String])
+        self.idn = Command('*IDN?', type_=[String, String, String, String])
         #: Queries or sets the state of the frontpanel.
         self.state = Command('LOCL?', 'LOCL',
                              Enum('local', 'remote', 'lockout'))
@@ -423,15 +426,15 @@ class SR830(InstrumentBase):
           and 'CH2'. If none are given 'X' and 'Y' are used.
 
         """
-        params = {'X': 1, 'Y': 2, 'R': 3, 'theta': 4, 'AuxIn1': 5, 'AuxIn2': 6,
+        params = {'X': 1, 'Y': 2, 'R': 3, 'Theta': 4, 'AuxIn1': 5, 'AuxIn2': 6,
                   'AuxIn3': 7, 'AuxIn4': 8, 'Ref': 9, 'CH1': 10, 'CH2': 11}
         if not args:
             args = ['X', 'Y']
         if len(args) > 6:
             raise ValueError('Too many parameters (max: 6).')
-        cmd = 'SNAP? ' + ','.join(map(lambda x: params[x], args))
+        cmd = 'SNAP? ' + ','.join(map(lambda x: str(params[x]), args))
         result = self.connection.ask(cmd)
-        return map(float, result.strip(','))
+        return map(float, result.split(','))
 
     def clear(self):
         """Clears all status registers."""

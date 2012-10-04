@@ -32,8 +32,14 @@ Requirements
 
 Documentation
 -------------
-Slave is fully documented. To build e.g. the html documentation, navigate into
+
+Slave is fully documented. The latest stable documentation can be found 
+[here][stable], the current development documentation [here][develop]. 
+To build the documentation manually, e.g. the html documentation, navigate into
 the `/doc/` subfolder and execute `make html`.
+
+  [stable]: http://slave.readthedocs.org/en/latest/
+  [develop]: http://slave.readthedocs.org/en/develop/
 
 Licensing
 ---------

@@ -6,7 +6,7 @@ import unittest
 import re
 
 from slave.core import Command, InstrumentBase
-from slave.types import String, Float, Integer, Mapping
+from slave.types import Boolean, String, Float, Integer, Mapping
 
 
 class MockConnection(object):
@@ -15,7 +15,8 @@ class MockConnection(object):
             'STRING': '1337',
             'INTEGER': 1337,
             'FLOAT': 1.337,
-            'MAPPING': 1337
+            'MAPPING': 1337,
+            'FN': '0',
         }
 
     def ask(self, cmd):
@@ -23,9 +24,10 @@ class MockConnection(object):
 
     def write(self, cmd):
         tokens = re.split('[\s,]+', cmd)
+        print tokens
         key = tokens.pop(0)
         # TODO check if args are valid
-        self._state[key] = ','.join(tokens)
+        self._state[key] = ','.join(tokens) or '1'
 
 
 class MockInstrument(InstrumentBase):
@@ -39,6 +41,13 @@ class MockInstrument(InstrumentBase):
         self.read_only = Command(('STRING?', String))
         self.write_only = Command(write=('STRING', String))
 
+    def write_fn(self):
+        cmd = Command(write='FN', connection=self.connection)
+        cmd.write()
+
+    def ask_fn(self):
+        cmd = Command(('FN?', Boolean), connection=self.connection)
+        return cmd.query()
 
 class TestCommand(unittest.TestCase):
     def setUp(self):
@@ -50,6 +59,7 @@ class TestCommand(unittest.TestCase):
         self.assertEqual(state['INTEGER'], self.instrument.integer)
         self.assertEqual(state['FLOAT'], self.instrument.float)
         self.assertEqual('elite', self.instrument.mapping)
+        self.assertEqual(False, self.instrument.ask_fn())
 
         # Test writing
         self.instrument.string = value = '1338'
@@ -60,6 +70,9 @@ class TestCommand(unittest.TestCase):
         self.assertEqual(value, self.instrument.float)
         self.instrument.mapping = value = 'notelite'
         self.assertEqual(value, self.instrument.mapping)
+
+        self.instrument.write_fn()
+        self.assertEqual(True, self.instrument.ask_fn())
 
         # Try to write read only value
         with self.assertRaises(AttributeError):

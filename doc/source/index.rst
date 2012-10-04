@@ -3,19 +3,22 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-Welcome to Slave's documentation!
-=================================
+################
+Welcome to Slave
+################
 
-This is the documentation of the Slave library. It provides an interface to
-several scientific instruments and simplifies the implementation of new ones.
+This is the documentation of the Slave library. It's main goal is to simplify
+the communication with scientific instruments.
 
-Contents:
+Content
+=======
 
 .. toctree::
    :maxdepth: 2
 
    intro
-
+   custom_device
+   slave
 
 Indices and tables
 ==================

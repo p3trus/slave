@@ -17,6 +17,22 @@ slave Package
     :undoc-members:
     :show-inheritance:
 
+:mod:`cryomagnetics` Module
+---------------------------
+
+.. automodule:: slave.cryomagnetics
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+:mod:`iec60488` Module
+----------------------
+
+.. automodule:: slave.iec60488
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 :mod:`ls340` Module
 -------------------
 
