@@ -413,14 +413,24 @@ class StoredSetting(object):
     """
     def __init__(self, *args, **kw):
         super(StoredSetting, self).__init__(*args, **kw)
+        self.__recall = Command(write=('*RCL', Integer(min=0)))
+        self.__save = Command(write=('*SAV', Integer(min=0)))
 
-    def recall(self):
-        """Restores the current settings from a copy stored in local memory."""
-        self.connection.write('*RCL')
+    def recall(self, idx):
+        """Restores the current settings from a copy stored in local memory.
 
-    def save(self):
-        """Stores the current settings of a device in local memory."""
-        self.connection.write('*SAV')
+        :param idx: Specifies the memory slot.
+
+        """
+        self.__recall = idx
+
+    def save(self, idx):
+        """Stores the current settings of a device in local memory.
+
+        :param idx: Specifies the memory slot.
+
+        """
+        self.__save = idx
 
 
 class Learn(object):
