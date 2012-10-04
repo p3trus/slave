@@ -303,3 +303,15 @@ class LS340(IEC60488):
     def clear_alarm(self):
         """Clears the alarm status for all inputs."""
         self.connection.write('ALMRST')
+
+    def _factory_default(self, confirm=False):
+        """Resets the device to factory defaults.
+
+        :param confirm: This function should not normally be used, to prevent
+            accidental resets, a confirm value of `True` must be used.
+
+        """
+        if confirm is True:
+            self.connection.write('DFLT 99')
+        else:
+            raise ValueError('Reset to factory defaults was not confirmed.')
