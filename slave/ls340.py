@@ -257,8 +257,19 @@ class LS340(IEC60488):
     :ivar loop2: Am instance of the Loop class, representing the second control
         loop.
     :ivar logging: A Boolean value, enabling or disabling data logging.
+    :ivar program_status: The status of the currently running program
+        represented by the following tuple: *(<program>, <status>)*. If
+        program is zero, it means that no program is running.
 
     """
+    PROGRAM_STATUS = [
+        'No errors',
+        'Too many call commands',
+        'Too many repeat commands',
+        'Too many end repeat commands',
+        'The control channel setpoint is not in temperature',
+    ]
+
     def __init__(self, connection, scanner=None):
         super(LS340, self).__init__(connection)
         self.scanner = scanner
@@ -285,6 +296,9 @@ class LS340(IEC60488):
         # Data Logging Commands
         # =====================
         self.logging = Command('LOG?', 'LOG', Boolean)
+
+        self.program_status = Command(('PGMRUN?',
+                                       [Integer, Enum(self.PROGRAM_STATUS)]))
 
     def clear_alarm(self):
         """Clears the alarm status for all inputs."""
