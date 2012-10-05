@@ -265,9 +265,13 @@ class LS340(IEC60488):
     :ivar key_status: A string representing the keypad status, either
         `'no key pressed'` or `'key pressed'`.
     :ivar revision: A tuple representing the revision information.
-        *(<master rev date>, <master rev number>, <master serial number>,
-        <switch setting SW1>, <input rev date>, <input rev number>,*
-        <option ID>, <option rev date>, <option rev number>)*.
+        *(<master rev date>, <master rev number>, <master serial number>,*
+        *<switch setting SW1>, <input rev date>, <input rev number>,*
+        *<option ID>, <option rev date>, <option rev number>)*.
+    :ivar high_relay_status: The status of the high relay, either `'off'` or
+        `'on'`.
+    :ivar low_relay_status: The status of the high relay, either `'off'` or
+        `'on'`.
 
     """
     PROGRAM_STATUS = [
@@ -303,6 +307,8 @@ class LS340(IEC60488):
                             Enum('local', 'remote', 'lockout', start=1))
         self.key_status = Command(('KEYST?',
                                    Enum('no key pressed', 'key pressed')))
+        self.high_relay_status = Command(('RELAYST? 1', Enum('off', 'on')))
+        self.low_relay_status = Command(('RELAYST? 2', Enum('off', 'on')))
         self.revision = Command(('REV?', [Integer for _ in range(9)]))
         # Data Logging Commands
         # =====================
