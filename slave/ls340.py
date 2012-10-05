@@ -315,6 +315,8 @@ class LS340(IEC60488):
     :ivar low_relay_status: The status of the high relay, either `'off'` or
         `'on'`.
     :ivar heater: An instance of the :class:`~.Heater` class.
+    :ivar lock: A tuple representing the keypad lock-out and the lock-out code.
+        *(<off/on>, <code>)*.
 
     """
     PROGRAM_STATUS = [
@@ -361,6 +363,8 @@ class LS340(IEC60488):
         self.high_relay_status = Command(('RELAYST? 1', Enum('off', 'on')))
         self.low_relay_status = Command(('RELAYST? 2', Enum('off', 'on')))
         self.revision = Command(('REV?', [Integer for _ in range(9)]))
+        self.lock = Command('LOCK?', 'LOCK',
+                            [Boolean, Integer(min=0, max=999)])
         # Data Logging Commands
         # =====================
         self.logging = Command('LOG?', 'LOG', Boolean)
