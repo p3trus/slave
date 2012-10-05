@@ -76,6 +76,15 @@ class Input(InstrumentBase):
     :ivar linear: The linear equation data.
     :ivar linear_status: The linear status register.
     :ivar reading_status: The reading status register.
+    :ivar linear_equation: The input linear equation parameters.
+        *(<equation>, <m>, <x source>, <b source>, <b>)*, where
+        * *<equation>* is either `'slope-intercept'` or `'point-slope'`,
+          meaning 'y = mx + b' or 'y = m(x + b)'.
+        * *<m>* The slope.
+        * *<x source>* The input data to use, either 'kelvin', 'celsius' or
+          'sensor units'.
+        * *<b source>* Either 'value', '+sp1', '-sp1', '+sp2' or '-sp2'.
+        * *<b>* The b value if *<b source>* is set to 'value'.
 
     """
     READING_STATUS = {
@@ -125,6 +134,15 @@ class Input(InstrumentBase):
                                         '1V', '2.5V', '5V', '7.5V', start=0)])
         self.kelvin = Command(('KRDG? {0}'.format(name), Float))
         self.linear = Command(('LDAT? {0}'.format(name), Float))
+        leq = [
+            Enum('slope-intercept', 'point-slope'),
+            Float,  # m value
+            Enum('kelvin', 'celsius', 'sensor units', start=1),
+            Enum('value', '+sp1', '-sp1', '+sp2', '-sp2', start=1),
+            Float,  # b value
+        ]
+        self.linear_equation('LINEAR? {0}'.format(name),
+                             'LINEAR {0}'.format(name), leq)
         # TODO use register instead of Integer
         self.linear_status = Command(('LDATST? {0}'.format(name), Integer))
         rds = dict((v, k) for k, v in self.READING_STATUS.items())
