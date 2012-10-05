@@ -171,6 +171,19 @@ class Output(InstrumentBase):
         self.value = Command(('AOUT? {0}'.format(channel), Float))
 
 
+class Zone(InstrumentBase):
+    """A LS340 control loop zone.
+
+    :param connection: A connection object.
+    :param loop: The index of the loop.
+    :param idx: The zone index.
+
+    """
+    def __init__(self, connection, loop, idx):
+        super(Zone, self).__init__(connection)
+        
+
+
 class Loop(InstrumentBase):
     """Represents a LS340 control loop.
 
@@ -190,6 +203,9 @@ class Loop(InstrumentBase):
          * *<rate>* Specifies the ramping rate in kelvin/minute.
     :ivar ramping: The ramping status. `True` if ramping and `False` otherwise.
     :ivar setpoint: The control-loop setpoint in its configured units.
+    :ivar zonex: There are 11 zones, zone1 is the first. The zone attribute
+        represents the control loop zone table parameters.
+        *(<top>, <p>, <i>, <d>, <mout>, <range>)*.
 
     """
     def __init__(self, connection, idx):
@@ -225,6 +241,19 @@ class Loop(InstrumentBase):
         self.ramping = Command(('RAMPST? {0}'.format(idx), Boolean))
         self.setpoint = Command('SETP? {0}'.format(idx),
                                 'SETP {0}'.format(idx), Float)
+        for z in range(1, 11):
+            type_ = [
+                Float(min=0),  # top value
+                Float(min=0),  # P value
+                Float(min=0),  # I value
+                Float(min=0),  # D value
+                Float(min=0),  # manual output
+                Integer(min=0, max=5),  # heater range
+            ]
+            cmd = Command('ZONE? {0}, {1},'.format(idx, z),
+                          'ZONE {0}, {1},'.format(idx, z),
+                          type_)
+            setattr(self, 'zone{0}'.format(z), cmd)
 
 
 class Scanner(InstrumentBase):
@@ -325,7 +354,6 @@ class LS340(IEC60488):
          * *<EOI enable>* A boolean.
          * *<address>* The IEEE-488.1 address of the device, an integer between
            0 and 30.
-
 
     """
     PROGRAM_STATUS = [
