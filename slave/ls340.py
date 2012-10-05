@@ -73,6 +73,7 @@ class Input(InstrumentBase):
         * *<excitation>* The input excitation.
         * *<range>* The input range.
     :ivar kelvin: The kelvin reading.
+    :ivar sensor_units: The sensor units reading of the input.
     :ivar linear: The linear equation data.
     :ivar linear_status: The linear status register.
     :ivar reading_status: The reading status register.
@@ -133,6 +134,7 @@ class Input(InstrumentBase):
                                         '50mV', '100mV', '250mV', '500mV',
                                         '1V', '2.5V', '5V', '7.5V', start=0)])
         self.kelvin = Command(('KRDG? {0}'.format(name), Float))
+        self.sensor_units = Command(('SRDG? {0}'.format(name), Float))
         self.linear = Command(('LDAT? {0}'.format(name), Float))
         leq = [
             Enum('slope-intercept', 'point-slope'),
@@ -187,19 +189,6 @@ class Output(InstrumentBase):
                                     start=1),
                                Float, Float, Float])
         self.value = Command(('AOUT? {0}'.format(channel), Float))
-
-
-class Zone(InstrumentBase):
-    """A LS340 control loop zone.
-
-    :param connection: A connection object.
-    :param loop: The index of the loop.
-    :param idx: The zone index.
-
-    """
-    def __init__(self, connection, loop, idx):
-        super(Zone, self).__init__(connection)
-        
 
 
 class Loop(InstrumentBase):
