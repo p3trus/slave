@@ -9,7 +9,7 @@ temperature controller.
 
 from slave.core import Command, InstrumentBase
 from slave.iec60488 import IEC60488
-from slave.types import Boolean, Enum, Float, Integer, Set
+from slave.types import Boolean, Enum, Float, Integer, Register, Set
 
 
 __all__ = ['scanner', 'LS340']
@@ -47,8 +47,18 @@ class Input(InstrumentBase):
     :ivar kelvin: The kelvin reading.
     :ivar linear: The linear equation data.
     :ivar linear_status: The linear status register.
+    :ivar reading_status: The reading status register.
 
     """
+    READING_STATUS = {
+                      0: 'invalid reading',
+                      1: 'old reading',
+                      4: 'temp underrange',
+                      5: 'temp overrange',
+                      6: 'units zero',
+                      7: 'units overrange',
+    }
+
     def __init__(self, connection, name):
         super(Input, self).__init__(connection)
         self.name = name = str(name)
@@ -89,6 +99,8 @@ class Input(InstrumentBase):
         self.linear = Command(('LDAT? {0}'.format(name), Float))
         # TODO use register instead of Integer
         self.linear_status = Command(('LDATST? {0}'.format(name), Integer))
+        rds = Register(dict((v, k) for k, v in self.READING_STATUS))
+        self.reading_status = Command(('RDGST? {0}'.format(name), Register()))
 
 
 class Output(InstrumentBase):
