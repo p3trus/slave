@@ -15,6 +15,34 @@ from slave.types import Boolean, Enum, Float, Integer, Register, Set
 __all__ = ['scanner', 'LS340']
 
 
+class Heater(InstrumentBase):
+    """Represents the LS340 heater.
+
+    :param connection: The connection object.
+
+    :ivar output: The heater output in percent.
+    :ivar status: The heater error status.
+    :ivar range: The heater range. An integer between 0 and 5, where 0
+        deactivates the heater.
+
+    """
+    ERROR_STATUS = [
+        'no error',
+        'power supply over voltage',
+        'power supply under voltat',
+        'output digital-to-analog converter error',
+        'current limit digital-to-analog converter error',
+        'open heater load',
+        'heater load less than 10 ohms',
+    ]
+
+    def __init__(self, connection):
+        super(Heater, self).__init__(connection)
+        self.range = Command('RANGE?', 'RANGE', Integer(min=0, max=5))
+        self.output = Command(('HTR?', Float))
+        self.status = Command(('HTRST?', Enum(*self.ERROR_STATUS)))
+
+
 class Input(InstrumentBase):
     """Represents a LS340 input channel.
 
@@ -99,8 +127,9 @@ class Input(InstrumentBase):
         self.linear = Command(('LDAT? {0}'.format(name), Float))
         # TODO use register instead of Integer
         self.linear_status = Command(('LDATST? {0}'.format(name), Integer))
-        rds = Register(dict((v, k) for k, v in self.READING_STATUS))
-        self.reading_status = Command(('RDGST? {0}'.format(name), Register()))
+        rds = dict((v, k) for k, v in self.READING_STATUS.items())
+        self.reading_status = Command(('RDGST? {0}'.format(name),
+                                       Register(rds)))
 
 
 class Output(InstrumentBase):
@@ -265,7 +294,6 @@ class LS340(IEC60488):
         serial number and firmware date in this order.
     :ivar mode: Represents the interface mode. Valid entries are
         `"local"`, `"remote"`, `"lockout"`.
-    :ivar range: The heater range.
     :ivar loop1: An instance of the Loop class, representing the first control
         loop.
     :ivar loop2: Am instance of the Loop class, representing the second control
@@ -286,6 +314,7 @@ class LS340(IEC60488):
         `'on'`.
     :ivar low_relay_status: The status of the high relay, either `'off'` or
         `'on'`.
+    :ivar heater: An instance of the :class:`~.Heater` class.
 
     """
     PROGRAM_STATUS = [
@@ -307,7 +336,7 @@ class LS340(IEC60488):
         # ================
         self.loop1 = Loop(connection, 1)
         self.loop2 = Loop(connection, 2)
-        self.range = Command('RANGE?', 'RANGE', Integer(min=0, max=5))
+        self.heater = Heater(connection)
         # System Commands
         # ===============
         self.beeper = Command('BEEP?', 'BEEP', Boolean)
@@ -337,7 +366,7 @@ class LS340(IEC60488):
         self.logging = Command('LOG?', 'LOG', Boolean)
 
         self.program_status = Command(('PGMRUN?',
-                                       [Integer, Enum(self.PROGRAM_STATUS)]))
+                                       [Integer, Enum(*self.PROGRAM_STATUS)]))
 
     def clear_alarm(self):
         """Clears the alarm status for all inputs."""
