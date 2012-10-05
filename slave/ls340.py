@@ -262,6 +262,12 @@ class LS340(IEC60488):
     :ivar program_status: The status of the currently running program
         represented by the following tuple: *(<program>, <status>)*. If
         program is zero, it means that no program is running.
+    :ivar key_status: A string representing the keypad status, either
+        `'no key pressed'` or `'key pressed'`.
+    :ivar revision: A tuple representing the revision information.
+        *(<master rev date>, <master rev number>, <master serial number>,
+        <switch setting SW1>, <input rev date>, <input rev number>,*
+        <option ID>, <option rev date>, <option rev number>)*.
 
     """
     PROGRAM_STATUS = [
@@ -295,6 +301,9 @@ class LS340(IEC60488):
                              Set(1, 2, 3)])
         self.mode = Command('MODE?', 'MODE',
                             Enum('local', 'remote', 'lockout', start=1))
+        self.key_status = Command(('KEYST?',
+                                   Enum('no key pressed', 'key pressed')))
+        self.revision = Command(('REV?', [Integer for _ in range(9)]))
         # Data Logging Commands
         # =====================
         self.logging = Command('LOG?', 'LOG', Boolean)
