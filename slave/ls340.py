@@ -268,6 +268,8 @@ class LS340(IEC60488):
         *(<master rev date>, <master rev number>, <master serial number>,*
         *<switch setting SW1>, <input rev date>, <input rev number>,*
         *<option ID>, <option rev date>, <option rev number>)*.
+    :ivar low_relay: The configuration of the low relay, represented by the
+        following tuple *(<mode>, <off/on>)*.
     :ivar high_relay_status: The status of the high relay, either `'off'` or
         `'on'`.
     :ivar low_relay_status: The status of the high relay, either `'off'` or
@@ -307,6 +309,14 @@ class LS340(IEC60488):
                             Enum('local', 'remote', 'lockout', start=1))
         self.key_status = Command(('KEYST?',
                                    Enum('no key pressed', 'key pressed')))
+        # XXX The need to specify the Boolean even if it's not used should be
+        # changed.
+        self.high_relay = Command('RELAY? 1', 'RELAY 1',
+                                  [Enum('off', 'alarms', 'manual'),
+                                   Boolean])
+        self.low_relay = Command('RELAY? 2', 'RELAY 2',
+                                  [Enum('off', 'alarms', 'manual'),
+                                   Boolean])
         self.high_relay_status = Command(('RELAYST? 1', Enum('off', 'on')))
         self.low_relay_status = Command(('RELAYST? 2', Enum('off', 'on')))
         self.revision = Command(('REV?', [Integer for _ in range(9)]))
