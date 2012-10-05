@@ -210,6 +210,8 @@ def scanner(model):
         * `"3465"`, The single capacitance input option card.
         * `"3468"`, The eight channel input option card.
 
+    The different scanner options support a different number of input channels.
+
     """
     channels = {
         '3462': ('C', 'D'),
