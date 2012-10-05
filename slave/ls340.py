@@ -224,6 +224,9 @@ class Loop(InstrumentBase):
     :ivar zonex: There are 11 zones, zone1 is the first. The zone attribute
         represents the control loop zone table parameters.
         *(<top>, <p>, <i>, <d>, <mout>, <range>)*.
+    :ivar tuning_status: A boolean representing the tuning status, `True` if
+        tuning `False` otherwise.
+        .. note:: This attribute is only available for loop1.
 
     """
     def __init__(self, connection, idx):
@@ -272,6 +275,8 @@ class Loop(InstrumentBase):
                           'ZONE {0}, {1},'.format(idx, z),
                           type_)
             setattr(self, 'zone{0}'.format(z), cmd)
+        if idx == 1:
+            self.tuning_status = Command(('TUNEST?', Boolean))
 
 
 class Scanner(InstrumentBase):
