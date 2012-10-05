@@ -317,6 +317,15 @@ class LS340(IEC60488):
     :ivar heater: An instance of the :class:`~.Heater` class.
     :ivar lock: A tuple representing the keypad lock-out and the lock-out code.
         *(<off/on>, <code>)*.
+    :ivar ieee: The IEEE-488 interface parameters, represented by the following
+        tuple *(<terminator>, <EOI enable>, <address>)*, where
+
+         * *<terminator>* is `None`, `\\\\r\\\\n`, `\\\\n\\\\r`, `\\\\r` or
+           `\\\\n`.
+         * *<EOI enable>* A boolean.
+         * *<address>* The IEEE-488.1 address of the device, an integer between
+           0 and 30.
+
 
     """
     PROGRAM_STATUS = [
@@ -365,6 +374,10 @@ class LS340(IEC60488):
         self.revision = Command(('REV?', [Integer for _ in range(9)]))
         self.lock = Command('LOCK?', 'LOCK',
                             [Boolean, Integer(min=0, max=999)])
+        self.ieee = Command('IEEE?', 'IEEE',
+                            [Enum(None, '\r\n', '\n\r', '\r', '\n'),
+                             Boolean,
+                             Integer(min=0, max=30)])
         # Data Logging Commands
         # =====================
         self.logging = Command('LOG?', 'LOG', Boolean)
