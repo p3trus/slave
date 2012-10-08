@@ -23,9 +23,13 @@ implementation might look like::
 
 """
 import collections
+import logging
 from itertools import izip, izip_longest
 
 import slave.types
+
+
+_logger = logging.getLogger(__name__)
 
 
 class SimulatedConnection(object):
@@ -143,6 +147,7 @@ class Command(object):
         self._query = query
         self._response_type = response_t or default_type
         self._query_type = query_t
+        _logger.debug('Command.__init__: cmu:{0}'.format(cmu))
 
         # initialize configuration dictionary
         self._custom_cfg = dict(cfg) if cfg else {}
@@ -209,6 +214,7 @@ class Command(object):
             cmu = self.program_message_unit(self._write, datas,
                                         self._write_type)
         # Send command message unit
+        _logger.debug('Command.write: cmu:{0}'.format(cmu))
         self.connection.write(cmu)
 
     def query(self, datas=None):
@@ -228,8 +234,11 @@ class Command(object):
             qmu = self.program_message_unit(self._query, datas,
                                             self._query_type)
         # Send query message unit.
+        _logger.debug('Command.query: qmu:{0}'.format(qmu))
         response = self.connection.ask(qmu)
+
         # Parse response
+        _logger.debug('Command.query: response:{0}'.format(response))
         header, parsed_data = self.parse_response(response)
         # TODO handle the response header
 
