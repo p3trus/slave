@@ -41,6 +41,9 @@ class Type(object):
         """
         return str(value)
 
+    def __repr__(self):
+        return '{0}()'.format(type(self).__name__)
+
 
 class Boolean(Type):
     """Represents a boolean type. It is serialized in decimal form."""
@@ -52,7 +55,7 @@ class Boolean(Type):
 
     def simulate(self):
         """Costructs a random boolean and returns it."""
-        return random.randint(0,1)
+        return random.randint(0, 1)
 
 
 class Number(Type):
@@ -76,6 +79,10 @@ class Number(Type):
             raise ValueError('Value:{0}<Min:{0}'.format(value, self.min))
         if self.max is not None and value > self.max:
             raise ValueError('Value:{0}>Max:{0}'.format(value, self.max))
+
+    def __repr__(self):
+        return '{0}(min={1!r}, max={2!r})'.format(type(self).__name__,
+                                                  self.min, self.max)
 
 
 class Integer(Number):
@@ -123,6 +130,9 @@ class Mapping(Type):
     def simulate(self):
         """Returns a randomly chosen key of the mapping."""
         return random.choice(self._map.keys())
+
+    def __repr__(self):
+        return '{0}({1!r})'.format(type(self).__name__, self._map)
 
 
 class Set(Mapping):
@@ -212,3 +222,6 @@ class Register(Type):
         values.
         """
         return dict((k, random.randint(0, 1)) for k in self.__map)
+
+    def __repr__(self):
+        return 'Register({0!r})'.format(self.__map)

@@ -92,8 +92,8 @@ class Command(object):
         'response data separator': ',',
     }
 
-    def __init__(self, query=None, write=None, type_=None,
-                 connection=None, cfg=None, simulate=False):
+    def __init__(self, query=None, write=None,
+                 type_=None, connection=None, cfg=None):
         def to_instance(x):
             """If x is a type class, it is converted to an instance of it."""
             if isinstance(x, slave.types.Type):
@@ -147,12 +147,13 @@ class Command(object):
         self._query = query
         self._response_type = response_t or default_type
         self._query_type = query_t
-        _logger.debug('Command.__init__: cmu:{0}'.format(cmu))
 
         # initialize configuration dictionary
         self._custom_cfg = dict(cfg) if cfg else {}
         self._cfg = dict(self._default_cfg)
         self._cfg.update(self._custom_cfg)
+
+        _logger.debug('creating command {0}'.format(self))
 
     @property
     def connection(self):
@@ -289,6 +290,17 @@ class Command(object):
             raise ValueError('Number of datas must match the number of types.')
 
         self._buffer = [t.dump(v) for v, t in izip(datas, self._write_type)]
+
+    def __repr__(self):
+        """The commands representation."""
+        query = 'query=({0!r}, {1!r}, {2!r})'.format(self._query,
+                                                     self._response_type,
+                                                     self._query_type)
+        write = 'write=({0!r}, {1!r})'.format(self._write, self._write_type)
+        connection = 'connection={0!r}'.format(self.connection)
+        cfg = 'cfg={0!r}'.format(self._cfg)
+        return 'Command({0}, {1}, {2}, {3})'.format(query, write,
+                                                    connection, cfg)
 
 
 class InstrumentBase(object):
