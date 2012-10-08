@@ -25,13 +25,20 @@ implementation might look like::
 import collections
 import logging
 from itertools import izip, izip_longest
+try:
+    from logging import NullHandler
+except ImportError:
+    # Fall-back code for python < 2.7
+    class NullHandler(logging.Handler):
+        def emit(self, record):
+            pass
 
 import slave.types
 
 
 _logger = logging.getLogger(__name__)
-_logger.addHandler(logging.NullHandler())
-print __name__
+_logger.addHandler(NullHandler())
+
 
 class SimulatedConnection(object):
     def ask(self, value):
