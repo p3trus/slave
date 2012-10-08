@@ -30,7 +30,8 @@ import slave.types
 
 
 _logger = logging.getLogger(__name__)
-
+_logger.addHandler(logging.NullHandler())
+print __name__
 
 class SimulatedConnection(object):
     def ask(self, value):
@@ -153,7 +154,7 @@ class Command(object):
         self._cfg = dict(self._default_cfg)
         self._cfg.update(self._custom_cfg)
 
-        _logger.debug('creating command {0}'.format(self))
+        _logger.debug('created {0}'.format(self))
 
     @property
     def connection(self):
@@ -215,7 +216,7 @@ class Command(object):
             cmu = self.program_message_unit(self._write, datas,
                                         self._write_type)
         # Send command message unit
-        _logger.debug('Command.write: cmu:{0}'.format(cmu))
+        _logger.info('command message unit: "{0}"'.format(cmu))
         self.connection.write(cmu)
 
     def query(self, datas=None):
@@ -235,11 +236,11 @@ class Command(object):
             qmu = self.program_message_unit(self._query, datas,
                                             self._query_type)
         # Send query message unit.
-        _logger.debug('Command.query: qmu:{0}'.format(qmu))
+        _logger.info('query message unit: "{0}"'.format(qmu))
         response = self.connection.ask(qmu)
 
         # Parse response
-        _logger.debug('Command.query: response:{0}'.format(response))
+        _logger.info('response:"{0}"'.format(response))
         header, parsed_data = self.parse_response(response)
         # TODO handle the response header
 
