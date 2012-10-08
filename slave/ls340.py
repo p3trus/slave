@@ -143,8 +143,8 @@ class Input(InstrumentBase):
             Enum('value', '+sp1', '-sp1', '+sp2', '-sp2', start=1),
             Float,  # b value
         ]
-        self.linear_equation('LINEAR? {0}'.format(name),
-                             'LINEAR {0}'.format(name), leq)
+        self.linear_equation = Command('LINEAR? {0}'.format(name),
+                                       'LINEAR {0}'.format(name), leq)
         # TODO use register instead of Integer
         self.linear_status = Command(('LDATST? {0}'.format(name), Integer))
         rds = dict((v, k) for k, v in self.READING_STATUS.items())
