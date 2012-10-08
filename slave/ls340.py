@@ -281,9 +281,10 @@ class Scanner(InstrumentBase):
             setattr(self, channel.lower(), Input(connection, channel))
 
 
-def scanner(model):
+def _get_scanner(connection, model):
     """A factory function used to create the different scanner instances.
 
+    :param connection: A connection object.
     :param model: A string representing the different scanner models supported
         by the ls340 temperature controller. Valid entries are:
 
@@ -301,7 +302,7 @@ def scanner(model):
         '3465': ('C'),
         '3468': ('C1', 'C2', 'C3', 'C4', 'D1', 'D2', 'D3', 'D4')
     }
-    return Scanner(channels[model])
+    return Scanner(connection, channels[model])
 
 
 class LS340(IEC60488):
@@ -313,8 +314,12 @@ class LS340(IEC60488):
 
     :param connection: An object, modeling the connection interface, used to
         communicate with the real instrument.
-    :param scanner: Sets a scanner option. See :meth:`~slave.ls340.scanner` for
-        the available scanner options.
+    :param scanner: A string representing the scanner in use. Valid entries are
+
+        * `"3462"`, The dual standard input option card.
+        * `"3464"`, The dual thermocouple input option card.
+        * `"3465"`, The single capacitance input option card.
+        * `"3468"`, The eight channel input option card.
 
     :ivar a: Input channel a.
     :ivar b: Input channel b.
@@ -378,7 +383,7 @@ class LS340(IEC60488):
 
     def __init__(self, connection, scanner=None):
         super(LS340, self).__init__(connection)
-        self.scanner = scanner
+        self.scanner = _get_scanner(connection, scanner) if scanner else None
         self.a = Input(connection, 'A')
         self.b = Input(connection, 'B')
         self.output1 = Output(connection, 1)
