@@ -92,12 +92,17 @@ Instead of a real connection object, you pass in a
 Logging
 -------
 
-Slave uses python's standard `logging` module. This is especially usefull for
+Slave uses python's standard logging_ module. This is especially usefull for
 developers implementing new devices. Currently only the Command class uses it.
 The logging levels in use are:
 
  * *INFO*
  * *DEBUG*
+
+.. _logging: http://docs.python.org/library/logging.html
+
+Info level
+^^^^^^^^^^
 
 At the *INFO* logging level, the generated command message units, query message
 units and responses are logged. This is usefull to check if the device
@@ -110,12 +115,18 @@ communication is working correctly. A generated log entry might look like
 This means the query string "RMOD?" was emited, and the device response was
 "0".
 
+Debug level
+^^^^^^^^^^^
+
 Additionally on *DEBUG* level, the construction of Commands is logged. It is
 usefull to verify that the objects were constructed properly. This creates
 messages similar to that
 ::
 
     DEBUG:slave.core:created Command(query=('*IDN?', [String(), String(), String(), String()], []), write=(None, [String(), String(), String(), String()]), connection=None, cfg={'program header prefix': '', 'response data separator': ',', 'program header separator': ' ', 'response header separator': ' ', 'program data separator': ','})
+
+Usage
+^^^^^
 
 To use logging with Slave, you can do something like this
 ::
