@@ -377,7 +377,14 @@ class LS340(IEC60488):
          * *<mode>* Specifies the mode of the digital output, valid entries are
            `'off'`, `'alarms'`, `'scanner'`, `'manual'`,
          * *<digital output>* A register to enable/disable the five digital
-           outputs D1-D5, if *<mode>* is `'manual'`.
+           outputs DO1-DO5, if *<mode>* is `'manual'`.
+    :ivar digital_io_status: The digital input/output status.
+        *(<input status>, <output status>)*, where
+
+         * *<input status>* is a Register representing the state of the 5 input
+           lines DI1-DI5.
+         * *<output status>* is a Register representing the state of the 5
+           output lines DO1-DO5.
 
     """
     PROGRAM_STATUS = [
@@ -430,10 +437,17 @@ class LS340(IEC60488):
                             [Enum(None, '\r\n', '\n\r', '\r', '\n'),
                              Boolean,
                              Integer(min=0, max=30)])
-        dout = [Enum('off', 'alarms', 'scanner', 'manual'),
-                Register({'D1': 0, 'D2': 1, 'D3': 2, 'D4': 3, 'D5': 4})]
+        dout = [
+            Enum('off', 'alarms', 'scanner', 'manual'),
+            Register({'DO1': 0, 'DO2': 1, 'DO3': 2, 'DO4': 3, 'DO5': 4})
+        ]
         self.digital_output_param = Command('DOUT?', 'DOUT',
                                             dout)
+        diost = [
+            Register({'DI1': 0, 'DI2': 1, 'DI3': 2, 'DI4': 3, 'DI5': 4}),
+            Register({'DO1': 0, 'DO2': 1, 'DO3': 2, 'DO4': 3, 'DO5': 4}),
+        ]
+        self.digital_io_status = Command(('DIOST?', diost))
         # Data Logging Commands
         # =====================
         self.logging = Command('LOG?', 'LOG', Boolean)
