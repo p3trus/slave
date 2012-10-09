@@ -345,21 +345,27 @@ class InstrumentBase(object):
         :class:`~Command.write` function and injects connection, and command
         config into commands.
         """
+
+
+    def __setattr__(self, name, value):
+        """Redirects write access of command attributes to the
+        :class:`~Command.write` function and injects connection, and command
+        config into commands.
+        """
         # Redirect write access
-        if hasattr(self, name):
+        try:
             attr = object.__getattribute__(self, name)
+        except AttributeError:
+            if isinstance(value, Command):
+                if value.connection is None:
+                    value.connection = self.connection
+                if self._cfg:
+                    # TODO doesn't feel right...
+                    cfg = dict(value._default_cfg)
+                    cfg.update(self._cfg)
+                    cfg.update(value._custom_cfg)
+                    value._cfg = cfg
+            object.__setattr__(self, name, value)
+        else:
             if isinstance(attr, Command):
                 attr.write(value)
-                return
-        # Inject connection
-        elif isinstance(value, Command):
-            if value.connection is None:
-                value.connection = self.connection
-            if self._cfg:
-                # TODO doesn't feel right...
-                cfg = dict(value._default_cfg)
-                cfg.update(self._cfg)
-                cfg.update(value._custom_cfg)
-                value._cfg = cfg
-
-        object.__setattr__(self, name, value)
