@@ -421,6 +421,15 @@ class LS340(IEC60488):
          * *<channel>* the input channel to use, an integer in the range 1-16.
          * *<interval>* the autoscan intervall in seconds, an integer in the
            range 0-999.
+    :ivar datetime: The configured date and time.
+        *(<MM>, <DD>, <YYYY>, <HH>, <mm>, <SS>, <sss>)*, where
+
+         * *<MM>* represents the month, an Integer in the range 1-12.
+         * *<DD>* represents the day, an Integer in the range 1-31.
+         * *<YYYY>* represents the year.
+         * *<mm>* represents the minutes, an Integer in the range 0-59.
+         * *<SS>* represents the seconds, an Integer in the range 0-59.
+         * *<sss>* represents the miliseconds, an Integer in the range 0-999.
 
     """
     PROGRAM_STATUS = [
@@ -452,6 +461,14 @@ class LS340(IEC60488):
                             [Enum('CRLF', 'LFCR', 'CR', 'LF', start=1),
                              Enum(300, 1200, 2400, 4800, 9600, 19200, start=1),
                              Set(1, 2, 3)])
+        self.datetime = Command('DATETIME?', 'DATETIME',
+                                [Integer(min=1, max=12),
+                                 Integer(min=1, max=31),
+                                 Integer,
+                                 Integer(min=0, max=23),
+                                 Integer(min=0, max=59),
+                                 Integer(min=0, max=59),
+                                 Integer(min=0, max=999)])
         self.mode = Command('MODE?', 'MODE',
                             Enum('local', 'remote', 'lockout', start=1))
         self.key_status = Command(('KEYST?',
