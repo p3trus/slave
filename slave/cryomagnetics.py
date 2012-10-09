@@ -18,15 +18,9 @@ class UnitFloat(Float):
 
     """
     def _convert(self, value):
-        """Converts value to Float.
-
-        .. note:: This will not work with scientific notation.
-
-        """
+        """Converts value to Float."""
         if isinstance(value, basestring):
-            # remove letters
-            value = ''.join(i for i in value if not
-                            (i in string.ascii_letters))
+            value = value.rstrip(string.ascii_letters)
         return float(value)
 
 
