@@ -9,7 +9,7 @@ temperature controller.
 
 from slave.core import Command, InstrumentBase
 from slave.iec60488 import IEC60488
-from slave.types import Boolean, Enum, Float, Integer, Register, Set
+from slave.types import Boolean, Enum, Float, Integer, Register, Set, String
 
 
 #__all__ = ['scanner', 'LS340']
@@ -81,7 +81,7 @@ class Input(InstrumentBase):
     :ivar reading_status: The reading status register.
     :ivar linear_equation: The input linear equation parameters.
         *(<equation>, <m>, <x source>, <b source>, <b>)*, where
-        
+
          * *<equation>* is either `'slope-intercept'` or `'point-slope'`,
            meaning 'y = mx + b' or 'y = m(x + b)'.
          * *<m>* The slope.
@@ -335,6 +335,13 @@ def _get_scanner(connection, model):
     return Scanner(connection, channels[model])
 
 
+class DisplayField(InstrumentBase):
+    def __init__(self, connection, idx):
+        super(DisplayField, self).__init__(connection)
+        self.idx = idx = int(idx)
+
+
+
 class LS340(IEC60488):
     """
     Represents a Lakeshore model LS340 temperature controller.
@@ -430,6 +437,14 @@ class LS340(IEC60488):
          * *<mm>* represents the minutes, an Integer in the range 0-59.
          * *<SS>* represents the seconds, an Integer in the range 0-59.
          * *<sss>* represents the miliseconds, an Integer in the range 0-999.
+    :ivar display_fieldx: The display field configuration values. x is just a
+        placeholder and varies between 1 and 8, e.g. `.display_field2`.
+        *(<input>, '<source>')*, where
+
+         * *<input>* Is the string name of the input to display.
+         * *<source>* Specifies the data to display. Valid entries are
+           `'kelvin'`, `'celsius'`, , `'sensor units'`, `'linear'`, `'min'` and
+           `'max'`.
 
     """
     PROGRAM_STATUS = [
@@ -469,6 +484,15 @@ class LS340(IEC60488):
                                  Integer(min=0, max=59),
                                  Integer(min=0, max=59),
                                  Integer(min=0, max=999)])
+        dispfld = [
+            String,
+            Enum('kelvin', 'celsius', 'sensor units', 'linear', 'min', 'max'),
+        ]
+        for i in range(1, 9):
+            cmd = Command('DISPFLD? {0}'.format(i),
+                          'DISPFLD {0},'.format(i),
+                          dispfld)
+            setattr(self, 'display_field{0}'.format(i), cmd)
         self.mode = Command('MODE?', 'MODE',
                             Enum('local', 'remote', 'lockout', start=1))
         self.key_status = Command(('KEYST?',
