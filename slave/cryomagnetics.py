@@ -1,6 +1,8 @@
 #  -*- coding: utf-8 -*-
 #
 # E21, (c) 2012, see AUTHORS.  Licensed under the GNU GPL.
+import string
+
 from slave.core import Command, InstrumentBase
 from slave.iec60488 import IEC60488
 from slave.types import Boolean, Float, Mapping, Set, String
@@ -8,6 +10,24 @@ from slave.types import Boolean, Float, Mapping, Set, String
 
 #: A list with all valid shim identifiers.
 SHIMS = ['Z', 'Z2', 'Z3', 'Z4', 'X', 'Y', 'ZX', 'ZY', 'C2', 'S2', 'Z2X', 'Z2Y']
+
+
+class UnitFloat(Float):
+    """Represents a floating point type. If a unit is present in the string
+    representation, it will get stripped.
+
+    """
+    def _convert(self, value):
+        """Converts value to Float.
+
+        .. note:: This will not work with scientific notation.
+
+        """
+        if isinstance(value, basestring):
+            # remove letters
+            value = ''.join(i for i in value if not
+                            (i in string.ascii_letters))
+        return float(value)
 
 
 class Range(InstrumentBase):
@@ -60,8 +80,8 @@ class Shim(InstrumentBase):
         }
         self.status = Command(('SHIM?',
                                Mapping(state)))
-        self.current = Command(('IMAG? {0}'.format(shim), [Float, String]),
-                               ('IMAG {0}'.format(shim), Float))
+        self.current = Command('IMAG? {0}'.format(shim),
+                               'IMAG {0}'.format(shim), UnitFloat)
 
     def disable(self):
         """Disables the shim."""
@@ -143,10 +163,10 @@ class MPS4G(IEC60488):
             self.channel = Command('CHAN?', 'CHAN', Set(1, 2))
 
         self.error = Command('ERROR?', 'ERROR', Boolean)
-        self.current = Command(('IMAG?', [Float, String]),
+        self.current = Command(('IMAG?', UnitFloat),
                                ('IMAG', Float))
-        self.output_current = Command(('IOUT?', [Float, String]))
-        self.lower_limit = Command(('LLIM?', [Float, String]),
+        self.output_current = Command(('IOUT?', UnitFloat))
+        self.lower_limit = Command(('LLIM?', UnitFloat),
                                    ('LLIM', Float))
         self.mode = Command(('MODE?', String))
         self.name = Command('NAME?', 'NAME', String)
@@ -154,7 +174,7 @@ class MPS4G(IEC60488):
                                      Mapping({True: 'ON', False: 'OFF'}))
         for idx in range(0, 5):
             setattr(self, 'range{0}'.format(idx), Range(connection, idx))
-        self.upper_limit = Command(('ULIM?', [Float, String]),
+        self.upper_limit = Command(('ULIM?', UnitFloat),
                                    ('ULIM', Float))
         self.unit = Command('UNITS?', 'UNITS', Set('A', 'G'))
         self.voltage_limit = Command('VLIM?', 'VLIM', Float(min=0., max=10.))
