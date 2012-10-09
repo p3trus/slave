@@ -72,8 +72,7 @@ class Shim(InstrumentBase):
             True: '{0} Enabled'.format(shim),
             False: '{0} Disabled'.format(shim)
         }
-        self.status = Command(('SHIM?',
-                               Mapping(state)))
+        self.status = Command(('SHIM?', Mapping(state)))
         self.current = Command('IMAG? {0}'.format(shim),
                                'IMAG {0}'.format(shim), UnitFloat)
 
@@ -157,23 +156,20 @@ class MPS4G(IEC60488):
             self.channel = Command('CHAN?', 'CHAN', Set(1, 2))
 
         self.error = Command('ERROR?', 'ERROR', Boolean)
-        self.current = Command(('IMAG?', UnitFloat),
-                               ('IMAG', Float))
+        self.current = Command('IMAG?', 'IMAG', UnitFloat)
         self.output_current = Command(('IOUT?', UnitFloat))
-        self.lower_limit = Command(('LLIM?', UnitFloat),
-                                   ('LLIM', Float))
+        self.lower_limit = Command('LLIM?', 'LLIM', UnitFloat))
         self.mode = Command(('MODE?', String))
         self.name = Command('NAME?', 'NAME', String)
         self.switch_heater = Command('PSHTR?', 'PSHTR',
                                      Mapping({True: 'ON', False: 'OFF'}))
         for idx in range(0, 5):
             setattr(self, 'range{0}'.format(idx), Range(connection, idx))
-        self.upper_limit = Command(('ULIM?', UnitFloat),
-                                   ('ULIM', Float))
+        self.upper_limit = Command('ULIM?', 'ULIM', UnitFloat)
         self.unit = Command('UNITS?', 'UNITS', Set('A', 'G'))
-        self.voltage_limit = Command('VLIM?', 'VLIM', Float(min=0., max=10.))
-        self.magnet_voltage = Command(('VMAG?', Float(min=-10., max=10.)))
-        self.output_voltage = Command(('VMAG?', Float(min=-12.8, max=12.8)))
+        self.voltage_limit = Command('VLIM?', 'VLIM', UnitFloat(min=0., max=10.))
+        self.magnet_voltage = Command(('VMAG?', UnitFloat(min=-10., max=10.)))
+        self.output_voltage = Command(('VMAG?', UnitFloat(min=-12.8, max=12.8)))
         self.sweep_status = Command(('SWEEP?', String))
 
     def local(self):
