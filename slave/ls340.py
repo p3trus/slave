@@ -371,6 +371,13 @@ class LS340(IEC60488):
          * *<EOI enable>* A boolean.
          * *<address>* The IEEE-488.1 address of the device, an integer between
            0 and 30.
+    :ivar digital_output_param: The digital output parameters.
+        *(<mode>, <digital output>)*, where:
+
+         * *<mode>* Specifies the mode of the digital output, valid entries are
+           `'off'`, `'alarms'`, `'scanner'`, `'manual'`,
+         * *<digital output>* A register to enable/disable the five digital
+           outputs D1-D5, if *<mode>* is `'manual'`.
 
     """
     PROGRAM_STATUS = [
@@ -423,6 +430,10 @@ class LS340(IEC60488):
                             [Enum(None, '\r\n', '\n\r', '\r', '\n'),
                              Boolean,
                              Integer(min=0, max=30)])
+        dout = [Enum('off', 'alarms', 'scanner', 'manual'),
+                Register({'D1': 0, 'D2': 1, 'D3': 2, 'D4': 3, 'D5': 4})]
+        self.digital_output_param = Command('DOUT?', 'DOUT',
+                                            dout)
         # Data Logging Commands
         # =====================
         self.logging = Command('LOG?', 'LOG', Boolean)
