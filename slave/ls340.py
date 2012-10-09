@@ -518,6 +518,10 @@ class LS340(IEC60488):
         """Clears the alarm status for all inputs."""
         self.connection.write('ALMRST')
 
+    def save_curves(self):
+        """Updates the curve flash with the current user curves."""
+        self.connection.write('CRVSAV')
+
     def _factory_default(self, confirm=False):
         """Resets the device to factory defaults.
 
