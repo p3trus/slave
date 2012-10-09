@@ -158,7 +158,7 @@ class MPS4G(IEC60488):
         self.error = Command('ERROR?', 'ERROR', Boolean)
         self.current = Command('IMAG?', 'IMAG', UnitFloat)
         self.output_current = Command(('IOUT?', UnitFloat))
-        self.lower_limit = Command('LLIM?', 'LLIM', UnitFloat))
+        self.lower_limit = Command('LLIM?', 'LLIM', UnitFloat)
         self.mode = Command(('MODE?', String))
         self.name = Command('NAME?', 'NAME', String)
         self.switch_heater = Command('PSHTR?', 'PSHTR',
@@ -167,9 +167,11 @@ class MPS4G(IEC60488):
             setattr(self, 'range{0}'.format(idx), Range(connection, idx))
         self.upper_limit = Command('ULIM?', 'ULIM', UnitFloat)
         self.unit = Command('UNITS?', 'UNITS', Set('A', 'G'))
-        self.voltage_limit = Command('VLIM?', 'VLIM', UnitFloat(min=0., max=10.))
+        self.voltage_limit = Command('VLIM?', 'VLIM',
+                                     UnitFloat(min=0., max=10.))
         self.magnet_voltage = Command(('VMAG?', UnitFloat(min=-10., max=10.)))
-        self.output_voltage = Command(('VMAG?', UnitFloat(min=-12.8, max=12.8)))
+        self.output_voltage = Command(('VMAG?',
+                                       UnitFloat(min=-12.8, max=12.8)))
         self.sweep_status = Command(('SWEEP?', String))
 
     def local(self):
