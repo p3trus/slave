@@ -12,7 +12,7 @@ from slave.iec60488 import IEC60488
 from slave.types import Boolean, Enum, Float, Integer, Register, Set
 
 
-__all__ = ['scanner', 'LS340']
+#__all__ = ['scanner', 'LS340']
 
 
 class Heater(InstrumentBase):
@@ -48,30 +48,32 @@ class Input(InstrumentBase):
 
     :param connection: A connection object.
     :param name: A string value indicating the input in use.
-    :ivar alarm: The alarm configuration, represented by the following list
-        *[<enabled>, <source>, <high value>, <low value>, <latch>, <relay>]*,
+    :ivar alarm: The alarm configuration, represented by the following tuple
+        *(<enabled>, <source>, <high value>, <low value>, <latch>, <relay>)*,
         where:
-        * *<enabled>* Enables or disables the alarm.
-        * *<source>* Specifies the input data to check.
-        * *<high value>* Sets the upper limit, where the high alarm sets off.
-        * *<low value>* Sets the lower limit, where the low alarm sets off.
-        * *<latch>* Enables or disables a latched alarm.
-        * *<relay>* Specifies if the alarm can affect the relays.
+
+         * *<enabled>* Enables or disables the alarm.
+         * *<source>* Specifies the input data to check.
+         * *<high value>* Sets the upper limit, where the high alarm sets off.
+         * *<low value>* Sets the lower limit, where the low alarm sets off.
+         * *<latch>* Enables or disables a latched alarm.
+         * *<relay>* Specifies if the alarm can affect the relays.
     :ivar alarm_status: The high and low alarm status, represented by the
-        following list: *[<high status>, <low status>]*.
+        following list: *(<high status>, <low status>)*.
     :ivar celsius: The input value in celsius.
     :ivar filter: The input filter parameters, represented by the following
-        list: *[<enable>, <points>, <window>]*.
-    :ivar set: The input setup parameters, represented by the following list:
-        *[<enable>, <compensation>]*
+        tuple: *(<enable>, <points>, <window>)*.
+    :ivar set: The input setup parameters, represented by the following tuple:
+        *(<enable>, <compensation>)*
     :ivar curve: The input curve number. An Integer in the range [0-60].
     :ivar input_type: The input type configuration, represented by the
-        list: *[<type>, <units>, <coefficient>, <excitation>, <range>]*, where
-        * *<type>* Is the input sensor type.
-        * *<units>* Specifies the input sensor units.
-        * *<coefficient>* The input coefficient.
-        * *<excitation>* The input excitation.
-        * *<range>* The input range.
+        tuple: *(<type>, <units>, <coefficient>, <excitation>, <range>)*, where
+
+         * *<type>* Is the input sensor type.
+         * *<units>* Specifies the input sensor units.
+         * *<coefficient>* The input coefficient.
+         * *<excitation>* The input excitation.
+         * *<range>* The input range.
     :ivar kelvin: The kelvin reading.
     :ivar sensor_units: The sensor units reading of the input.
     :ivar linear: The linear equation data.
@@ -79,13 +81,14 @@ class Input(InstrumentBase):
     :ivar reading_status: The reading status register.
     :ivar linear_equation: The input linear equation parameters.
         *(<equation>, <m>, <x source>, <b source>, <b>)*, where
-        * *<equation>* is either `'slope-intercept'` or `'point-slope'`,
-          meaning 'y = mx + b' or 'y = m(x + b)'.
-        * *<m>* The slope.
-        * *<x source>* The input data to use, either 'kelvin', 'celsius' or
-          'sensor units'.
-        * *<b source>* Either 'value', '+sp1', '-sp1', '+sp2' or '-sp2'.
-        * *<b>* The b value if *<b source>* is set to 'value'.
+        
+         * *<equation>* is either `'slope-intercept'` or `'point-slope'`,
+           meaning 'y = mx + b' or 'y = m(x + b)'.
+         * *<m>* The slope.
+         * *<x source>* The input data to use, either 'kelvin', 'celsius' or
+           'sensor units'.
+         * *<b source>* Either 'value', '+sp1', '-sp1', '+sp2' or '-sp2'.
+         * *<b>* The b value if *<b source>* is set to 'value'.
 
     """
     READING_STATUS = {
@@ -101,24 +104,24 @@ class Input(InstrumentBase):
         super(Input, self).__init__(connection)
         self.name = name = str(name)
         self.alarm = Command('ALARM? {0}'.format(name),
-                             'ALARM {0}'.format(name),
+                             'ALARM {0},'.format(name),
                              [Boolean,
                               Enum('kelvin', 'celsius', 'sensor', 'linear'),
                               Float, Float, Boolean, Boolean])
         self.alarm_status = Command(('ALARMST?', [Boolean, Boolean]))
         self.celsius = Command(('CRDG? {0}'.format(name), Float))
         self.filter = Command('FILTER? {0}'.format(name),
-                              'FILTER {0}'.format(name),
+                              'FILTER {0},'.format(name),
                               [Boolean, Integer(min=0),
                                Integer(min=0, max=100)])
         self.set = Command('INSET? {0}'.format(name),
-                           'INSET {0}'.format(name),
+                           'INSET {0},'.format(name),
                            [Boolean, Enum('off', 'on', 'pause')])
         self.curve = Command('INCRV? {0}'.format(name),
-                             'INCRV {0}'.format(name),
+                             'INCRV {0},'.format(name),
                              Integer(min=0, max=60))
         self.input_type = Command('INTYPE? {0}'.format(name),
-                                  'INTYPE {0}'.format(name),
+                                  'INTYPE {0},'.format(name),
                                   [Enum('special', 'Si', 'GaAlAs',
                                         'Pt100 250 Ohm', 'Pt100 500 Ohm',
                                         'Pt1000', 'RhFe', 'Carbon-Glass',
@@ -144,7 +147,7 @@ class Input(InstrumentBase):
             Float,  # b value
         ]
         self.linear_equation = Command('LINEAR? {0}'.format(name),
-                                       'LINEAR {0}'.format(name), leq)
+                                       'LINEAR {0},'.format(name), leq)
         # TODO use register instead of Integer
         self.linear_status = Command(('LDATST? {0}'.format(name), Integer))
         rds = dict((v, k) for k, v in self.READING_STATUS.items())
@@ -158,21 +161,22 @@ class Output(InstrumentBase):
     :param connection: A connection object.
     :param channel: The analog output channel. Valid are either 1 or 2.
 
-    :ivar analog: The analog output parameters, represented by the following
-        list: *[<bipolar>, <mode>, <input>, <source>, <high>, <low>, <manual>]*
+    :ivar analog: The analog output parameters, represented by the tuple
+        *(<bipolar>, <mode>, <input>, <source>, <high>, <low>, <manual>)*,
         where:
-        * *<bipolar>* Enables bipolar output.
-        * *<mode>* Valid entries are `'off'`, `'input'`, `'manual'`, `'loop'`.
-          `'loop'` is only valid for the output channel 2.
-        * *<input>* Selects the input to monitor. (Has no effect if mode is not
-          `'input'`)
-        * *<source>* Selects the input data, either `'kelvin'`, `'celsius'`,
-          `'sensor'` or `'linear'`.
-        * *<high>* Represents the data value at which 100% is reached.
-        * *<low>* Represents the data value at which the minimum value is
-            reached (-100% for bipolar, 0% otherwise).
-        * *<manual>* Represents the data value of the analog output in manual
-            mode.
+
+         * *<bipolar>* Enables bipolar output.
+         * *<mode>* Valid entries are `'off'`, `'input'`, `'manual'`, `'loop'`.
+           `'loop'` is only valid for the output channel 2.
+         * *<input>* Selects the input to monitor (Has no effect if mode is
+           not `'input'`).
+         * *<source>* Selects the input data, either `'kelvin'`, `'celsius'`,
+           `'sensor'` or `'linear'`.
+         * *<high>* Represents the data value at which 100% is reached.
+         * *<low>* Represents the data value at which the minimum value is
+           reached (-100% for bipolar, 0% otherwise).
+         * *<manual>* Represents the data value of the analog output in manual
+           mode.
 
     """
     def __init__(self, connection, channel):
@@ -181,7 +185,7 @@ class Output(InstrumentBase):
             raise ValueError('Invalid Channel number. Valid are either 1 or 2')
         self.channel = channel
         self.analog = Command('ANALOG? {0}'.format(channel),
-                              'ANALOG {0}'.format(channel),
+                              'ANALOG {0},'.format(channel),
                               [Boolean,
                                Enum('off', 'input', 'manual', 'loop'),
                                #INPUT,
@@ -195,17 +199,25 @@ class Loop(InstrumentBase):
     """Represents a LS340 control loop.
 
     :ivar filter: The loop filter state.
-    :ivar limit: The limit configuration, represented by the following list
-        *[<limit>, <pos slope>, <neg slope>, <max current>, <max range>]*
+    :ivar limit: The limit configuration, represented by the following tuple
+        *(<limit>, <pos slope>, <neg slope>, <max current>, <max range>)*
     :ivar manual_output: The manual output value.
     :ivar mode: The control-loop mode. Valid entries are
         *'manual', 'zone', 'open', 'pid', 'pi', 'p'*
-    :ivar parameters: The control loop parameters, a list containing
-        *[<input('A', 'B')>, <units('kelvin', 'celsius', 'sensor')>, <enabled>,
-        <powerup>]*.
+    :ivar parameters: The control loop parameters, a tuple containing
+        *(<input>, <units>, <enabled>, <powerup>)*, where
+
+         * *<input>* specifies the input channel. Valid entries are `'A'` and
+           `'B'`.
+         * *<units>* The setpoint units. Either `'kelvin'`, `'celsius'` or
+           `'sensor'`.
+         * *<enabled>* A boolean enabling/disabling the control loop.
+         * *<powerup>* Specifies if the control loop is enabled/disabled after
+           powerup.
     :ivar pid: The PID values.
     :ivar ramp: The control-loop ramp parameters, represented by the following
-        list *[<enabled>, <rate>]*, where
+        tuple *(<enabled>, <rate>)*, where
+
          * *<enabled>*  Enables, disables the ramping.
          * *<rate>* Specifies the ramping rate in kelvin/minute.
     :ivar ramping: The ramping status. `True` if ramping and `False` otherwise.
@@ -216,41 +228,51 @@ class Loop(InstrumentBase):
     :ivar tuning_status: A boolean representing the tuning status, `True` if
         tuning `False` otherwise.
         .. note:: This attribute is only available for loop1.
+    :ivar display_parameters: The display parameter of the loop.
+        *(<loop>, <resistance>, <current/power>, <large output enable>)*, where
+
+         * *<loop>* specifies how many loops should be displayed. Valid entries
+           are `'none'`, `'loop1'`, `'loop2'`, `'both'`.
+         * *<resistance>* The heater load resistance, an integer between 0 and
+           1000.
+         * *<current/power>* Specifies if the heater output should be displayed
+           as current or power. Valid entries are `'current'` and `'power'`.
+         * *<large output enable>* Disables/Enables the large output display.
 
     """
     def __init__(self, connection, idx):
         super(Loop, self).__init__(connection)
         self.idx = idx = int(idx)
         self.filter = Command('CFILT? {0}'.format(idx),
-                              'CFILT {0}'.format(idx),
+                              'CFILT {0},'.format(idx),
                               Boolean)
         self.limit = Command('CLIMIT? {0}'.format(idx),
-                             'CLIMIT {0}'.format(idx),
+                             'CLIMIT {0},'.format(idx),
                              [Float, Float, Float,
                               Enum(0.25, 0.5, 1., 2., start=1),
                               Integer(min=0, max=5)])
         # TODO: check limits.
         self.manual_output = Command('MOUT? {0}'.format(idx),
-                                     'MOUT {0}'.format(idx),
+                                     'MOUT {0},'.format(idx),
                                      Float(min=0, max=100))
-        self.mode = Command('CMODE? {0}'.format(idx), 'CMODE {0}'.format(idx),
+        self.mode = Command('CMODE? {0}'.format(idx), 'CMODE {0},'.format(idx),
                             Enum('manual', 'zone', 'open', 'pid', 'pi', 'p',
                                  start=1))
 
         self.parameters = Command('CSET? {0}'.format(idx),
-                                  'CSET {0}'.format(idx),
+                                  'CSET {0},'.format(idx),
                                   [Set('A', 'B'),
                                    Enum('kelvin', 'celsius', 'sensor',
                                         start=1),
                                    Boolean,
                                    Boolean])
-        self.pid = Command('PID? {0}'.format(idx), 'PID {0}'.format(idx),
+        self.pid = Command('PID? {0}'.format(idx), 'PID {0},'.format(idx),
                            [Float, Float, Float])
-        self.ramp = Command('RAMP? {0}'.format(idx), 'RAMP {0}'.format(idx),
+        self.ramp = Command('RAMP? {0}'.format(idx), 'RAMP {0},'.format(idx),
                             [Boolean, Float])
         self.ramping = Command(('RAMPST? {0}'.format(idx), Boolean))
         self.setpoint = Command('SETP? {0}'.format(idx),
-                                'SETP {0}'.format(idx), Float)
+                                'SETP {0},'.format(idx), Float)
         for z in range(1, 11):
             type_ = [
                 Float(min=0),  # top value
@@ -266,6 +288,14 @@ class Loop(InstrumentBase):
             setattr(self, 'zone{0}'.format(z), cmd)
         if idx == 1:
             self.tuning_status = Command(('TUNEST?', Boolean))
+        cdisp = [
+            Enum('none', 'loop1', 'loop2', 'both'),
+            Integer(min=0, max=1000),
+            Enum('current', 'power', start=1),
+            Boolean,
+        ]
+        self.display_parameters = Command('CDISP? {0}'.format(idx),
+                                          'CDISP {0},'.format(idx), cdisp)
 
 
 class Scanner(InstrumentBase):
@@ -330,14 +360,12 @@ class LS340(IEC60488):
     :ivar beeping: A Integer value representing the current beeper status.
     :ivar busy: A Boolean representing the instrument busy status.
     :ivar com: The serial interface configuration, represented by the following
-        list: *[<terminator>, <baud rate>, <parity>]*.
+        tuple: *(<terminator>, <baud rate>, <parity>)*.
 
         * *<terminator>* valid entries are `"CRLF"`, `"LFCR"`, `"CR"`, `"LF"`
         * *<baud rate>* valid entries are 300, 1200, 2400, 4800, 9600, 19200
         * *<parity>* valid entries are 1, 2, 3. See LS340 manual for meaning.
 
-    :ivar idn: A list of strings representing the manufacturer, model number,
-        serial number and firmware date in this order.
     :ivar mode: Represents the interface mode. Valid entries are
         `"local"`, `"remote"`, `"lockout"`.
     :ivar loop1: An instance of the Loop class, representing the first control
