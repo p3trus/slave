@@ -236,7 +236,8 @@ class Command(object):
             raise AttributeError('Command is not queryable')
         # construct the query message unit
         if datas is None:
-            qmu = self._query
+            php = self._cfg['program header prefix']
+            qmu = php + self._query
         else:
             if not self._query_type:
                 raise ValueError('Query type missing')
@@ -345,13 +346,6 @@ class InstrumentBase(object):
         :class:`~Command.write` function and injects connection, and command
         config into commands.
         """
-
-
-    def __setattr__(self, name, value):
-        """Redirects write access of command attributes to the
-        :class:`~Command.write` function and injects connection, and command
-        config into commands.
-        """
         # Redirect write access
         try:
             attr = object.__getattribute__(self, name)
@@ -365,6 +359,13 @@ class InstrumentBase(object):
                     cfg.update(self._cfg)
                     cfg.update(value._custom_cfg)
                     value._cfg = cfg
+            if isinstance(value, InstrumentBase):
+                # inject config into InstrumentBase attributes.
+                cfg = dict(self._cfg)
+                if value._cfg:
+                    cfg.update(value._cfg)
+                value._cfg = cfg
+
             object.__setattr__(self, name, value)
         else:
             if isinstance(attr, Command):
