@@ -385,6 +385,14 @@ class LS340(IEC60488):
            lines DI1-DI5.
          * *<output status>* is a Register representing the state of the 5
            output lines DO1-DO5.
+    :ivar scanner_parameters: The scanner parameters.
+        *(<mode>, <channel>, <intervall>)*, where
+
+         * *<mode>* represents the scan mode. Valid entries are `'off'`,
+           `'manual'`, `'autoscan'`, `'slave'`.
+         * *<channel>* the input channel to use, an integer in the range 1-16.
+         * *<interval>* the autoscan intervall in seconds, an integer in the
+           range 0-999.
 
     """
     PROGRAM_STATUS = [
@@ -448,6 +456,12 @@ class LS340(IEC60488):
             Register({'DO1': 0, 'DO2': 1, 'DO3': 2, 'DO4': 3, 'DO5': 4}),
         ]
         self.digital_io_status = Command(('DIOST?', diost))
+        xscan = [
+            Enum('off', 'manual', 'autoscan', 'slave'),
+            Integer(min=1, max=16),
+            Integer(min=0, max=999)
+        ]
+        self.scanner_parameters = Command('XSCAN?', 'XSCAN', xscan)
         # Data Logging Commands
         # =====================
         self.logging = Command('LOG?', 'LOG', Boolean)
