@@ -21,7 +21,7 @@ class SR7225(InstrumentBase):
     """
     def __init__(self, connection):
         cfg = {
-            'parm_delimiter': ' ',
+             'program data separator': ',',
         }
         super(SR7225, self).__init__(connection, cfg=cfg)
         # Signal channel
