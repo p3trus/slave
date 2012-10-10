@@ -89,7 +89,11 @@ class Input(InstrumentBase):
            'sensor units'.
          * *<b source>* Either 'value', '+sp1', '-sp1', '+sp2' or '-sp2'.
          * *<b>* The b value if *<b source>* is set to 'value'.
-    :ivar minmax: The minimum maximum input function parameters.
+    :ivar minmax: The min max data, *(<min>, <max>)*, where
+
+         * *<min>* Is the minimum input data.
+         * *<max>* Is the maximum input data.
+    :ivar minmax_parameter: The minimum maximum input function parameters.
         *(<on/pause>, <source>)*, where
 
          * *<on/pause>* Starts/pauses the min/max function. Valid entries are
@@ -160,11 +164,12 @@ class Input(InstrumentBase):
         rds = dict((v, k) for k, v in self.READING_STATUS.items())
         self.reading_status = Command(('RDGST? {0}'.format(name),
                                        Register(rds)))
-        self.minmax = Command('MNMX? {0}'.format(name),
-                              'MNMX {0},'.format(name),
-                              Enum('on', 'pause'),
-                              Enum('kelvin', 'celsius',
-                                   'sensor units', 'linear'))
+        self.minmax = Command(('MDAT? {0}'.format(name), [Float, Float]))
+        self.minmax_parameter = Command('MNMX? {0}'.format(name),
+                                        'MNMX {0},'.format(name),
+                                        [Enum('on', 'pause'),
+                                         Enum('kelvin', 'celsius',
+                                              'sensor units', 'linear')])
 
 
 class Output(InstrumentBase):
