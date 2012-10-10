@@ -154,7 +154,7 @@ class Enum(Mapping):
         """
         start = int(kw.pop('start', 0))
         step = int(kw.pop('step', 1))
-        stop = len(args) * step
+        stop = len(args) * step + start
         map_ = dict((k, v) for k, v in zip(args, range(start, stop, step)))
         super(Enum, self).__init__(map_)
 
