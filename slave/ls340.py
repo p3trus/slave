@@ -100,6 +100,11 @@ class Input(InstrumentBase):
            `'on'`, `'pause'`.
          * *<source>* Specifies the input data to process. Valid entries are
            `'kelvin'`, `'celsius'`, `'sensor units'` and `'linear'`.
+    :ivar minmax_status: The min/max reading status.
+        *(<min status>, <max status>)*, where
+
+         * *<min status>* is the reading status register of the min value.
+         * *<max status>* is the reading status register of the max value.
 
     """
     READING_STATUS = {
@@ -170,6 +175,7 @@ class Input(InstrumentBase):
                                         [Enum('on', 'pause'),
                                          Enum('kelvin', 'celsius',
                                               'sensor units', 'linear')])
+        self.minmax_status = Command(('MDATST? {0}'.format(name), rds, rds))
 
 
 class Output(InstrumentBase):
