@@ -65,7 +65,7 @@ class SR7225(InstrumentBase):
         self.reference_phase = Command('REFP.', 'REFP.',
                                        Float(min=-360., max=360.))
         #: Queries the reference frequency in Hz.
-        self.reference_frequency = Command('FRQ.', type=Float)
+        self.reference_frequency = Command('FRQ.', type_=Float)
 
         # Signal channel output filters
         # =============================
@@ -108,28 +108,28 @@ class SR7225(InstrumentBase):
         # Instrument Outputs
         # ==================
         #: Queries the X demodulator output.
-        self.x = Command('X.', type=Float)
+        self.x = Command('X.', type_=Float)
         #: Queries the Y demodulator output.
-        self.y = Command('Y.', type=Float)
+        self.y = Command('Y.', type_=Float)
         #: Queries the X and Y demodulator output.
-        self.xy = Command('XY.', type=Float)
+        self.xy = Command('XY.', type_=Float)
         #: Queries the magnitude.
-        self.r = Command('MAG.', type=Float)
+        self.r = Command('MAG.', type_=Float)
         #: Queries the signal phase.
-        self.theta = Command('PHA.', type=Float)
+        self.theta = Command('PHA.', type_=Float)
         #: Queries the magnitude and signal phase.
-        self.theta = Command('MP.', type=Float)
+        self.theta = Command('MP.', type_=Float)
         #: Queries the ratio equivalent to X/ADC1.
-        self.ratio = Command('RT.', type=Float)
+        self.ratio = Command('RT.', type_=Float)
         #: Queries the ratio equivalent to log(X/ADC1).
-        self.log_ratio = Command('LR.', type=Float)
+        self.log_ratio = Command('LR.', type_=Float)
         #: Queries the square root of the noise spectral density measured at
         #: the Y channel output.
-        self.noise = Command('NHZ.', type=Float)
+        self.noise = Command('NHZ.', type_=Float)
         #: Queries the noise bandwidth.
-        self.noise_bandwidth = Command('ENBW.', type=Float)
+        self.noise_bandwidth = Command('ENBW.', type_=Float)
         #: Queries the noise output, the mean absolute value of the Y channel.
-        self.noise_output = Command('NN.', type=Float)
+        self.noise_output = Command('NN.', type_=Float)
         #: Sets/Queries the starmode.
         self.star = Command('STAR', 'STAR',
                             Enum('x', 'y', 'r', 'theta',
@@ -166,11 +166,11 @@ class SR7225(InstrumentBase):
         # Auxiliary Inputs
         # ================
         #: Read the auxiliary analog-to-digital input 1.
-        self.adc1 = Command('ADC. 1', type=Float)
+        self.adc1 = Command('ADC. 1', type_=Float)
         #: Read the auxiliary analog-to-digital input 1.
-        self.adc2 = Command('ADC. 2', type=Float)
+        self.adc2 = Command('ADC. 2', type_=Float)
         #: Sets/Queries the adc trigger mode.
-        self.adc_trigger_mode = Command('TADC', type=Integer(min=0, max=13))
+        self.adc_trigger_mode = Command('TADC', type_=Integer(min=0, max=13))
         # Output Data Curve Buffer
         # ========================
         #: Sets/Queries the curve length.
@@ -213,7 +213,7 @@ class SR7225(InstrumentBase):
             'data available': 7
         }
         #: Queries the status byte.
-        self.status = Command('ST', type=Register(status_byte))
+        self.status = Command('ST', type_=Register(status_byte))
         overload_byte = {
             'ch1 output overload': 1,
             'ch2 output overload': 2,
@@ -223,7 +223,7 @@ class SR7225(InstrumentBase):
             'reference unlock': 7,
         }
         #: Queries the overload status.
-        self.overload_status = Command('N', type=Register(overload_byte))
+        self.overload_status = Command('N', type_=Register(overload_byte))
         #: Sets/Queries the service request mask.
         self.srq_mask = Command('MSK', 'MSK', Integer(min=0, max=255))
         #: Sets/Queries the remote mode.
@@ -231,11 +231,11 @@ class SR7225(InstrumentBase):
         # Instrument identification
         # =========================
         #: Queries the instrument id.
-        self.id = Command('ID', type=String)
+        self.id = Command('ID', type_=String)
         #: Queries the firmware revision.
-        self.revision = Command('REV', type=String)
+        self.revision = Command('REV', type_=String)
         #: Queries the firmware version.
-        self.version = Command('VER', type=String)
+        self.version = Command('VER', type_=String)
         #: Sets/Queries the front panel LED's and LCD backlight state.
         self.lights = Command('LTS', 'LTS', Boolean)
         #:
