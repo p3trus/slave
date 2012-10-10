@@ -284,14 +284,25 @@ class Loop(InstrumentBase):
          * *<enabled>* A boolean enabling/disabling the control loop.
          * *<powerup>* Specifies if the control loop is enabled/disabled after
            powerup.
+
     :ivar pid: The PID values.
     :ivar ramp: The control-loop ramp parameters, represented by the following
         tuple *(<enabled>, <rate>)*, where
 
          * *<enabled>*  Enables, disables the ramping.
          * *<rate>* Specifies the ramping rate in kelvin/minute.
+
     :ivar ramping: The ramping status. `True` if ramping and `False` otherwise.
     :ivar setpoint: The control-loop setpoint in its configured units.
+    :ivar settle: The settle parameters. *(<threshold>, <time>)*, where
+
+        * *<threshold>* Specifies the allowable band around the setpoint. Must
+            be between 0.00 and 100.00.
+        * *<time>* The time in seconds, the reading must stay within the band.
+          Valid entries are 0-86400.
+
+        .. note:: This command is only available for loop1.
+
     :ivar tuning_status: A boolean representing the tuning status, `True` if
         tuning `False` otherwise.
         .. note:: This attribute is only available for loop1.
