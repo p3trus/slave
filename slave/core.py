@@ -361,10 +361,11 @@ class InstrumentBase(object):
                     value._cfg = cfg
             if isinstance(value, InstrumentBase):
                 # inject config into InstrumentBase attributes.
-                cfg = dict(self._cfg)
-                if value._cfg:
-                    cfg.update(value._cfg)
-                value._cfg = cfg
+                if self._cfg:
+                    cfg = dict(self._cfg)
+                    if value._cfg:
+                        cfg.update(value._cfg)
+                    value._cfg = cfg
 
             object.__setattr__(self, name, value)
         else:
