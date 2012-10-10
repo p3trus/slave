@@ -45,6 +45,38 @@ from slave.iec60488 import IEC60488
 from slave.types import Boolean, Enum, Float, Integer, Register, Set, String
 
 
+class Curve(InstrumentBase):
+    """Represents a LS340 curve.
+
+    :param connection: A connection object.
+    param idx: The curve index.
+
+    :ivar header: The curve header configuration.
+        *(<name><serial><format><limit><coefficient>)*, where
+
+        * *<name>* The name of the curve, a string limited to 15 characters.
+        * *<serial>* The serial number, a string limited to 10 characters.
+        * *<format>* Specifies the curve data format. Valid entries are
+          `'mV/K'`, `'V/K'`, `'Ohm/K'`, `'logOhm/K'`, `'logOhm/logK'`.
+        * *<limit>* The curve temperature limit in Kelvin.
+        * *<coefficient>* The curves temperature coefficient. Valid entries are
+          `'negative'` and `'positive'`.
+
+    """
+    def __init__(self, connection, idx):
+        super(Curve, self).__init__(connection)
+        self.idx = idx = int(idx)
+        read = 0 < idx < 21
+        self.header = Command('CRVHDR? {0}'.format(idx),
+                              'CRVHDR {0}'.format(idx) if read else None,
+                              [String(max=15),
+                               String(max=10),
+                               Enum('mV/K', 'V/K', 'Ohm/K',
+                                    'logOhm/K', 'logOhm/logK', start=1),
+                               Float(min=0.),
+                               Enum('negative', 'positive', start=1)])
+
+
 class Heater(InstrumentBase):
     """Represents the LS340 heater.
 
@@ -358,6 +390,9 @@ class Loop(InstrumentBase):
             setattr(self, 'zone{0}'.format(z), cmd)
         if idx == 1:
             self.tuning_status = Command(('TUNEST?', Boolean))
+            self.settle = Command('SETTLE?', 'SETTLE',
+                                  [Float(min=0., max=100.),
+                                   Integer(min=0, max=86400)])
         cdisp = [
             Enum('none', 'loop1', 'loop2', 'both'),
             Integer(min=0, max=1000),
