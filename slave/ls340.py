@@ -102,7 +102,7 @@ class Curve(InstrumentBase):
         # curves 1-20 are internal and not writeable.
         self._writeable = writeable
         self.header = Command('CRVHDR? {0}'.format(idx),
-                              'CRVHDR {0}'.format(idx) if writeable else None,
+                              'CRVHDR {0},'.format(idx) if writeable else None,
                               [String(max=15),
                                String(max=10),
                                Enum('mV/K', 'V/K', 'Ohm/K',
@@ -117,7 +117,7 @@ class Curve(InstrumentBase):
         index = int(index)
         if index < 0:
             index += len(self)
-        if 0 < index < len(self):
+        if 0 <= index < len(self):
             return index
         else:
             raise IndexError()
@@ -142,8 +142,10 @@ class Curve(InstrumentBase):
                 self[i] = value[i]
         else:
             item = self.__make_index(item)
+            unit, temp = value
             data_t = [Integer(min=1), Integer(min=1, max=200), Float, Float]
-            cmd = Command(write=('CRVPT', data_t))
+            cmd = Command(write=('CRVPT', data_t),
+                          connection=self.connection, cfg=self._cfg)
             # Since indices in LS304 start at 1, it must be added.
             cmd.write((self.idx, item + 1, unit, temp))
 
