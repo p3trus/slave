@@ -112,13 +112,13 @@ class SR7225(InstrumentBase):
         #: Queries the Y demodulator output.
         self.y = Command('Y.', type_=Float)
         #: Queries the X and Y demodulator output.
-        self.xy = Command('XY.', type_=Float)
+        self.xy = Command('XY.', type_=[Float, Float])
         #: Queries the magnitude.
         self.r = Command('MAG.', type_=Float)
         #: Queries the signal phase.
         self.theta = Command('PHA.', type_=Float)
         #: Queries the magnitude and signal phase.
-        self.theta = Command('MP.', type_=Float)
+        self.r_theta = Command('MP.', type_=[Float, Float])
         #: Queries the ratio equivalent to X/ADC1.
         self.ratio = Command('RT.', type_=Float)
         #: Queries the ratio equivalent to log(X/ADC1).
