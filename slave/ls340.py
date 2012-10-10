@@ -752,6 +752,37 @@ class LS340(IEC60488):
         """Updates the curve flash with the current user curves."""
         self.connection.write('CRVSAV')
 
+    def softcal(self, std, dest, serial, T1, U1, T2, U2, T3=None, U3=None):
+        """Generates a softcal curve.
+
+        :param std: The standard curve index used to calculate the softcal
+            curve. Valid entries are 1-20
+        :param dest: The user curve index where the softcal curve is stored.
+            Valid entries are 21-60.
+        :param serial: The serial number of the new curve. A maximum of 10
+            characters is allowed.
+        :param T1: The first temperature point.
+        :param U1: The first sensor units point.
+        :param T2: The second temperature point.
+        :param U2: The second sensor units point.
+        :param T3: The third temperature point. Default: `None`.
+        :param U3: The third sensor units point. Default: `None`.
+
+        """
+        std = int(std)
+        if not (0 <= std <= 20):
+            raise ValueError('Standard curve index out of range.')
+        dest = int(dest)
+        if not (20 < std <= 60):
+            raise ValueError('User curve index out of range.')
+        serial = str(serial)
+        if len(serial) > 10:
+            raise ValueError('Serial number too large.')
+        args = [std, dest, serial, T1, U1, T2, U2]
+        if (T3 is not None) and (U3 is not None):
+            args.extend([T3, U3])
+        self.connection.write('SCAL ' + ','.join(args))
+
     def _factory_default(self, confirm=False):
         """Resets the device to factory defaults.
 
