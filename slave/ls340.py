@@ -49,7 +49,10 @@ class Curve(InstrumentBase):
     """Represents a LS340 curve.
 
     :param connection: A connection object.
-    param idx: The curve index.
+    :param idx: The curve index.
+    :param writeable: Specifies if the represented curve is read-only or
+        writeable as well. User curves are writeable in general.
+    :param length: The maximum number of points. Default: 200.
 
     :ivar header: The curve header configuration.
         *(<name><serial><format><limit><coefficient>)*, where
@@ -61,20 +64,97 @@ class Curve(InstrumentBase):
         * *<limit>* The curve temperature limit in Kelvin.
         * *<coefficient>* The curves temperature coefficient. Valid entries are
           `'negative'` and `'positive'`.
+    :ivar point: The curve data point
+
+    Points are tuples with the following structure
+    *(<units value>, <temp value>)*, where
+
+    * *<units value>* specifies the sensor units for this point.
+    * *<temp value>* specifies the corresponding temperature in kelvin.
+
+    To access the points of this curve, use slicing operations, e.g.::
+
+        # assuming an LS340 instance named ls340, the following will print the
+        # sixth point.
+        print ls340.curve4[5]
+
+        # You can use negative indices. This will print the last point.
+        print ls340.curve4[-1]
+
+        # You can use the builtin function `len()` to get the number of points.
+        print len(ls340.curve4)
+
+        #Extended slicing is available too. This will print every second point.
+        print ls340.curve4[::2]
+
+        # Set this curves data point to 0.10191 sensor units and 470.000 K.
+        ls340.curve21[5] = 0.10191, 470.000
+
+    .. note ::
+
+        In contrast to the LS340 device, point indices start at 0 **not** 1.
 
     """
-    def __init__(self, connection, idx):
+    def __init__(self, connection, idx, writeable, length=None):
         super(Curve, self).__init__(connection)
         self.idx = idx = int(idx)
-        read = 0 < idx < 21
+        self.__length = length or 200
+        # curves 1-20 are internal and not writeable.
+        self._writeable = writeable
         self.header = Command('CRVHDR? {0}'.format(idx),
-                              'CRVHDR {0}'.format(idx) if read else None,
+                              'CRVHDR {0}'.format(idx) if writeable else None,
                               [String(max=15),
                                String(max=10),
                                Enum('mV/K', 'V/K', 'Ohm/K',
                                     'logOhm/K', 'logOhm/logK', start=1),
                                Float(min=0.),
                                Enum('negative', 'positive', start=1)])
+
+    def __len__(self):
+        return self.__length
+
+    def __make_index(self, index):
+        index = int(index)
+        if index < 0:
+            index += len(self)
+        if 0 < index < len(self):
+            return index
+        else:
+            raise IndexError()
+
+    def __getitem__(self, item):
+        if isinstance(item, slice):
+            indices = item.indices(len(self))
+            return [self[i] for i in range(*indices)]
+        # Simple index
+        item = self.__make_index(item)
+        response_t = [Float, Float]
+        data_t = [Integer(min=1), Integer(min=1, max=200)]
+        cmd = Command(('CRVPT?', response_t, data_t),
+                      connection=self.connection, cfg=self._cfg)
+        # Since indices in LS304 start at 1, it must be added.
+        return cmd.query((self.idx, item + 1))
+
+    def __setitem__(self, item, value):
+        if isinstance(item, slice):
+            indices = item.indices(len(self))
+            for i in range(*indices):
+                self[i] = value[i]
+        else:
+            item = self.__make_index(item)
+            data_t = [Integer(min=1), Integer(min=1, max=200), Float, Float]
+            cmd = Command(write=('CRVPT', data_t))
+            # Since indices in LS304 start at 1, it must be added.
+            cmd.write((self.idx, item + 1, unit, temp))
+
+    def delete(self):
+        """Deletes the current curve.
+
+        .. note:: Only writeable curves are deleteable.
+
+        """
+        if self._writeable:
+            self.connection.write('CRVDEL {0}'.format(self.idx))
 
 
 class Heater(InstrumentBase):
@@ -469,6 +549,8 @@ class LS340(IEC60488):
         * *<baud rate>* valid entries are 300, 1200, 2400, 4800, 9600, 19200
         * *<parity>* valid entries are 1, 2, 3. See LS340 manual for meaning.
 
+    :ivar curvex: An instance of :class:`~.Curve`. x is just a placeholder for
+        an integer between 1 and 60, e.g. `.curve2` is the second curve.
     :ivar datetime: The configured date and time.
         *(<MM>, <DD>, <YYYY>, <HH>, <mm>, <SS>, <sss>)*, where
 
@@ -644,6 +726,11 @@ class LS340(IEC60488):
             Integer(min=0, max=999)
         ]
         self.scanner_parameters = Command('XSCAN?', 'XSCAN', xscan)
+        # Curve Commands
+        # ==============
+        for i in range(1, 61):
+            setattr(self, 'curve{0}'.format(i),
+                    Curve(connection, i, writeable=(i > 20)))
         # Data Logging Commands
         # =====================
         self.logging = Command('LOG?', 'LOG', Boolean)
