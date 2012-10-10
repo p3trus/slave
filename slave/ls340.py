@@ -559,6 +559,10 @@ class LS340(IEC60488):
         """Clears the alarm status for all inputs."""
         self.connection.write('ALMRST')
 
+    def reset_minmax(self):
+        """Resets Min/Max functions for all inputs."""
+        self.connection.write('MNMXRST')
+
     def save_curves(self):
         """Updates the curve flash with the current user curves."""
         self.connection.write('CRVSAV')
