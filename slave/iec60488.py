@@ -51,7 +51,7 @@ EVENT_STATUS_BYTE = {
 PARALLEL_POLL_REGISTER = dict((i, str(i)) for i in range(8, 16))
 
 
-def __construct_register(reg, default_reg):
+def _construct_register(reg, default_reg):
     """Constructs a register dict."""
     if reg:
         x = dict((k, reg.get(k, d)) for k, d in default_reg.iteritems())
@@ -110,8 +110,8 @@ class IEC60488(InstrumentBase):
     """
     def __init__(self, connection, esb=None, stb=None, *args, **kw):
         super(IEC60488, self).__init__(connection, *args, **kw)
-        self._esb = esb = __construct_register(esb, EVENT_STATUS_BYTE)
-        self._stb = stb = __construct_register(stb, STATUS_BYTE)
+        self._esb = esb = _construct_register(esb, EVENT_STATUS_BYTE)
+        self._stb = stb = _construct_register(stb, STATUS_BYTE)
 
         self.event_status = Command(('*ESR?', Register(esb)))
         self.event_status_enable = Command('*ESE?', '*ESE', Register(esb))
@@ -413,14 +413,24 @@ class StoredSetting(object):
     """
     def __init__(self, *args, **kw):
         super(StoredSetting, self).__init__(*args, **kw)
+        self.__recall = Command(write=('*RCL', Integer(min=0)))
+        self.__save = Command(write=('*SAV', Integer(min=0)))
 
-    def recall(self):
-        """Restores the current settings from a copy stored in local memory."""
-        self.connection.write('*RCL')
+    def recall(self, idx):
+        """Restores the current settings from a copy stored in local memory.
 
-    def save(self):
-        """Stores the current settings of a device in local memory."""
-        self.connection.write('*SAV')
+        :param idx: Specifies the memory slot.
+
+        """
+        self.__recall = idx
+
+    def save(self, idx):
+        """Stores the current settings of a device in local memory.
+
+        :param idx: Specifies the memory slot.
+
+        """
+        self.__save = idx
 
 
 class Learn(object):

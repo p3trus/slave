@@ -1,13 +1,27 @@
 #  -*- coding: utf-8 -*-
 #
 # E21, (c) 2012, see AUTHORS.  Licensed under the GNU GPL.
+import string
+
 from slave.core import Command, InstrumentBase
 from slave.iec60488 import IEC60488
-from slave.types import Boolean, Float, Mapping, Register, Set, String
+from slave.types import Boolean, Float, Mapping, Set, String
 
 
 #: A list with all valid shim identifiers.
 SHIMS = ['Z', 'Z2', 'Z3', 'Z4', 'X', 'Y', 'ZX', 'ZY', 'C2', 'S2', 'Z2X', 'Z2Y']
+
+
+class UnitFloat(Float):
+    """Represents a floating point type. If a unit is present in the string
+    representation, it will get stripped.
+
+    """
+    def _convert(self, value):
+        """Converts value to Float."""
+        if isinstance(value, basestring):
+            value = value.rstrip(string.ascii_letters)
+        return float(value)
 
 
 class Range(InstrumentBase):
@@ -58,10 +72,9 @@ class Shim(InstrumentBase):
             True: '{0} Enabled'.format(shim),
             False: '{0} Disabled'.format(shim)
         }
-        self.status = Command(('SHIM?',
-                               Mapping(state)))
-        self.current = Command(('IMAG? {0}'.format(shim), [Float, String]),
-                               ('IMAG {0}'.format(shim), Float))
+        self.status = Command(('SHIM?', Mapping(state)))
+        self.current = Command('IMAG? {0}'.format(shim),
+                               'IMAG {0}'.format(shim), UnitFloat)
 
     def disable(self):
         """Disables the shim."""
@@ -76,6 +89,9 @@ class MPS4G(IEC60488):
     """Represents the Cryomagnetics, inc. 4G Magnet Power Supply.
 
     :param connection: A connection object.
+    :param channel: This parameter is used to set the MPS4G in single channel
+        mode. Valid entries are `None`, `1` and `2`.
+
     :ivar channel: The selected channel.
     :ivar error: The error response mode of the usb interface.
     :ivar current: The magnet current.Queriing returns a value, unit tuple.
@@ -110,7 +126,7 @@ class MPS4G(IEC60488):
     :ivar sweep_status: A string representing the current sweep status.
 
     """
-    def __init__(self, connection, shims=None):
+    def __init__(self, connection, shims=None, channel=None):
         stb = {
             0: 'sweep mode active',
             1: 'standby mode active',
@@ -118,32 +134,44 @@ class MPS4G(IEC60488):
             3: 'power module failure',
             7: 'menu mode',
         }
-        super(MPS4G, self).__init__(connection, stb=stb)
+        if not channel in (None, 1, 2):
+            raise ValueError('Invalid channel. Must be either None, 1 or 2.')
+        if channel:
+            # if single channel mode is required, set the channel on every
+            # command to avoid errors.
+            cfg = {'program header prefix': 'CHAN {0};'.format(channel)}
+        else:
+            cfg = {}
+        super(MPS4G, self).__init__(connection, stb=stb, cfg=cfg)
         if shims:
             if isinstance(shims, basestring):
                 shims = [shims]
             for shim in list(shims):
                 setattr(self, str(shim), Shim(connection, shim))
 
-        self.channel = Command('CHAN?', 'CHAN', Set(1, 2))
+        if channel:
+            # Channel is read only if channel is fixed
+            self.channel = Command(('CHAN?', Set(1, 2)))
+        else:
+            self.channel = Command('CHAN?', 'CHAN', Set(1, 2))
+
         self.error = Command('ERROR?', 'ERROR', Boolean)
-        self.current = Command(('IMAG?', [Float, String]),
-                               ('IMAG', Float))
-        self.output_current = Command(('IOUT?', [Float, String]))
-        self.lower_limit = Command(('LLIM?', [Float, String]),
-                                   ('LLIM', Float))
+        self.current = Command('IMAG?', 'IMAG', UnitFloat)
+        self.output_current = Command(('IOUT?', UnitFloat))
+        self.lower_limit = Command('LLIM?', 'LLIM', UnitFloat)
         self.mode = Command(('MODE?', String))
         self.name = Command('NAME?', 'NAME', String)
         self.switch_heater = Command('PSHTR?', 'PSHTR',
                                      Mapping({True: 'ON', False: 'OFF'}))
         for idx in range(0, 5):
             setattr(self, 'range{0}'.format(idx), Range(connection, idx))
-        self.upper_limit = Command(('ULIM?', [Float, String]),
-                                   ('ULIM', Float))
+        self.upper_limit = Command('ULIM?', 'ULIM', UnitFloat)
         self.unit = Command('UNITS?', 'UNITS', Set('A', 'G'))
-        self.voltage_limit = Command('VLIM?', 'VLIM', Float(min=0., max=10.))
-        self.magnet_voltage = Command(('VMAG?', Float(min=-10., max=10.)))
-        self.output_voltage = Command(('VMAG?', Float(min=-12.8, max=12.8)))
+        self.voltage_limit = Command('VLIM?', 'VLIM',
+                                     UnitFloat(min=0., max=10.))
+        self.magnet_voltage = Command(('VMAG?', UnitFloat(min=-10., max=10.)))
+        self.output_voltage = Command(('VMAG?',
+                                       UnitFloat(min=-12.8, max=12.8)))
         self.sweep_status = Command(('SWEEP?', String))
 
     def local(self):

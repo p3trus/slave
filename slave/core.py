@@ -23,9 +23,21 @@ implementation might look like::
 
 """
 import collections
+import logging
 from itertools import izip, izip_longest
+try:
+    from logging import NullHandler
+except ImportError:
+    # Fall-back code for python < 2.7
+    class NullHandler(logging.Handler):
+        def emit(self, record):
+            pass
 
 import slave.types
+
+
+_logger = logging.getLogger(__name__)
+_logger.addHandler(NullHandler())
 
 
 class SimulatedConnection(object):
@@ -81,14 +93,15 @@ class Command(object):
 
     """
     _default_cfg = {
+        'program header prefix': '',
         'program header separator': ' ',
         'program data separator': ',',
         'response header separator': ' ',
         'response data separator': ',',
     }
 
-    def __init__(self, query=None, write=None, type_=None,
-                 connection=None, cfg=None, simulate=False):
+    def __init__(self, query=None, write=None,
+                 type_=None, connection=None, cfg=None):
         def to_instance(x):
             """If x is a type class, it is converted to an instance of it."""
             if isinstance(x, slave.types.Type):
@@ -148,6 +161,8 @@ class Command(object):
         self._cfg = dict(self._default_cfg)
         self._cfg.update(self._custom_cfg)
 
+        _logger.debug('created {0}'.format(self))
+
     @property
     def connection(self):
         return self._connection
@@ -169,16 +184,16 @@ class Command(object):
 
         The following algorithm is used to construct the program message unit::
 
-            +---------+    +-----------+    +---------+
-            | Program |    | Program   |    | Program |
-            | Header  +--->| Header    +--->| Data    +-+->
-            +---------+    | Separator | ^  +---------+ |
-                           +-----------+ |              |
-                                         | +-----------+|
-                                         | | Program   ||
-                                         +-+ Data      <+
-                                           | Separator |
-                                           +-----------+
+            +---------+    +---------+    +-----------+    +---------+
+            | Program |    | Program |    | Program   |    | Program |
+            | Header  |--->| Header  +--->| Header    +--->| Data    +-+->
+            | Prefix  |    +---------+    | Separator | ^  +---------+ |
+            +---------+                   +-----------+ |              |
+                                                        | +-----------+|
+                                                        | | Program   ||
+                                                        +-+ Data      <+
+                                                          | Separator |
+                                                          +-----------+
 
         """
         if (not isinstance(datas, collections.Sequence) or
@@ -187,10 +202,11 @@ class Command(object):
         if len(datas) != len(types):
             raise ValueError('Number of datas must match the number of types.')
 
+        php = self._cfg['program header prefix']
         phs = self._cfg['program header separator']
         pds = self._cfg['program data separator']
         program_data = [t.dump(v) for v, t in izip(datas, types)]
-        return header + phs + pds.join(program_data)
+        return php + header + phs + pds.join(program_data)
 
     def write(self, datas=None):
         """Generates and sends a command message unit.
@@ -207,6 +223,7 @@ class Command(object):
             cmu = self.program_message_unit(self._write, datas,
                                         self._write_type)
         # Send command message unit
+        _logger.info('command message unit: "{0}"'.format(cmu))
         self.connection.write(cmu)
 
     def query(self, datas=None):
@@ -219,15 +236,19 @@ class Command(object):
             raise AttributeError('Command is not queryable')
         # construct the query message unit
         if datas is None:
-            qmu = self._query
+            php = self._cfg['program header prefix']
+            qmu = php + self._query
         else:
             if not self._query_type:
                 raise ValueError('Query type missing')
             qmu = self.program_message_unit(self._query, datas,
                                             self._query_type)
         # Send query message unit.
+        _logger.info('query message unit: "{0}"'.format(qmu))
         response = self.connection.ask(qmu)
+
         # Parse response
+        _logger.info('response:"{0}"'.format(response))
         header, parsed_data = self.parse_response(response)
         # TODO handle the response header
 
@@ -279,6 +300,17 @@ class Command(object):
 
         self._buffer = [t.dump(v) for v, t in izip(datas, self._write_type)]
 
+    def __repr__(self):
+        """The commands representation."""
+        query = 'query=({0!r}, {1!r}, {2!r})'.format(self._query,
+                                                     self._response_type,
+                                                     self._query_type)
+        write = 'write=({0!r}, {1!r})'.format(self._write, self._write_type)
+        connection = 'connection={0!r}'.format(self.connection)
+        cfg = 'cfg={0!r}'.format(self._cfg)
+        return 'Command({0}, {1}, {2}, {3})'.format(query, write,
+                                                    connection, cfg)
+
 
 class InstrumentBase(object):
     """Base class of all instruments.
@@ -315,20 +347,27 @@ class InstrumentBase(object):
         config into commands.
         """
         # Redirect write access
-        if hasattr(self, name):
+        try:
             attr = object.__getattribute__(self, name)
+        except AttributeError:
+            if isinstance(value, Command):
+                if value.connection is None:
+                    value.connection = self.connection
+                if self._cfg:
+                    # TODO doesn't feel right...
+                    cfg = dict(value._default_cfg)
+                    cfg.update(self._cfg)
+                    cfg.update(value._custom_cfg)
+                    value._cfg = cfg
+            if isinstance(value, InstrumentBase):
+                # inject config into InstrumentBase attributes.
+                if self._cfg:
+                    cfg = dict(self._cfg)
+                    if value._cfg:
+                        cfg.update(value._cfg)
+                    value._cfg = cfg
+
+            object.__setattr__(self, name, value)
+        else:
             if isinstance(attr, Command):
                 attr.write(value)
-                return
-        # Inject connection
-        elif isinstance(value, Command):
-            if value.connection is None:
-                value.connection = self.connection
-            if self._cfg:
-                # TODO doesn't feel right...
-                cfg = dict(value._default_cfg)
-                cfg.update(self._cfg)
-                cfg.update(value._custom_cfg)
-                value._cfg = cfg
-
-        object.__setattr__(self, name, value)
