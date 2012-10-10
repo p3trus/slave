@@ -352,13 +352,6 @@ def _get_scanner(connection, model):
     return Scanner(connection, channels[model])
 
 
-class DisplayField(InstrumentBase):
-    def __init__(self, connection, idx):
-        super(DisplayField, self).__init__(connection)
-        self.idx = idx = int(idx)
-
-
-
 class LS340(IEC60488):
     """
     Represents a Lakeshore model LS340 temperature controller.
