@@ -5,14 +5,44 @@
 """
 The ls340 module implements an interface for the Lakeshore model LS340
 temperature controller.
+
+The :class:`~.LS340` class models the excellent `Lakeshore model LS340`_
+temperature controller. Using it is simple::
+
+    # We use pyvisa to connect to the controller.
+    import visa
+    from slave.ls340 import LS340
+
+    # We assume the LS340 is listening on GPIB channel.
+    ls340 = LS340(visa.instrument('GPIB::08'))
+    # Show kelvin reading of channel A.
+    print ls340.a.kelvin
+
+    # Filter channel 'B' data through 10 readings with 2% of full scale window.
+    ls340.b.filter = True, 10, 2
+
+Since the :class:`~.LS340` supports different scanner options, these are
+supported as well. They extend the available input channels. To use them one
+simply passes the model name at construction, e.g.::
+
+    import visa
+    from slave.ls340 import LS340
+
+    # We assume the LS340 is equipped with the 3468 eight channel input option
+    # card.
+    ls340 = LS340(visa.instrument('GPIB::08'), scanner='3468')
+
+    # Show sensor reading of channel D2.
+    print ls340.scanner.d2.sensor_units
+
+.. _Lakeshore model LS340: http://www.lakeshore.com/products/cryogenic-tempera\
+ture-controllers/model-340/Pages/Overview.aspx
+
 """
 
 from slave.core import Command, InstrumentBase
 from slave.iec60488 import IEC60488
 from slave.types import Boolean, Enum, Float, Integer, Register, Set, String
-
-
-#__all__ = ['scanner', 'LS340']
 
 
 class Heater(InstrumentBase):
@@ -21,9 +51,9 @@ class Heater(InstrumentBase):
     :param connection: The connection object.
 
     :ivar output: The heater output in percent.
-    :ivar status: The heater error status.
     :ivar range: The heater range. An integer between 0 and 5, where 0
         deactivates the heater.
+    :ivar status: The heater error status.
 
     """
     ERROR_STATUS = [
@@ -38,8 +68,8 @@ class Heater(InstrumentBase):
 
     def __init__(self, connection):
         super(Heater, self).__init__(connection)
-        self.range = Command('RANGE?', 'RANGE', Integer(min=0, max=5))
         self.output = Command(('HTR?', Float))
+        self.range = Command('RANGE?', 'RANGE', Integer(min=0, max=5))
         self.status = Command(('HTRST?', Enum(*self.ERROR_STATUS)))
 
 
@@ -48,6 +78,7 @@ class Input(InstrumentBase):
 
     :param connection: A connection object.
     :param name: A string value indicating the input in use.
+
     :ivar alarm: The alarm configuration, represented by the following tuple
         *(<enabled>, <source>, <high value>, <low value>, <latch>, <relay>)*,
         where:
@@ -61,11 +92,9 @@ class Input(InstrumentBase):
     :ivar alarm_status: The high and low alarm status, represented by the
         following list: *(<high status>, <low status>)*.
     :ivar celsius: The input value in celsius.
+    :ivar curve: The input curve number. An Integer in the range [0-60].
     :ivar filter: The input filter parameters, represented by the following
         tuple: *(<enable>, <points>, <window>)*.
-    :ivar set: The input setup parameters, represented by the following tuple:
-        *(<enable>, <compensation>)*
-    :ivar curve: The input curve number. An Integer in the range [0-60].
     :ivar input_type: The input type configuration, represented by the
         tuple: *(<type>, <units>, <coefficient>, <excitation>, <range>)*, where
 
@@ -75,10 +104,7 @@ class Input(InstrumentBase):
          * *<excitation>* The input excitation.
          * *<range>* The input range.
     :ivar kelvin: The kelvin reading.
-    :ivar sensor_units: The sensor units reading of the input.
     :ivar linear: The linear equation data.
-    :ivar linear_status: The linear status register.
-    :ivar reading_status: The reading status register.
     :ivar linear_equation: The input linear equation parameters.
         *(<equation>, <m>, <x source>, <b source>, <b>)*, where
 
@@ -89,6 +115,7 @@ class Input(InstrumentBase):
            'sensor units'.
          * *<b source>* Either 'value', '+sp1', '-sp1', '+sp2' or '-sp2'.
          * *<b>* The b value if *<b source>* is set to 'value'.
+    :ivar linear_status: The linear status register.
     :ivar minmax: The min max data, *(<min>, <max>)*, where
 
          * *<min>* Is the minimum input data.
@@ -105,6 +132,10 @@ class Input(InstrumentBase):
 
          * *<min status>* is the reading status register of the min value.
          * *<max status>* is the reading status register of the max value.
+    :ivar reading_status: The reading status register.
+    :ivar sensor_units: The sensor units reading of the input.
+    :ivar set: The input setup parameters, represented by the following tuple:
+        *(<enable>, <compensation>)*
 
     """
     READING_STATUS = {
@@ -119,6 +150,10 @@ class Input(InstrumentBase):
     def __init__(self, connection, name):
         super(Input, self).__init__(connection)
         self.name = name = str(name)
+        # The reading status register, used in linear_status, reading_status
+        # and minmax_status.
+        rds = Register(dict((v, k) for k, v in self.READING_STATUS.items()))
+
         self.alarm = Command('ALARM? {0}'.format(name),
                              'ALARM {0},'.format(name),
                              [Boolean,
@@ -164,11 +199,8 @@ class Input(InstrumentBase):
         ]
         self.linear_equation = Command('LINEAR? {0}'.format(name),
                                        'LINEAR {0},'.format(name), leq)
-        # TODO use register instead of Integer
-        self.linear_status = Command(('LDATST? {0}'.format(name), Integer))
-        rds = dict((v, k) for k, v in self.READING_STATUS.items())
-        self.reading_status = Command(('RDGST? {0}'.format(name),
-                                       Register(rds)))
+        self.linear_status = Command(('LDATST? {0}'.format(name), rds))
+        self.reading_status = Command(('RDGST? {0}'.format(name), rds))
         self.minmax = Command(('MDAT? {0}'.format(name), [Float, Float]))
         self.minmax_parameter = Command('MNMX? {0}'.format(name),
                                         'MNMX {0},'.format(name),
@@ -221,10 +253,25 @@ class Output(InstrumentBase):
 class Loop(InstrumentBase):
     """Represents a LS340 control loop.
 
+    :param connection: A connection object.
+    :param idx: The loop index.
+
+    :ivar display_parameters: The display parameter of the loop.
+        *(<loop>, <resistance>, <current/power>, <large output enable>)*, where
+
+         * *<loop>* specifies how many loops should be displayed. Valid entries
+           are `'none'`, `'loop1'`, `'loop2'`, `'both'`.
+         * *<resistance>* The heater load resistance, an integer between 0 and
+           1000.
+         * *<current/power>* Specifies if the heater output should be displayed
+           as current or power. Valid entries are `'current'` and `'power'`.
+         * *<large output enable>* Disables/Enables the large output display.
     :ivar filter: The loop filter state.
     :ivar limit: The limit configuration, represented by the following tuple
         *(<limit>, <pos slope>, <neg slope>, <max current>, <max range>)*
-    :ivar manual_output: The manual output value.
+    :ivar manual_output: The manual output value in percent of full scale.
+        Valid entries are floats in the range -100.00 to 100.00 with a
+        resolution of 0.01.
     :ivar mode: The control-loop mode. Valid entries are
         *'manual', 'zone', 'open', 'pid', 'pi', 'p'*
     :ivar parameters: The control loop parameters, a tuple containing
@@ -245,22 +292,12 @@ class Loop(InstrumentBase):
          * *<rate>* Specifies the ramping rate in kelvin/minute.
     :ivar ramping: The ramping status. `True` if ramping and `False` otherwise.
     :ivar setpoint: The control-loop setpoint in its configured units.
-    :ivar zonex: There are 11 zones, zone1 is the first. The zone attribute
-        represents the control loop zone table parameters.
-        *(<top>, <p>, <i>, <d>, <mout>, <range>)*.
     :ivar tuning_status: A boolean representing the tuning status, `True` if
         tuning `False` otherwise.
         .. note:: This attribute is only available for loop1.
-    :ivar display_parameters: The display parameter of the loop.
-        *(<loop>, <resistance>, <current/power>, <large output enable>)*, where
-
-         * *<loop>* specifies how many loops should be displayed. Valid entries
-           are `'none'`, `'loop1'`, `'loop2'`, `'both'`.
-         * *<resistance>* The heater load resistance, an integer between 0 and
-           1000.
-         * *<current/power>* Specifies if the heater output should be displayed
-           as current or power. Valid entries are `'current'` and `'power'`.
-         * *<large output enable>* Disables/Enables the large output display.
+    :ivar zonex: There are 11 zones, zone1 is the first. The zone attribute
+        represents the control loop zone table parameters.
+        *(<top>, <p>, <i>, <d>, <mout>, <range>)*.
 
     """
     def __init__(self, connection, idx):
@@ -274,10 +311,9 @@ class Loop(InstrumentBase):
                              [Float, Float, Float,
                               Enum(0.25, 0.5, 1., 2., start=1),
                               Integer(min=0, max=5)])
-        # TODO: check limits.
         self.manual_output = Command('MOUT? {0}'.format(idx),
                                      'MOUT {0},'.format(idx),
-                                     Float(min=0, max=100))
+                                     Float(min=-100., max=100.))
         self.mode = Command('CMODE? {0}'.format(idx), 'CMODE {0},'.format(idx),
                             Enum('manual', 'zone', 'open', 'pid', 'pi', 'p',
                                  start=1))
@@ -376,8 +412,6 @@ class LS340(IEC60488):
 
     :ivar a: Input channel a.
     :ivar b: Input channel b.
-    :ivar output1: First output channel.
-    :ivar output2: Second output channel.
     :ivar beeper: A boolean value representing the beeper mode. `True` means
         enabled, `False` means disabled.
     :ivar beeping: A Integer value representing the current beeper status.
@@ -389,53 +423,89 @@ class LS340(IEC60488):
         * *<baud rate>* valid entries are 300, 1200, 2400, 4800, 9600, 19200
         * *<parity>* valid entries are 1, 2, 3. See LS340 manual for meaning.
 
-    :ivar mode: Represents the interface mode. Valid entries are
-        `"local"`, `"remote"`, `"lockout"`.
+    :ivar datetime: The configured date and time.
+        *(<MM>, <DD>, <YYYY>, <HH>, <mm>, <SS>, <sss>)*, where
+
+        * *<MM>* represents the month, an Integer in the range 1-12.
+        * *<DD>* represents the day, an Integer in the range 1-31.
+        * *<YYYY>* represents the year.
+        * *<mm>* represents the minutes, an Integer in the range 0-59.
+        * *<SS>* represents the seconds, an Integer in the range 0-59.
+        * *<sss>* represents the miliseconds, an Integer in the range 0-999.
+
+    :ivar digital_io_status: The digital input/output status.
+        *(<input status>, <output status>)*, where
+
+        * *<input status>* is a Register representing the state of the 5 input
+          lines DI1-DI5.
+        * *<output status>* is a Register representing the state of the 5
+          output lines DO1-DO5.
+
+    :ivar digital_output_param: The digital output parameters.
+        *(<mode>, <digital output>)*, where:
+
+        * *<mode>* Specifies the mode of the digital output, valid entries are
+          `'off'`, `'alarms'`, `'scanner'`, `'manual'`,
+        * *<digital output>* A register to enable/disable the five digital
+          outputs DO1-DO5, if *<mode>* is `'manual'`.
+
+    :ivar display_fieldx: The display field configuration values. x is just a
+        placeholder and varies between 1 and 8, e.g. `.display_field2`.
+        *(<input>, '<source>')*, where
+
+        * *<input>* Is the string name of the input to display.
+        * *<source>* Specifies the data to display. Valid entries are
+          `'kelvin'`, `'celsius'`, , `'sensor units'`, `'linear'`, `'min'` and
+          `'max'`.
+
+    :ivar heater: An instance of the :class:`~.Heater` class.
+    :ivar high_relay: The configuration of the high relay, represented by the
+        following tuple *(<mode>, <off/on>)*, where
+
+        * *<mode>* specifies the relay mode, either `'off'` , `'alarms'` or
+          `'manual'`.
+        * *<off/on>* A boolean enabling disabling the relay in manual mode.
+
+    :ivar high_relay_status: The status of the high relay, either `'off'` or
+        `'on'`.
+    :ivar ieee: The IEEE-488 interface parameters, represented by the following
+        tuple *(<terminator>, <EOI enable>, <address>)*, where
+
+        * *<terminator>* is `None`, `\\\\r\\\\n`, `\\\\n\\\\r`, `\\\\r` or
+          `\\\\n`.
+        * *<EOI enable>* A boolean.
+        * *<address>* The IEEE-488.1 address of the device, an integer between
+          0 and 30.
+
+    :ivar key_status: A string representing the keypad status, either
+        `'no key pressed'` or `'key pressed'`.
+    :ivar lock: A tuple representing the keypad lock-out and the lock-out code.
+        *(<off/on>, <code>)*.
+    :ivar logging: A Boolean value, enabling or disabling data logging.
     :ivar loop1: An instance of the Loop class, representing the first control
         loop.
     :ivar loop2: Am instance of the Loop class, representing the second control
         loop.
-    :ivar logging: A Boolean value, enabling or disabling data logging.
+    :ivar low_relay: The configuration of the low relay, represented by the
+        following tuple *(<mode>, <off/on>)*, where
+
+        * *<mode>* specifies the relay mode, either `'off'` , `'alarms'` or
+          `'manual'`.
+        * *<off/on>* A boolean enabling disabling the relay in manual mode.
+
+    :ivar low_relay_status: The status of the low relay, either `'off'` or
+        `'on'`.
+    :ivar mode: Represents the interface mode. Valid entries are
+        `"local"`, `"remote"`, `"lockout"`.
+    :ivar output1: First output channel.
+    :ivar output2: Second output channel.
     :ivar program_status: The status of the currently running program
         represented by the following tuple: *(<program>, <status>)*. If
         program is zero, it means that no program is running.
-    :ivar key_status: A string representing the keypad status, either
-        `'no key pressed'` or `'key pressed'`.
     :ivar revision: A tuple representing the revision information.
         *(<master rev date>, <master rev number>, <master serial number>,*
         *<switch setting SW1>, <input rev date>, <input rev number>,*
         *<option ID>, <option rev date>, <option rev number>)*.
-    :ivar low_relay: The configuration of the low relay, represented by the
-        following tuple *(<mode>, <off/on>)*.
-    :ivar high_relay_status: The status of the high relay, either `'off'` or
-        `'on'`.
-    :ivar low_relay_status: The status of the high relay, either `'off'` or
-        `'on'`.
-    :ivar heater: An instance of the :class:`~.Heater` class.
-    :ivar lock: A tuple representing the keypad lock-out and the lock-out code.
-        *(<off/on>, <code>)*.
-    :ivar ieee: The IEEE-488 interface parameters, represented by the following
-        tuple *(<terminator>, <EOI enable>, <address>)*, where
-
-         * *<terminator>* is `None`, `\\\\r\\\\n`, `\\\\n\\\\r`, `\\\\r` or
-           `\\\\n`.
-         * *<EOI enable>* A boolean.
-         * *<address>* The IEEE-488.1 address of the device, an integer between
-           0 and 30.
-    :ivar digital_output_param: The digital output parameters.
-        *(<mode>, <digital output>)*, where:
-
-         * *<mode>* Specifies the mode of the digital output, valid entries are
-           `'off'`, `'alarms'`, `'scanner'`, `'manual'`,
-         * *<digital output>* A register to enable/disable the five digital
-           outputs DO1-DO5, if *<mode>* is `'manual'`.
-    :ivar digital_io_status: The digital input/output status.
-        *(<input status>, <output status>)*, where
-
-         * *<input status>* is a Register representing the state of the 5 input
-           lines DI1-DI5.
-         * *<output status>* is a Register representing the state of the 5
-           output lines DO1-DO5.
     :ivar scanner_parameters: The scanner parameters.
         *(<mode>, <channel>, <intervall>)*, where
 
@@ -444,23 +514,6 @@ class LS340(IEC60488):
          * *<channel>* the input channel to use, an integer in the range 1-16.
          * *<interval>* the autoscan intervall in seconds, an integer in the
            range 0-999.
-    :ivar datetime: The configured date and time.
-        *(<MM>, <DD>, <YYYY>, <HH>, <mm>, <SS>, <sss>)*, where
-
-         * *<MM>* represents the month, an Integer in the range 1-12.
-         * *<DD>* represents the day, an Integer in the range 1-31.
-         * *<YYYY>* represents the year.
-         * *<mm>* represents the minutes, an Integer in the range 0-59.
-         * *<SS>* represents the seconds, an Integer in the range 0-59.
-         * *<sss>* represents the miliseconds, an Integer in the range 0-999.
-    :ivar display_fieldx: The display field configuration values. x is just a
-        placeholder and varies between 1 and 8, e.g. `.display_field2`.
-        *(<input>, '<source>')*, where
-
-         * *<input>* Is the string name of the input to display.
-         * *<source>* Specifies the data to display. Valid entries are
-           `'kelvin'`, `'celsius'`, , `'sensor units'`, `'linear'`, `'min'` and
-           `'max'`.
 
     """
     PROGRAM_STATUS = [
@@ -513,8 +566,6 @@ class LS340(IEC60488):
                             Enum('local', 'remote', 'lockout', start=1))
         self.key_status = Command(('KEYST?',
                                    Enum('no key pressed', 'key pressed')))
-        # XXX The need to specify the Boolean even if it's not used should be
-        # changed.
         self.high_relay = Command('RELAY? 1', 'RELAY 1',
                                   [Enum('off', 'alarms', 'manual'),
                                    Boolean])
