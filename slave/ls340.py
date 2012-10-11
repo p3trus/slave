@@ -45,6 +45,11 @@ from slave.iec60488 import IEC60488
 from slave.types import Boolean, Enum, Float, Integer, Register, Set, String
 
 
+def _invert(dct):
+    """Returns an inverted dict, keys become values and vice versa."""
+    return dict((v, k) for k, v in dct.iteritems())
+
+
 class Curve(InstrumentBase):
     """Represents a LS340 curve.
 
@@ -144,7 +149,7 @@ class Curve(InstrumentBase):
             item = self.__make_index(item)
             unit, temp = value
             data_t = [Integer(min=1), Integer(min=1, max=200), Float, Float]
-            cmd = Command(write=('CRVPT', data_t),
+            cmd = Command(write=('CRVDEL {0};CRVPT'.format(self.idx), data_t),
                           connection=self.connection, cfg=self._cfg)
             # Since indices in LS304 start at 1, it must be added.
             cmd.write((self.idx, item + 1, unit, temp))
@@ -401,6 +406,53 @@ class Program(InstrumentBase):
         self.connection.write('PGMDEL {0}'.format(self.idx))
 
 
+class Column(InstrumentBase):
+    """Represents a column of records.
+
+    :param connection: A connection object
+    :param idx: The column index.
+
+    The LS340 stores data in table form. Each row is a record consisting of
+    points. Each column has an associated type. The type can be read or written
+    with :meth:`.type`. The records can be accessed via the indexing syntax,
+    e.g.
+    ::
+        # Assuming an LS340 instance named ls340, the following should print
+        # point1 of record 7.
+        print ls340.column1[7]
+
+    .. note::
+
+        Currently there is no parsing done on the type and the record. These
+        should be written or read as strings according to the manual.
+        Also slicing is not supported yet.
+
+    """
+    def __init__(self, connection, idx):
+        super(Column, self).__init__(connection)
+        self.idx = idx = int(idx)
+
+    @property
+    def type(self):
+        return self.connection.ask('LOGPNT? {0}'.format(self.idx))
+
+    @type.setter
+    def type(self, value):
+        self.connection.write('LOGPNT {0},'.format(self.idx) + value)
+
+    def __len__(self):
+        """Returns the number of records stored."""
+        return int(self.connection.ask('LOGCNT?'))
+
+    def __getitem__(self, item):
+        """Returns the stored record at the specified index as string.
+
+        :param item: A positive integer, describing the record index.
+
+        """
+        return self.connection.ask('LOGVIEW? {0}, {1}'.format(int(item), self.idx))
+
+
 class Loop(InstrumentBase):
     """Represents a LS340 control loop.
 
@@ -581,6 +633,8 @@ class LS340(IEC60488):
         enabled, `False` means disabled.
     :ivar beeping: A Integer value representing the current beeper status.
     :ivar busy: A Boolean representing the instrument busy status.
+    :ivar columnx: A Column instance, x is a placeholder for an integer between
+        1 and 4.
     :ivar com: The serial interface configuration, represented by the following
         tuple: *(<terminator>, <baud rate>, <parity>)*.
 
@@ -808,6 +862,8 @@ class LS340(IEC60488):
                                        [Integer, Enum(*self.PROGRAM_STATUS)]))
         for i in range(1, 11):
             setattr(self, 'program{0}'.format(i), Program(connection, i))
+        for i in range(1, 5):
+            setattr(self, 'column{0}'.format(i), Column(connection, i))
 
     def clear_alarm(self):
         """Clears the alarm status for all inputs."""
@@ -816,10 +872,6 @@ class LS340(IEC60488):
     def lines(self):
         """The number of program lines remaining."""
         return int(self.connection.ask('PGMMEM?'))
-
-    def records(self):
-        """The total number of logged records."""
-        return int(self.connection.ask('LOGCNT?'))
 
     def reset_minmax(self):
         """Resets Min/Max functions for all inputs."""
