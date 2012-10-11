@@ -364,6 +364,43 @@ class Output(InstrumentBase):
         self.value = Command(('AOUT? {0}'.format(channel), Float))
 
 
+class Program(InstrumentBase):
+    """Represents a LS340 program.
+
+    :param connection: A connection object.
+    :param idx: The program index.
+
+    .. note::
+
+        There is currently no parsing done on program lines. Lines are read and
+        written as strings according to the LS340 manual.
+
+    """
+    def __init__(self, connection, idx):
+        super(Program, self).__init__(connection)
+        self.idx = idx = int(idx)
+
+    def line(self, idx):
+        """Return the i'th program line.
+
+        :param i: The i'th program line.
+
+        """
+        return self.connection.ask('PGM? {0}, {1}'.format(self.idx, int(idx)))
+
+    def append_line(self, new_line):
+        """Appends the new_line to the LS340 program."""
+        self.connection.write('PGM {0},'.format(self.idx) + new_line)
+
+    def run(self):
+        """Runs this program."""
+        self.connection.write('PGMRUN {0}'.format(self.idx))
+
+    def delete(self):
+        """Deletes this program."""
+        self.connection.write('PGMDEL {0}'.format(self.idx))
+
+
 class Loop(InstrumentBase):
     """Represents a LS340 control loop.
 
@@ -644,6 +681,8 @@ class LS340(IEC60488):
         `"local"`, `"remote"`, `"lockout"`.
     :ivar output1: First output channel.
     :ivar output2: Second output channel.
+    :ivar programx: A Program instance, x denotes a placeholder for an integer
+        between 1 and 10.
     :ivar program_status: The status of the currently running program
         represented by the following tuple: *(<program>, <status>)*. If
         program is zero, it means that no program is running.
@@ -767,10 +806,16 @@ class LS340(IEC60488):
                                       ('LOGSET', logset_write_t))
         self.program_status = Command(('PGMRUN?',
                                        [Integer, Enum(*self.PROGRAM_STATUS)]))
+        for i in range(1, 11):
+            setattr(self, 'program{0}'.format(i), Program(connection, i))
 
     def clear_alarm(self):
         """Clears the alarm status for all inputs."""
         self.connection.write('ALMRST')
+
+    def lines(self):
+        """The number of program lines remaining."""
+        return int(self.connection.ask('PGMMEM?'))
 
     def reset_minmax(self):
         """Resets Min/Max functions for all inputs."""
@@ -810,6 +855,10 @@ class LS340(IEC60488):
         if (T3 is not None) and (U3 is not None):
             args.extend([T3, U3])
         self.connection.write('SCAL ' + ','.join(args))
+
+    def stop_program(self):
+        """Terminates the current program, if one is running."""
+        self.connection.write('PGMRUN 0')
 
     def _factory_default(self, confirm=False):
         """Resets the device to factory defaults.
