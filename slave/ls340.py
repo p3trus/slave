@@ -90,7 +90,7 @@ class Curve(InstrumentBase):
         # Set this curves data point to 0.10191 sensor units and 470.000 K.
         ls340.curve21[5] = 0.10191, 470.000
 
-    .. note ::
+    .. warning ::
 
         In contrast to the LS340 device, point indices start at 0 **not** 1.
 
@@ -612,6 +612,21 @@ class LS340(IEC60488):
     :ivar lock: A tuple representing the keypad lock-out and the lock-out code.
         *(<off/on>, <code>)*.
     :ivar logging: A Boolean value, enabling or disabling data logging.
+    :ivar logging_params: The data logging parameters.
+        *(<type>, <interval>, <overwrite>, <start mode>)*, where
+
+        * *<type>* Valid entries are `'readings'` and `'seconds'`.
+        * *<interval>* The number of readings between each record if *<type>*
+            is readings and number of seconds between each record otherwise.
+            Valid entries are 1-3600.
+        * *<overwrite>* `True` if overwrite is enabled, `False` otherwise.
+        * *<start mode>* The start mode, either `clear` or `continue`.
+
+        .. note::
+
+            If no valid SRAM data card is installed, queriing returns
+            `('invalid', 0, False, 'clear')`.
+
     :ivar loop1: An instance of the Loop class, representing the first control
         loop.
     :ivar loop2: Am instance of the Loop class, representing the second control
@@ -736,7 +751,20 @@ class LS340(IEC60488):
         # Data Logging Commands
         # =====================
         self.logging = Command('LOG?', 'LOG', Boolean)
-
+        logset_query_t = [
+            Enum('invalid', 'readings', 'seconds', start=0),
+            Integer(min=0, max=3600),
+            Boolean,
+            Enum('clear', 'continue')
+        ]
+        logset_write_t = [
+            Enum('readings', 'seconds', start=1),
+            Integer(min=1, max=3600),
+            Boolean,
+            Enum('clear', 'continue')
+        ]
+        self.logging_params = Command(('LOGSET?', logset_query_t),
+                                      ('LOGSET', logset_write_t))
         self.program_status = Command(('PGMRUN?',
                                        [Integer, Enum(*self.PROGRAM_STATUS)]))
 
