@@ -817,6 +817,10 @@ class LS340(IEC60488):
         """The number of program lines remaining."""
         return int(self.connection.ask('PGMMEM?'))
 
+    def records(self):
+        """The total number of logged records."""
+        return int(self.connection.ask('LOGCNT?'))
+
     def reset_minmax(self):
         """Resets Min/Max functions for all inputs."""
         self.connection.write('MNMXRST')
