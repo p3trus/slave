@@ -417,6 +417,7 @@ class Column(InstrumentBase):
     with :meth:`.type`. The records can be accessed via the indexing syntax,
     e.g.
     ::
+
         # Assuming an LS340 instance named ls340, the following should print
         # point1 of record 7.
         print ls340.column1[7]
@@ -642,8 +643,6 @@ class LS340(IEC60488):
         * *<baud rate>* valid entries are 300, 1200, 2400, 4800, 9600, 19200
         * *<parity>* valid entries are 1, 2, 3. See LS340 manual for meaning.
 
-    :ivar curvex: An instance of :class:`~.Curve`. x is just a placeholder for
-        an integer between 1 and 60, e.g. `.curve2` is the second curve.
     :ivar datetime: The configured date and time.
         *(<MM>, <DD>, <YYYY>, <HH>, <mm>, <SS>, <sss>)*, where
 
@@ -735,8 +734,7 @@ class LS340(IEC60488):
         `"local"`, `"remote"`, `"lockout"`.
     :ivar output1: First output channel.
     :ivar output2: Second output channel.
-    :ivar programx: A Program instance, x denotes a placeholder for an integer
-        between 1 and 10.
+    :ivar programs: A tuple of 10 program instances.
     :ivar program_status: The status of the currently running program
         represented by the following tuple: *(<program>, <status>)*. If
         program is zero, it means that no program is running.
@@ -752,6 +750,10 @@ class LS340(IEC60488):
          * *<channel>* the input channel to use, an integer in the range 1-16.
          * *<interval>* the autoscan intervall in seconds, an integer in the
            range 0-999.
+    :ivar std_curve: A tuple of 20 standard curves. These :class:`~.Curve`
+        instances are read-only.
+    :ivar user_curve: A tuple of 40 user definable :class:`~.Curve` instances.
+        These are read and writeable.
 
     """
     PROGRAM_STATUS = [
@@ -838,9 +840,12 @@ class LS340(IEC60488):
         self.scanner_parameters = Command('XSCAN?', 'XSCAN', xscan)
         # Curve Commands
         # ==============
-        for i in range(1, 61):
-            setattr(self, 'curve{0}'.format(i),
-                    Curve(connection, i, writeable=(i > 20)))
+        self.std_curve = tuple(
+            Curve(connection, i, writeable=False) for i in range(1, 21)
+        )
+        self.user_curve = tuple(
+            Curve(connection, i, writeable=True) for i in range(21, 61)
+        )
         # Data Logging Commands
         # =====================
         self.logging = Command('LOG?', 'LOG', Boolean)
@@ -860,8 +865,7 @@ class LS340(IEC60488):
                                       ('LOGSET', logset_write_t))
         self.program_status = Command(('PGMRUN?',
                                        [Integer, Enum(*self.PROGRAM_STATUS)]))
-        for i in range(1, 11):
-            setattr(self, 'program{0}'.format(i), Program(connection, i))
+        self.programs = tuple(Program(connection, i) for i in range(1, 11))
         for i in range(1, 5):
             setattr(self, 'column{0}'.format(i), Column(connection, i))
 
