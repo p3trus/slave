@@ -17,7 +17,7 @@ class UnitFloat(Float):
     representation, it will get stripped.
 
     """
-    def _convert(self, value):
+    def __convert__(self, value):
         """Converts value to Float."""
         if isinstance(value, basestring):
             value = value.rstrip(string.ascii_letters)
