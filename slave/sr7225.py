@@ -9,6 +9,8 @@ from slave.types import Boolean, Enum, Integer, Float, Register, Set, String
 class SR7225(InstrumentBase):
     """Represents a Signal Recovery SR7225 lock-in amplifier.
 
+    :param connection: A connection object.
+
     .. todo::
 
        * Check the delimiter of SR7225 in use.
