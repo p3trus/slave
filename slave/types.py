@@ -1,119 +1,218 @@
 #  -*- coding: utf-8 -*-
 #
 # E21, (c) 2012, see AUTHORS.  Licensed under the GNU GPL.
+"""Contains the type factory classes used to load and dump values to string.
+
+The type module contains several type classes used by the :class:`~.Command`
+class to load and dump values.
+
+"""
 import random
 import string
+import sys
 
 
 class Type(object):
-    """Type factory base class."""
+    """The type class defines the interface for all type factory classes."""
     def dump(self, value):
-        value = self._convert(value)
-        self._validate(value)
-        return self._serialize(value)
+        raise NotImplementedError()
 
     def load(self, value):
-        return self._convert(value)
+        raise NotImplementedError()
 
     def simulate(self):
-        """Calculates a valid value, represented by this class."""
+        """Return a valid, randomly calculated value."""
         raise NotImplementedError()
-
-    def _convert(self, value):
-        """Converts value to the type represented by this class."""
-        raise NotImplementedError()
-
-    def _validate(self, value):
-        """Validates the value.
-
-        This member function can be overwritten by subclasses to provide
-        validation. Per default it does nothing.
-
-        """
-        pass
-
-    def _serialize(self, value):
-        """Converts the value to a string.
-
-        The serialize function converts the value to a string. It can be
-        overwritten if custom serialisation behaviour is needed.
-
-        """
-        return str(value)
 
     def __repr__(self):
         return '{0}()'.format(type(self).__name__)
 
 
-class Boolean(Type):
-    """Represents a boolean type. It is serialized in decimal form."""
-    def _convert(self, value):
-        return bool(int(value))
+class SingleType(Type):
+    """A simple yet easily customizable implementation of the Type interface
 
-    def _serialize(self, value):
-        return '{0:d}'.format(self._convert(value))
+    :param fmt: A format string used in :meth:`.__serialize__()` to convert the
+        value to string. Advanced string formatting syntax is used.
+        Default: `'{0}'`
 
-    def simulate(self):
-        """Costructs a random boolean and returns it."""
-        return random.randint(0, 1)
+    The SingleType provides a default implementation of the :class:`~.Type`
+    interface. It provides three hooks to modify it's behavior.
 
+    * :meth:`.__convert__()`
+    * :meth:`.__serialize__()`
+    * :meth:`.__validate__()`
 
-class Number(Type):
-    """Represents a abstract number type, allowing range checks."""
-    def __init__(self, min=None, max=None):
+    Only :meth:`.__convert__()` is required. It should convert the value to the
+    represented python type. Both :meth:`.__serialize__()` and
+    :meth:`.__validate__()` have a default implementation, which can be
+    overwritten to provide custom behaviour.
+
+    """
+    def __init__(self, fmt=None):
+        super(SingleType, self).__init__()
+        self._fmt = fmt or '{0}'
+
+    def __convert__(self, value):
+        """Convert and return the value to the represented type.
+
+        :raises: TypeError, ValueError
+
         """
-        Constructs a Number type factory.
+        raise NotImplementedError()
 
-        :param min: Minimal value a constructed object can have.
-        :param max: Maximal value a constructed object can have.
+    def __serialize__(self, value):
+        """Converts the value to string."""
+        return self._fmt.format(value)
+
+    def __validate__(self, value):
+        """Validates the value.
+
+        :raises: ValueError
 
         """
-        super(Number, self).__init__()
-        # evaluates to min/max if min/max is None and to it's conversion
-        # otherwise.
-        self.min = min and self._convert(min)
-        self.max = max and self._convert(max)
+        pass
 
-    def _validate(self, value):
-        if self.min is not None and value < self.min:
-            raise ValueError('Value:{0}<Min:{0}'.format(value, self.min))
-        if self.max is not None and value > self.max:
-            raise ValueError('Value:{0}>Max:{0}'.format(value, self.max))
+    def dump(self, value):
+        """Dumps the value to string.
+
+        :returns: Returns the stringified version of the value.
+        :raises: TypeError, ValueError
+
+        """
+        value = self.__convert__(value)
+        self.__validate__(value)
+        return self.__serialize__(value)
+
+    def load(self, value):
+        """Create the value from a string.
+
+        :returns: The value loaded from a string.
+        :raises: TypeError
+
+        """
+        return self.__convert__(value)
+
+
+class Range(SingleType):
+    """Abstract base class for types representing ranges.
+
+    :param min: The minimal included value.
+    :param max: The maximal included value.
+
+    The Range base class extends the :class:`~.SingleType` class with a range
+    checking validation.
+
+    """
+    def __init__(self, min=None, max=None, *args, **kw):
+        super(Range, self).__init__(*args, **kw)
+        self._min = min and self.__convert__(min)
+        self._max = max and self.__convert__(max)
+
+    def __validate__(self, value):
+        if self._min is not None and value < self._min:
+            raise ValueError('Value:{0}<Min:{0}'.format(value, self._min))
+        if self._max is not None and value > self._max:
+            raise ValueError('Value:{0}>Max:{0}'.format(value, self._max))
 
     def __repr__(self):
         return '{0}(min={1!r}, max={2!r})'.format(type(self).__name__,
-                                                  self.min, self.max)
+                                                  self._min, self._max)
 
 
-class Integer(Number):
+class Boolean(SingleType):
+    """Represents a Boolean type.
+
+    :ṕaram fmt: Boolean uses a default format string of `'{0:d}'`. This means
+        `True` will get serialized to `'1'` and `False` to `'0'`.
+
+    """
+    def __init__(self, fmt=None):
+        super(Boolean, self).__init__(fmt=fmt or '{0:d}')
+
+    def __convert__(self, value):
+        return bool(int(value))
+
+    def simulate(self):
+        return bool(random.randint(0, 1))
+
+
+class Integer(Range):
     """Represents an integer type."""
-    def _convert(self, value):
+    def __convert__(self, value):
         return int(value)
 
     def simulate(self):
-        min_ = -999 if self.min is None else self.min
-        max_ = 1000 if self.max is None else self.max
+        """Generates a random integer in the available range."""
+        min_ = (-sys.maxint - 1) if self._min is None else self._min
+        max_ = sys.maxint if self._max is None else self._max
         return random.randint(min_, max_)
 
 
-class Float(Number):
+class Float(Range):
     """Represents a floating point type."""
-    def _convert(self, value):
+    def __convert__(self, value):
         return float(value)
 
     def simulate(self):
-        min_ = -999. if self.min is None else self.min
-        max_ = 1000. if self.max is None else self.max
+        min_ = sys.float_info.min if self._min is None else self._min
+        max_ = sys.float_info.max if self._max is None else self._max
         return random.uniform(min_, max_)
 
 
-class Mapping(Type):
+class String(SingleType):
+    """Represents a string type.
+
+    :param min: Minimum number of characters allowed.
+    :param max: Maximum number of characters allowed.
+
+    """
+    def __init__(self, min=None, max=None, *args, **kw):
+        super(String, self).__init__(*args, **kw)
+        self._min = min = min and self.__convert__(min)
+        self._max = max = max and self.__convert__(max)
+        if (min is not None) and (max is not None):
+            if (min > max):
+                raise ValueError('min > max')
+
+    def __convert__(self, value):
+        return str(value)
+
+    def __validate__(self, value):
+        if self._min and len(value) < self._min:
+            raise ValueError('String too short.')
+        if self._max and self._max < len(value):
+            raise ValueError('String too long.')
+
+    def simulate(self):
+        """Returns a randomly constructed string.
+
+        Simulate randomly constructs a string with a length between min and
+        max. If min is not present, a minimum length of 1 is assumed, if max
+        is not present a maximum length of 10 is used.
+        """
+        min_ = 1 if self._min is None else self._min
+        max_ = 10 if self._max is None else self._max
+        n = min_ if (min_ >= max_) else random.randint(min_, max_)
+        chars = string.ascii_letters + string.digits
+        return ''.join(random.choice(chars) for x in range(n))
+
+
+class Mapping(SingleType):
     """
     Represents a one to one mapping of keys and values.
 
     The Mapping represents a one to one mapping of keys and values. The keys
     represent the value on the user side, and the values represent the value on
-    the instrument side.
+    the instrument side, e.g::
+
+        type_ = Mapping({'UserValue': 'DeviceValue'})
+        print type_.load('DeviceValue')  # prints 'UserValue'
+        print type_.dump('UserValue')  # prints 'DeviceValue'
+
+    .. note::
+
+        1. Keys do not need to be strings, they just need to be hashable.
+        2. Values will be converted to strings using `str()`.
 
     """
     def __init__(self, mapping):
@@ -121,11 +220,17 @@ class Mapping(Type):
         self._map = dict((k, str(v)) for k, v in mapping.items())
         self._inv = dict((v, k) for k, v in self._map.items())
 
-    def _convert(self, value):
-        return self._map[value]
+    def __convert__(self, value):
+        try:
+            return self._map[value]
+        except KeyError:
+            raise ValueError()
 
     def load(self, value):
-        return self._inv[value]
+        try:
+            return self._inv[value]
+        except KeyError:
+            raise TypeError()
 
     def simulate(self):
         """Returns a randomly chosen key of the mapping."""
@@ -139,8 +244,8 @@ class Set(Mapping):
     """
     Represents a one to one mapping of each value to its string representation.
     """
-    def __init__(self, *args):
-        super(Set, self).__init__(dict((k, str(k)) for k in args))
+    def __init__(self, *args, **kw):
+        super(Set, self).__init__(dict((k, str(k)) for k in args), **kw)
 
 
 class Enum(Mapping):
@@ -154,74 +259,34 @@ class Enum(Mapping):
         """
         start = int(kw.pop('start', 0))
         step = int(kw.pop('step', 1))
-        stop = len(args) * step
+        stop = len(args) * step + start
         map_ = dict((k, v) for k, v in zip(args, range(start, stop, step)))
-        super(Enum, self).__init__(map_)
+        super(Enum, self).__init__(map_, **kw)
 
 
-class String(Type):
-    """Represents python's string type."""
-    def __init__(self, min=None, max=None):
-        """
-        Constructs a Number type factory.
-
-        :param min: Minimal length a string object can have.
-        :param max: Maximal length a string object can have.
-
-        """
-        super(String, self).__init__()
-        # evaluates to min/max if min/max is None and to it's conversion
-        # otherwise.
-        self.min = min and self._convert(min)
-        self.max = max and self._convert(max)
-
-    def _convert(self, value):
-        return str(value)
-
-    def _validate(self, value):
-        if self.min is not None and len(value) < self.min:
-            raise ValueError('len({0})<Min:{0}'.format(value, self.min))
-        if self.max is not None and len(value) > self.max:
-            raise ValueError('len({0})>Max:{0}'.format(value, self.max))
-
-    def simulate(self):
-        """Returns a randomly constructed string.
-
-        Simulate randomly constructs a string with a length between min and
-        max. If min is not present, a minimum length of 1 is assumed, if max
-        is not present a maximum length of 10 is used.
-        """
-        min_ = 1 if self.min is None else self.min
-        max_ = 10 if self.max is None else self.max
-        # XXX What if self.min > 10 and self.max == None?
-        n = random.randint(min_, max_)
-        chars = string.ascii_letters + string.digits
-        return ''.join(random.choice(chars) for x in range(n))
-
-
-class Register(Type):
+class Register(SingleType):
     """Represents a binary register, where bits are mapped with a name."""
     def __init__(self, mapping):
         super(Register, self).__init__()
-        self.__map = dict((str(k), int(v)) for k, v in mapping.iteritems())
+        self._map = dict((str(k), int(v)) for k, v in mapping.iteritems())
 
-    def _convert(self, value):
+    def __convert__(self, value):
         x = 0
         for k, v in value.iteritems():
             if v:  # set bit
-                x |= 1 << self.__map[k]
+                x |= 1 << self._map[k]
         return x
 
     def load(self, value):
         bit = lambda x, i: bool(x & (1 << i))
         value = int(value)
-        return dict((k, bit(value, i)) for k, i in self.__map.iteritems())
+        return dict((k, bit(value, i)) for k, i in self._map.iteritems())
 
     def simulate(self):
         """Returns a dictionary representing the mapped register with random
         values.
         """
-        return dict((k, random.randint(0, 1)) for k in self.__map)
+        return dict((k, random.randint(0, 1)) for k in self._map)
 
     def __repr__(self):
-        return 'Register({0!r})'.format(self.__map)
+        return 'Register({0!r})'.format(self._map)

@@ -96,7 +96,7 @@ class Command(object):
         'program header prefix': '',
         'program header separator': ' ',
         'program data separator': ',',
-        'response header separator': ' ',
+        'response header separator': None,
         'response data separator': ',',
     }
 
@@ -217,7 +217,7 @@ class Command(object):
         if not self._write:
             raise AttributeError('Command is not writeable')
         # construct the command message unit
-        if not datas:
+        if datas is None:
             cmu = self._write
         else:
             cmu = self.program_message_unit(self._write, datas,
@@ -263,7 +263,7 @@ class Command(object):
         rhs = self._cfg['response header separator']
         rds = self._cfg['response data separator']
 
-        response = response.split(rhs)
+        response = response.split(rhs) if rhs else [response]
         if len(response) == 2:
             header = response[0]
             data = response[1]

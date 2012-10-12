@@ -33,6 +33,14 @@ slave Package
     :undoc-members:
     :show-inheritance:
 
+:mod:`ls340` Module
+-------------------
+
+.. automodule:: slave.ls340
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 :mod:`sr7225` Module
 --------------------
 
