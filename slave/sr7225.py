@@ -11,6 +11,79 @@ class SR7225(InstrumentBase):
 
     :param connection: A connection object.
 
+    .. rubric:: Signal Channel
+
+    :ivar current_mode: The current mode, either `'off'`, `'high bandwidth'` or
+        `'low noise'`.
+    :ivar voltage_mode: The voltage mode, either `'test'`, `'A'` or `'A-B'`.
+        The `'test'` mode corresponds to both inputs grounded.
+
+        .. note:
+
+            The :attr:`~.current_mode` has a higher precedence.
+
+    :ivar fet: The voltage mode input device control. Valid entries are
+        `'bipolar'` and `'fet'`, where
+
+        * `'bipolar'` is a bipolar device with 10kOhm input impedance and
+          2 nV/sqrt(Hz) voltage noise at 1 kHz.
+        * `'fet'` 10MOhm input impedance and 5nV/sqrt(Hz) voltage noise at
+          1kHz.
+
+    :ivar grounding: The input connector shield grounding mode. Valid entries
+        are `'ground'` and `'float'`.
+    :ivar coupling: The input connector coupling, either `'ac'` or `'dc'`.
+    :ivar sensitivity: The full-scale sensitivity, an integer between 1 and 27.
+    :ivar ac_gain: The gain of the signal channel amplifier. An integer between
+        0 and 9, corresponding to 0dB to 90dB.
+    :ivar ac_gain_auto: A boolean corresponding to the ac gain automatic mode.
+        It is `False` if the ac_gain is under manual control, and `True`
+        otherwise.
+    :ivar line_filter: The line filter configuration.
+        *(<filter>, <frequency>)*, where
+
+        * *<filter>* Is the filter mode. Valid entries are `'off'`, `'notch'`,
+          `'double'` or `'both'`.
+        * *<frequency>* Is the notch filter center frequency, either `'60Hz'`
+          or `'50Hz'`.
+
+    :ivar sample_frequency: The sampling frequency. An integer between 0 and 2,
+        corresponding to three different sampling frequencies near 166kHz.
+
+    .. rubric:: Reference channel
+
+    :ivar reference: The reference input mode, either `'internal'`, `'rear'` or
+        `'front'`.
+    :ivar harmonic: The reference harmonic mode, an integer between 1 and 32
+        corresponding to the first to 32. harmonic.
+    :ivar reference_phase: The phase of the reference signal, a float ranging
+        from -360.00 to 360.00 corresponding to the angle in degrees.
+    :ivar reference_frequency: A float corresponding to the reference frequency
+        in Hz.
+
+        .. note::
+
+            If :attr:`.reference` is not `'internal'` the reference frequency
+            value is zero if the reference channel is unlocked.
+
+    .. rubric:: Signal channel output filters
+
+    :ivar slope: The output lowpass filter slope in dB/octave, either `'6dB'`,
+        `'12dB'`, `'18dB'` or `'24dB'`.
+    :ivar time_constant: A float representing the time constant in seconds. See
+        :attr:`.TIME_CONSTANT` for the available values.
+
+    .. rubric:: Signal channel output amplifiers
+    .. rubric:: Instrument outputs
+    .. rubric:: Internal oscillator
+    .. rubric:: Auxiliary outputs
+    .. rubric:: Auxiliary inputs
+    .. rubric:: Output data curve buffer
+    .. rubric:: Computer interfaces
+    .. rubric:: Instrument identification
+    .. rubric:: Frontpanel
+    .. rubric:: Autodefault
+
     .. todo::
 
        * Check the delimiter of SR7225 in use.
@@ -21,6 +94,13 @@ class SR7225(InstrumentBase):
        * Use Register for srq_mask Command instead of Integer.
 
     """
+    #: All valid time constant values.
+    TIME_CONSTANT = [
+        10e-6, 20e-6, 40e-6, 80e-6, 160e-6, 320e-6, 640e-6, 5e-3, 10e-3, 20e-3,
+        50e-3, 100e-3, 200e-3, 500e-3, 1, 2, 5, 10, 20, 50, 100, 200, 500, 1e3,
+        2e3, 5e3, 10e3, 20e3, 50e3, 100e3,
+    ]
+
     def __init__(self, connection):
         cfg = {
              'program data separator': ',',
@@ -28,62 +108,36 @@ class SR7225(InstrumentBase):
         super(SR7225, self).__init__(connection, cfg=cfg)
         # Signal channel
         # ==============
-        #: Set or query the current mode.
         self.current_mode = Command('IMODE', 'IMODE',
                                     Enum('off', 'high bandwidth', 'low noise'))
-        #: Set or query the voltage mode.
-        #: .. note::
-        #:
-        #:    The :class:~.current_mode command has a higher precedence.
         self.voltage_mode = Command('VMODE', 'VMODE',
                                     Enum('test', 'A', 'A-B'))
-        #: Sets/Queries the voltage mode input device.
-        self.fet = Command('FET', 'FET', Enum('bipolar', 'FET'))
-        #: Sets/Queries the input connector shielding.
+        self.fet = Command('FET', 'FET', Enum('bipolar', 'fet'))
         self.grounding = Command('FLOAT', 'FLOAT', Enum('ground', 'float'))
-        #: Sets/Queries the input connector coupling.
-        self.coupling = Command('CP', 'CP', Enum('AC', 'DC'))
-        #: Sets/Queries the full scale sensitivity.
+        self.coupling = Command('CP', 'CP', Enum('ac', 'dc'))
         self.sensitivity = Command('SEN', 'SEN', Integer(min=1, max=27))
-        #: Sets/Queries the gain of the signal channel amplifier.
         self.ac_gain = Command('ACGAIN', 'ACGAIN', Integer(min=0, max=9))
-        #: Sets/Queries the state of the automatic ac gain control.
         self.auto_ac_gain = Command('AUTOMATIC', 'AUTOMATIC', Boolean)
-        #: Sets/Queries the line filter.
         self.line_filter = Command('LF', 'LF',
                                    [Enum('off', 'notch', 'double', 'both'),
-                                    Enum('60 Hz', '50 Hz')])
-        #: Sets/Queries the main analog to digital sample frequency.
+                                    Enum('60Hz', '50Hz')])
         self.sample_frequency = Command('SAMPLE', 'SAMPLE',
                                         Integer(min=0, max=2))
 
         # Reference Channel
         # =================
-        #: Sets/Queries the reference input mode.
         self.reference = Command('IE', 'IE', Enum('internal', 'rear', 'front'))
-        #: Sets/Queries the reference harmonic mode.
         self.harmonic = Command('REFN', 'REFN', Integer(min=1, max=32))
-        #: Sets/Queries the phase in degrees.
         self.reference_phase = Command('REFP.', 'REFP.',
                                        Float(min=-360., max=360.))
-        #: Queries the reference frequency in Hz.
         self.reference_frequency = Command('FRQ.', type_=Float)
 
         # Signal channel output filters
         # =============================
-        #: Sets/Queries the low-pass filter slope.
         self.slope = Command('SLOPE', 'SLOPE',
-                             Enum('6 dB', '12 dB', '18 dB', '24 dB'))
+                             Enum('6dB', '12dB', '18dB', '24dB'))
         #: Sets/Queries the filter time constant.
-        self.time_constant = Command('TC', 'TC',
-                                     Enum('10 us', '20 us', '40 us', '80 us',
-                                          '160 us', '320 us', '640 us', '5 ms',
-                                          '10 ms', '20 ms', '50 ms', '100 ms',
-                                          '200 ms', '500 ms', '1 s', '2 s',
-                                          '5 s', '10 s', '20 s', '50 s',
-                                          '100 s', '200 s', '500 s', '1 ks',
-                                          '2 ks', '5 ks', '10 ks', '20 ks',
-                                          '50 ks', '100 ks'))
+        self.time_constant = Command('TC', 'TC',Enum(*self.TIME_CONSTANT))
         #: Sets/Queries the synchronous filter.
         self.sync = Command('SYNC', 'SYNC', Boolean)
 
