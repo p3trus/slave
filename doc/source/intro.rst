@@ -13,8 +13,8 @@ implemented instruments and best shown with an example. In the following
 tutorial we will implement a small measurement script, which initializes a
 Stanford Research SR830 lock-in and starts a measurement.
 
-The first step is to construct a connection. Here we use pyvisa to connect with
-the SR830 via GPIB on channel 8::
+The first step is to construct a connection. Here we use `pyvisa`_ to connect
+with the SR830 via GPIB on channel 8::
 
     import visa
     connection = visa.instrument('GPIB::08')

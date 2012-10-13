@@ -7,8 +7,21 @@
 Welcome to Slave
 ################
 
-This is the documentation of the Slave library. It's main goal is to simplify
-the communication with scientific instruments.
+This is the documentation of the Slave library, designed to simplify
+instrument control.
+
+`Python`_ has many advantages, that make it interresting for the test &
+measurement industry. It easy to learn yet powerfull. Libraries such as
+`pyvisa`_ or `pyserial`_ are an important step in making python usefull in
+these field. But developers still have to implement device drivers on their
+own. Slave simplifies this even further, providing automatic command
+construction, type parsing, etc. as well as several ready-to-use device
+drivers, such as the
+
+* Lakeshore ls340 temperature controller
+* Stanford Research sr830 lock-in amplifier
+* Cryomagnetics 4G magnet power supply
+* etc.
 
 Content
 =======
@@ -27,3 +40,6 @@ Indices and tables
 * :ref:`modindex`
 * :ref:`search`
 
+.. _Python: http://www.python.org
+.. _pyvisa: http://pyvisa.sourceforge.net/
+.. _pyserial: http://pyserial.sourceforge.net/
