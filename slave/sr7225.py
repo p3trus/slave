@@ -72,10 +72,78 @@ class SR7225(InstrumentBase):
         `'12dB'`, `'18dB'` or `'24dB'`.
     :ivar time_constant: A float representing the time constant in seconds. See
         :attr:`.TIME_CONSTANT` for the available values.
+    :ivar sync: A boolean value, representing the state of the synchronous time
+        constant mode.
 
     .. rubric:: Signal channel output amplifiers
+
+    :ivar x_offset: The x-channel output offset control.
+        *(<enabled>, <range>)*, where
+
+        * *<enabled>* A boolean enabling/disabling the output offset.
+        * *<range>* The range of the offset, an integer between -30000 and
+          30000 corresponding to +/- 300%.
+
+    :ivar y_offset: The y-channel output offset control.
+        *(<enabled>, <range>)*, where
+
+        * *<enabled>* A boolean enabling/disabling the output offset.
+        * *<range>* The range of the offset, an integer between -30000 and
+          30000 corresponding to +/- 300%.
+
+    :ivar expand: The expansion control, either `'off'`, `'x'`, `'y'` or
+        `'both'`.
+    :ivar channel1_output: The output of CH1 connector of the rear panel
+        Either `'x'`, `'y'`, `'r'`, `'phase1'`, `'phase2'`, `'noise'`,
+        `'ratio'` or `'log ratio'`.
+    :ivar channel2_output: The output of CH2 connector of the rear panel
+        Either `'x'`, `'y'`, `'r'`, `'phase1'`, `'phase2'`, `'noise'`,
+        `'ratio'` or `'log ratio'`.
+
     .. rubric:: Instrument outputs
+
+    :ivar x: A float representing the X-channel output in either volt or
+        ampere.
+    :ivar y: A float representing the Y-channel output in either volt or
+        ampere.
+    :ivar xy: X and Y-channel output with the following format *(<x>, <y>)*.
+    :ivar r: The signal magnitude, as float.
+    :ivar theta: The signal phase, as float.
+    :ivar r_theta: The magnitude and the signal phase. *(<r>, <theta>)*.
+    :ivar ratio: The ratio equivalent to X/ADC1.
+    :ivar log_ratio: The ratio equivalent to log(X/ADC1).
+    :ivar noise: The square root of the noise spectral density measured at the
+        Y channel output.
+    :ivar noise_bandwidth: The noise bandwidth.
+    :ivar noise_output: The noise output, the mean absolute value of the Y
+        channel.
+    :ivar star: The star mode configuration, one off `'x'`, `'y'`, `'r'`,
+        `'theta'`, `'adc1'`, `'xy'`, `'rtheta'`, `'adc12'`
+
     .. rubric:: Internal oscillator
+
+    :ivar amplitude: A float between 0. and 5. representing the oscillator
+        amplitude in V rms.
+    :ivar amplitude_start: Amplitude sweep start value.
+    :ivar amplitude_stop: Amplitude sweep end value.
+    :ivar amplitude_step: Amplitude sweep amplitude step.
+    :ivar frequency: The oscillator frequency in Hz. Valid entries are 0. to
+        1.2e5.
+    :ivar frequency_start: The frequency sweep start value.
+    :ivar frequency_stop: The frequency sweep stop value.
+    :ivar frequency_step: The frequency sweep step size and sweep type.
+        *(<step>, <mode>)*, where
+
+        * *<step>* The step size in Hz.
+        * *<mode>* The sweep mode, either 'log' or 'linear'.
+
+    :ivar sync_oscillator: The state of the syncronous oscillator (demodulator)
+        mode.
+
+    :ivar sweep_rate: The frequency and amplitude sweep step rate in time per
+        step. Valid entries are 0.05 to 1000. in 0.005 steps representing the
+        time in seconds.
+
     .. rubric:: Auxiliary outputs
     .. rubric:: Auxiliary inputs
     .. rubric:: Output data curve buffer
@@ -87,7 +155,7 @@ class SR7225(InstrumentBase):
     .. todo::
 
        * Check the delimiter of SR7225 in use.
-       * Implement ? high speed mode.
+       * Implement * and ? high speed mode.
        * Implement proper range checking in sweep_rate command.
        * Implement DC, DCB, DCT command.
        * Use Enum for adc_trigger mode.
@@ -136,88 +204,59 @@ class SR7225(InstrumentBase):
         # =============================
         self.slope = Command('SLOPE', 'SLOPE',
                              Enum('6dB', '12dB', '18dB', '24dB'))
-        #: Sets/Queries the filter time constant.
-        self.time_constant = Command('TC', 'TC',Enum(*self.TIME_CONSTANT))
-        #: Sets/Queries the synchronous filter.
+        self.time_constant = Command('TC', 'TC', Enum(*self.TIME_CONSTANT))
         self.sync = Command('SYNC', 'SYNC', Boolean)
 
         # Signal Channel Output Amplifiers
         # ================================
-        #: Sets/Queries the x channel offset
         self.x_offset = Command('XOF', 'XOF', Boolean,
                                 Integer(min=-30000, max=30000))
-        #: Sets/Queries the y channel offset
         self.y_offset = Command('YOF', 'YOF', Boolean,
                                 Integer(min=-30000, max=30000))
-        #: Sets/Queries the expansion control.
         self.expand = Command('EX', 'EX',
                               Enum('off', 'x', 'y', 'both'))
-        #: Sets/Queries the output signal type on the rear CH1 connector.
         self.channel1_output = Command('CH 1', 'CH 1 ',
                                        Enum('x', 'y', 'r', 'phase1', 'phase2',
                                             'noise', 'ratio', 'log ratio'))
-        #: Sets/Queries the output signal type on the rear CH2 connector.
         self.channel2_output = Command('CH 2', 'CH 2 ',
                                        Enum('x', 'y', 'r', 'phase1', 'phase2',
                                             'noise', 'ratio', 'log ratio'))
 
         # Instrument Outputs
         # ==================
-        #: Queries the X demodulator output.
         self.x = Command('X.', type_=Float)
-        #: Queries the Y demodulator output.
         self.y = Command('Y.', type_=Float)
-        #: Queries the X and Y demodulator output.
         self.xy = Command('XY.', type_=[Float, Float])
-        #: Queries the magnitude.
         self.r = Command('MAG.', type_=Float)
-        #: Queries the signal phase.
         self.theta = Command('PHA.', type_=Float)
-        #: Queries the magnitude and signal phase.
         self.r_theta = Command('MP.', type_=[Float, Float])
-        #: Queries the ratio equivalent to X/ADC1.
         self.ratio = Command('RT.', type_=Float)
-        #: Queries the ratio equivalent to log(X/ADC1).
         self.log_ratio = Command('LR.', type_=Float)
-        #: Queries the square root of the noise spectral density measured at
-        #: the Y channel output.
         self.noise = Command('NHZ.', type_=Float)
-        #: Queries the noise bandwidth.
         self.noise_bandwidth = Command('ENBW.', type_=Float)
-        #: Queries the noise output, the mean absolute value of the Y channel.
         self.noise_output = Command('NN.', type_=Float)
-        #: Sets/Queries the starmode.
         self.star = Command('STAR', 'STAR',
                             Enum('x', 'y', 'r', 'theta',
                                  'adc1', 'xy', 'rtheta', 'adc12'))
         # Internal oscillator
         # ===================
-        #: Sets/Queries the oscillator amplitude.
         self.amplitude = Command('OA.', 'OA.', Float(min=0., max=5.))
-        #: Sets/Queries the starting amplitude of the amplitude sweep.
         self.amplitude_start = Command('ASTART.', 'ASTART.',
                                        Float(min=0., max=5.))
-        #: Sets/Queries the target amplitude of the amplitude sweep.
         self.amplitude_stop = Command('ASTOP.', 'ASTOP.',
                                       Float(min=0., max=5.))
-        #: Sets/Queries the amplitude step of the amplitude sweep.
         self.amplitude_step = Command('ASTEP.', 'ASTEP.',
                                       Float(min=0., max=5.))
-        #: Sets/Queries the synchronous oscillator mode.
         self.sync_oscillator = Command('SYNCOSC', 'SYNCOSC', Boolean)
-        #: Sets/Queries the oscillator frequency.
         self.frequency = Command('OF.', 'OF.', Float(min=0, max=1.2e5))
         #: Sets/Queries the start frequency of the frequency sweep.
         self.frequency_start = Command('FSTART.', 'FSTART.',
                                        Float(min=0, max=1.2e5))
-        #: Sets/Queries the target frequency of the frequency sweep.
         self.frequency_stop = Command('FSTOP.', 'FSTOP.',
                                        Float(min=0, max=1.2e5))
-        #: Sets/Queries the frequency step of the frequency sweep.
         self.frequency_step = Command('FSTEP.', 'FSTEP.',
                                       [Float(min=0, max=1.2e5),
                                        Enum('log', 'linear')])
-        #: Sets/Queries the amplitude and frequency sweep step rate
         self.sweep_rate = Command('SRATE', 'SRATE', Integer(min=0))
         # Auxiliary Inputs
         # ================
@@ -294,7 +333,6 @@ class SR7225(InstrumentBase):
         self.version = Command('VER', type_=String)
         #: Sets/Queries the front panel LED's and LCD backlight state.
         self.lights = Command('LTS', 'LTS', Boolean)
-        #:
 
     def auto_sensitivity(self):
         """Triggers the auto sensitivity mode.
