@@ -125,6 +125,19 @@ class MPS4G(IEC60488):
     :ivar service_request_enable: The service request enable register.
     :ivar sweep_status: A string representing the current sweep status.
 
+    .. warning::
+
+        Due to a bug in firmware version 1.25, a semicolon must be appended to.
+        the end of the commands `'LLIM'` and `'ULIM'`. This is done
+        automatically. Writing the name crashes the MPS4G software. A restart
+        does not fix the problem. You need to load the factory defaults.
+
+    .. note::
+
+        If something bad happens and the MPS4G isn't reacting, you can load the
+        factory defaults via the simulation mode. To enter it press *SHIFT* and
+        *5* on the front panel at startup.
+
     """
     def __init__(self, connection, shims=None, channel=None):
         stb = {
@@ -158,14 +171,16 @@ class MPS4G(IEC60488):
         self.error = Command('ERROR?', 'ERROR', Boolean)
         self.current = Command('IMAG?', 'IMAG', UnitFloat)
         self.output_current = Command(('IOUT?', UnitFloat))
-        self.lower_limit = Command('LLIM?', 'LLIM', UnitFloat)
+        # Custom format string to fix bug in firmware.
+        self.lower_limit = Command('LLIM?', 'LLIM', UnitFloat(fmt='{0};'))
         self.mode = Command(('MODE?', String))
         self.name = Command('NAME?', 'NAME', String)
         self.switch_heater = Command('PSHTR?', 'PSHTR',
                                      Mapping({True: 'ON', False: 'OFF'}))
         for idx in range(0, 5):
             setattr(self, 'range{0}'.format(idx), Range(connection, idx))
-        self.upper_limit = Command('ULIM?', 'ULIM', UnitFloat)
+        # Custom format string to fix bug in firmware.
+        self.upper_limit = Command('ULIM?', 'ULIM', UnitFloat(fmt='{0};'))
         self.unit = Command('UNITS?', 'UNITS', Set('A', 'G'))
         self.voltage_limit = Command('VLIM?', 'VLIM',
                                      UnitFloat(min=0., max=10.))
