@@ -145,8 +145,52 @@ class SR7225(InstrumentBase):
         time in seconds.
 
     .. rubric:: Auxiliary outputs
+
+    :ivar dac1: The voltage of the auxiliary output 1 on the rear panel, a
+        float between +/- 12.00.
+    :ivar dac2: The voltage of the auxiliary output 2 on the rear panel, a
+        float between +/- 12.00.
+
+    :ivar output_port: The bits to be output on the rear panel digital output
+        port, an Integer between 0 and 255.
+
     .. rubric:: Auxiliary inputs
+
+    :ivar adc1: The auxiliary analog-to-digital input 1.
+    :ivar adc2: The auxiliary analog-to-digital input 2.
+    :ivar adc_trigger_mode: The trigger mode of the auxiliary ADC inputs,
+        represented by an integer between 0 and 13.
+    :ivar burst_time: The burst time per point rate for the ADC1 and ADC2.
+        An integer between 25 and 5000 when storing only to ADC1 and 56 to 5000
+        when storing to ADC1 and ADC2.
+
+        .. note::
+
+        The lower boundary of 56 in the second case is not tested by slave
+        itself.
+
     .. rubric:: Output data curve buffer
+
+    :ivar curve_buffer_settings: The curve buffer settings define what is to be
+        stored in the curve buffer.
+    :ivar curve_buffer_length: The length of the curve buffer. The max value
+        depends on the the :attr:`.curve_buffer_settings`.
+    :ivar storage_intervall: The storage intervall, an integer representing the
+        time between datapoints in miliseconds.
+    :ivar event_marker: If the `'event'` flag of the
+        :attr:`.curve_buffer_settings` is `True`, the content of the event
+        marker variable, an integer between 0 and 32767, is stored for each
+        data point.
+    :ivar measurement_status: The curve acquisition status.
+        *(<acquisition status>, <sweeps>, <lockin status>, <points>)*, where
+        * *<acquisition status>* is the curve acquisition status. It is either
+          `'no activity'`, `'td running'`, `'tdc running'`, `'td halted'` or
+          `'tdc halted'`.
+        * *<sweeps>* The number of sweeps acquired.
+        * *<lockin status>* The content of the status register, equivalent to
+          :attr:`.status`.
+        * *<points>* The number of points acquired.
+
     .. rubric:: Computer interfaces
     .. rubric:: Instrument identification
     .. rubric:: Frontpanel
@@ -168,6 +212,38 @@ class SR7225(InstrumentBase):
         50e-3, 100e-3, 200e-3, 500e-3, 1, 2, 5, 10, 20, 50, 100, 200, 500, 1e3,
         2e3, 5e3, 10e3, 20e3, 50e3, 100e3,
     ]
+
+    #: The definition of the curve buffer register bits. To change the curve
+    #: buffer settings use the :attr:`.curve_buffer_settings`attribute.
+    CURVE_BUFFER = {
+        0: 'x',
+        1: 'y',
+        2: 'r',
+        3: 'theta',
+        4: 'sensitivity',
+        5: 'adc1',
+        6: 'adc2',
+        7: '7',
+        8: 'dac1',
+        9: 'dac2',
+        10: 'noise',
+        11: 'ratio',
+        12: 'log ratio',
+        13: 'event',
+        14: 'reference frequency bits 0-15',
+        15: 'reference frequency bits 16-32',
+    }
+
+    STATUS_BYTE = {
+        0: 'cmd complete',
+        1: 'invalid cmd',
+        2: 'cmd param error',
+        3: 'reference unlock',
+        4: 'overload',
+        5: 'new adc values after external trigger',
+        6: 'asserted srq',
+        7: 'data available',
+    }
 
     def __init__(self, connection):
         cfg = {
@@ -249,7 +325,6 @@ class SR7225(InstrumentBase):
                                       Float(min=0., max=5.))
         self.sync_oscillator = Command('SYNCOSC', 'SYNCOSC', Boolean)
         self.frequency = Command('OF.', 'OF.', Float(min=0, max=1.2e5))
-        #: Sets/Queries the start frequency of the frequency sweep.
         self.frequency_start = Command('FSTART.', 'FSTART.',
                                        Float(min=0, max=1.2e5))
         self.frequency_stop = Command('FSTOP.', 'FSTOP.',
@@ -258,30 +333,35 @@ class SR7225(InstrumentBase):
                                       [Float(min=0, max=1.2e5),
                                        Enum('log', 'linear')])
         self.sweep_rate = Command('SRATE', 'SRATE', Integer(min=0))
+        # Auxiliary Outputs
+        # ================
+        self.dac1 = Command('DAC. 1', 'DAC. 1 ', Float(min=-12., max=12.))
+        self.dac2 = Command('DAC. 2', 'DAC. 2 ', Float(min=-12., max=12.))
+        self.output_port = Command('BYTE', 'BYTE', Integer(min=0, max=255))
         # Auxiliary Inputs
         # ================
-        #: Read the auxiliary analog-to-digital input 1.
         self.adc1 = Command('ADC. 1', type_=Float)
-        #: Read the auxiliary analog-to-digital input 1.
         self.adc2 = Command('ADC. 2', type_=Float)
-        #: Sets/Queries the adc trigger mode.
         self.adc_trigger_mode = Command('TADC', type_=Integer(min=0, max=13))
+        self.burst_time = Command('BURSTTPP', 'BURSTTPP',
+                                  Integer(min=25, max=5000))
         # Output Data Curve Buffer
         # ========================
-        #: Sets/Queries the curve length.
+        cb = Register(dict((v, k) for k, v in self.CURVE_BUFFER))
+        self.curve_buffer_settings = Command('CBD', 'CBD', cb)
         self.curve_buffer_length = Command('LEN', 'LEN', Integer(min=0))
-        #: Sets/Queries the storage intervall in ms.
         self.storage_intervall = Command('STR', 'STR', Integer(min=0, max=1e9))
-        #: Sets/Queries the event marker.
         self.event_marker = Command('EVENT', 'EVENT',
                                     Integer(min=0, max=32767))
-        #: Queries the curve acquisition status.
+        status_byte = Register(dict((v, k) for k, v in self.STATUS_BYTE))
         self.measurement_status = Command(('M', [Enum('no activity',
                                                       'td running',
                                                       'tdc running',
                                                       'td halted',
                                                       'tdc halted'),
-                                                 Integer, Integer, Integer]))
+                                                 Integer,
+                                                 status_byte,
+                                                 Integer]))
         # Computer Interfaces
         # ===================
         #: RS232 settings.
@@ -297,18 +377,8 @@ class SR7225(InstrumentBase):
                                   'None', 'None echo')])
         #: Sets/Queries the ascii code of the delimiter.
         self.delimiter = Command('DD', 'DD', Set(13, *range(31, 126)))
-        status_byte = {
-            'cmd complete': 0,
-            'invalid cmd': 1,
-            'cmd param error': 2,
-            'reference unlock': 3,
-            'overload': 4,
-            'new adc values after external trigger': 5,
-            'asserted srq': 6,
-            'data available': 7
-        }
         #: Queries the status byte.
-        self.status = Command('ST', type_=Register(status_byte))
+        self.status = Command('ST', type_=status_byte)
         overload_byte = {
             'ch1 output overload': 1,
             'ch2 output overload': 2,
@@ -401,17 +471,21 @@ class SR7225(InstrumentBase):
         """Starts a frequency and amplitude sweep."""
         self.connection.write('SWEEP 3')
 
-    def reset_curves(self):
-        """Resets the curve storage memory and its status variables."""
+    def init_curves(self):
+        """Initializes the curve storage memory and its status variables.
+
+        .. note:: All records of previously taken curves is removed.
+
+        """
         self.connection.write('NC')
 
     def take_data(self, continuously=False):
         """Starts data acquisition.
 
-        :param continuously: If False, data is written until the buffer is full.
-           If its True, the data buffer is used as a circular buffer. That
-           means if data acquisition reaches the end of the buffer it
-           continues at the beginning.
+        :param continuously: If False, data is written until the buffer is
+            full. If its True, the data buffer is used as a circular buffer.
+            That means if data acquisition reaches the end of the buffer it
+            continues at the beginning.
 
         """
         if continuously:
