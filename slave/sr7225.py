@@ -166,8 +166,8 @@ class SR7225(InstrumentBase):
 
         .. note::
 
-        The lower boundary of 56 in the second case is not tested by slave
-        itself.
+            The lower boundary of 56 in the second case is not tested by slave
+            itself.
 
     .. rubric:: Output data curve buffer
 
@@ -183,6 +183,7 @@ class SR7225(InstrumentBase):
         data point.
     :ivar measurement_status: The curve acquisition status.
         *(<acquisition status>, <sweeps>, <lockin status>, <points>)*, where
+
         * *<acquisition status>* is the curve acquisition status. It is either
           `'no activity'`, `'td running'`, `'tdc running'`, `'td halted'` or
           `'tdc halted'`.
@@ -192,18 +193,67 @@ class SR7225(InstrumentBase):
         * *<points>* The number of points acquired.
 
     .. rubric:: Computer interfaces
+
+    :ivar rs232: The rs232 settings. *(<baud rate>, <settings>)*, where
+
+        * *<baud rate>* The baud rate in bits per second. Valid entries are
+          `75`, `110`, `134.5`, `150`, `300`, `600`, `1200`, `1800`, `2000`,
+          `2400`, `4800`, `9600` and `19200`.
+        * *<settings>* The sr7225 uses a 5bit register to configure the rs232
+          interface.
+
+            + `'9bit'` If it is `True`, data + parity use 9 bits and 8 bits
+              otherwise.
+            + `'parity'` If it's `True`, a single parity bit is used.
+              If it's `False` no parity bit is used.
+            + `'odd parity'` If it is `True` odd parity is used and even
+              otherwise.
+            + `'echo'` If it's `True`, echo is enabled.
+            + `'promt'` If it's `True`, promt is enabled.
+
+    :ivar gpib: The gpib configuration. *(<channel>, <terminator>)*, where
+
+        * *<channel>* Is the gpib communication channel, an integer between 0
+          and 31.
+        * *<terminator>* The command terminator, either `'CR'`, `'CR echo'`,
+          `'CRLF'`, `'CRLF echo'`, `'None'` or `'None echo'`. `'CR'` is the
+          carriage return, `'LF'` the linefeed. When echo is on, every command
+          or response of the gpib interface is echoed to the rs232 interface.
+
+    :ivar delimiter: The response data separator. Valid entries are 13 or 32 to
+        125 representing the ascii value of the character in use.
+
+        .. warning::
+
+            This command does **not** change the response data separator of the
+            commands in use. Using it might lead to errors.
+
+    :ivar status: The sr7225 status register.
+    :ivar status_enable: The status enable register is used to mask the bits of
+        the status register, which generate a service request.
+    :ivar overload_status: The overload status register.
+    :ivar remote: The remote mode of the front panel.
+
     .. rubric:: Instrument identification
+
+    :ivar identification: The identification, it responds with `'7225'`.
+    :ivar revision: The firmware revision. A multiline string.
+
+        .. warning:: Not every connection can handle multiline responses.
+
+    :ivar version: The firmware version.
+
     .. rubric:: Frontpanel
-    .. rubric:: Autodefault
+
+    :ivar lights: The status of the front panel lights. `True` if these are
+        enabled, `False` otherwise.
 
     .. todo::
 
-       * Check the delimiter of SR7225 in use.
        * Implement * and ? high speed mode.
-       * Implement proper range checking in sweep_rate command.
        * Implement DC, DCB, DCT command.
        * Use Enum for adc_trigger mode.
-       * Use Register for srq_mask Command instead of Integer.
+       * Implement daisy chain address command `\N`.
 
     """
     #: All valid time constant values.
@@ -212,9 +262,13 @@ class SR7225(InstrumentBase):
         50e-3, 100e-3, 200e-3, 500e-3, 1, 2, 5, 10, 20, 50, 100, 200, 500, 1e3,
         2e3, 5e3, 10e3, 20e3, 50e3, 100e3,
     ]
-
+    #: All valid baud rates of the rs232 interface.
+    BAUD_RATE = [
+        75, 110, 134.5, 150, 300, 600, 1200, 1800, 2000, 2400, 4800, 9600,
+        19200,
+    ]
     #: The definition of the curve buffer register bits. To change the curve
-    #: buffer settings use the :attr:`.curve_buffer_settings`attribute.
+    #: buffer settings use the :attr:`.curve_buffer_settings` attribute.
     CURVE_BUFFER = {
         0: 'x',
         1: 'y',
@@ -243,6 +297,14 @@ class SR7225(InstrumentBase):
         5: 'new adc values after external trigger',
         6: 'asserted srq',
         7: 'data available',
+    }
+    #: The rs232 settings register definition.
+    RS232 = {
+        0: '9bit',
+        1: 'parity',
+        2: 'odd parity',
+        3: 'echo',
+        4: 'promt',
     }
 
     def __init__(self, connection):
@@ -332,7 +394,8 @@ class SR7225(InstrumentBase):
         self.frequency_step = Command('FSTEP.', 'FSTEP.',
                                       [Float(min=0, max=1.2e5),
                                        Enum('log', 'linear')])
-        self.sweep_rate = Command('SRATE', 'SRATE', Integer(min=0))
+        self.sweep_rate = Command('SRATE.', 'SRATE.',
+                                  Float(min=0.05, max=1000))
         # Auxiliary Outputs
         # ================
         self.dac1 = Command('DAC. 1', 'DAC. 1 ', Float(min=-12., max=12.))
@@ -347,13 +410,15 @@ class SR7225(InstrumentBase):
                                   Integer(min=25, max=5000))
         # Output Data Curve Buffer
         # ========================
-        cb = Register(dict((v, k) for k, v in self.CURVE_BUFFER))
+        cb = Register(dict((v, k) for k, v in self.CURVE_BUFFER.iteritems()))
         self.curve_buffer_settings = Command('CBD', 'CBD', cb)
         self.curve_buffer_length = Command('LEN', 'LEN', Integer(min=0))
         self.storage_intervall = Command('STR', 'STR', Integer(min=0, max=1e9))
         self.event_marker = Command('EVENT', 'EVENT',
                                     Integer(min=0, max=32767))
-        status_byte = Register(dict((v, k) for k, v in self.STATUS_BYTE))
+        status_byte = Register(
+            dict((v, k) for k, v in self.STATUS_BYTE.iteritems())
+        )
         self.measurement_status = Command(('M', [Enum('no activity',
                                                       'td running',
                                                       'tdc running',
@@ -364,20 +429,13 @@ class SR7225(InstrumentBase):
                                                  Integer]))
         # Computer Interfaces
         # ===================
-        #: RS232 settings.
-        self.rs232 = Command('RS', 'RS',
-                             [Enum(75, 110, 134.5, 150, 300, 600, 1200, 1800,
-                                   2000, 2400, 4800, 9600, 19200),
-                              Register({'9 bits': 0, 'parity bit': 1,
-                                        'odd parity': 2, 'echo': 3,
-                                        'prompt': 4})])
+        rs = Register(dict((v, k) for k, v in self.RS232.iteritems()))
+        self.rs232 = Command('RS', 'RS', [Enum(*self.BAUD_RATE), rs])
         self.gpib = Command('GP', 'GP',
                             [Integer(min=0, max=31),
-                             Enum('CR', 'CR echo', 'CR, LF', 'CR, LF echo',
+                             Enum('CR', 'CR echo', 'CRLF', 'CRLF echo',
                                   'None', 'None echo')])
-        #: Sets/Queries the ascii code of the delimiter.
         self.delimiter = Command('DD', 'DD', Set(13, *range(31, 126)))
-        #: Queries the status byte.
         self.status = Command('ST', type_=status_byte)
         overload_byte = {
             'ch1 output overload': 1,
@@ -387,21 +445,16 @@ class SR7225(InstrumentBase):
             'input overload': 6,
             'reference unlock': 7,
         }
-        #: Queries the overload status.
         self.overload_status = Command('N', type_=Register(overload_byte))
-        #: Sets/Queries the service request mask.
-        self.srq_mask = Command('MSK', 'MSK', Integer(min=0, max=255))
-        #: Sets/Queries the remote mode.
+        self.status_enable = Command('MSK', 'MSK', status_byte)
         self.remote = Command('REMOTE', 'REMOTE', Boolean)
         # Instrument identification
         # =========================
-        #: Queries the instrument id.
-        self.id = Command('ID', type_=String)
-        #: Queries the firmware revision.
+        self.identification = Command('ID', type_=String)
         self.revision = Command('REV', type_=String)
-        #: Queries the firmware version.
         self.version = Command('VER', type_=String)
-        #: Sets/Queries the front panel LED's and LCD backlight state.
+        # Frontpanel
+        # ==========
         self.lights = Command('LTS', 'LTS', Boolean)
 
     def auto_sensitivity(self):
