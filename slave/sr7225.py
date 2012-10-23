@@ -3,7 +3,20 @@
 # Slave, (c) 2012, see AUTHORS.  Licensed under the GNU GPL.
 
 from slave.core import Command, InstrumentBase
-from slave.types import Boolean, Enum, Integer, Float, Register, Set, String
+from slave.types import Boolean, Enum, Integer, Register, Set, String
+import slave.types
+
+
+class Float(slave.types.Float):
+    """Custom float class used to correct a bug in the SR7225 firmware.
+
+    When the SR7225 is queried in floating point mode and the value is exactly
+    zero, it appends a `\x00` value, a null byte. To bypass this firmware bug,
+    the null byte is stripped before the conversion to float happens.
+
+    """
+    def __convert__(self, value):
+        return super(Float, self).__convert__(value.strip('\x00'))
 
 
 class SR7225(InstrumentBase):
