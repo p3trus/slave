@@ -33,7 +33,41 @@ class SR7225(InstrumentBase):
     :ivar grounding: The input connector shield grounding mode. Valid entries
         are `'ground'` and `'float'`.
     :ivar coupling: The input connector coupling, either `'ac'` or `'dc'`.
-    :ivar sensitivity: The full-scale sensitivity, an integer between 1 and 27.
+    :ivar sensitivity: The full-scale sensitivity. The valid entries depend on
+        the current mode.
+
+        =========  ================  ===========
+        'off'      'high bandwidth'  'low noise'
+        =========  ================  ===========
+        '2 nV'     '2 fA'            '2 fA'
+        '5 nV'     '5 fA'            '5 fA'
+        '10 nV'    '10 fA'           '10 fA'
+        '20 nV'    '20 fA'           '20 fA'
+        '50 nV'    '50 fA'           '50 fA'
+        '100 nV'   '100 fA'          '100 fA'
+        '200 nV'   '200 fA'          '200 fA'
+        '500 nV'   '500 fA'          '500 fA'
+        '1 uV'     '1 pA'            '1 pA'
+        '2 uV'     '2 pA'            '2 pA'
+        '5 uV'     '5 pA'            '5 pA'
+        '10 uV'    '10 pA'           '10 pA'
+        '20 uV'    '20 pA'           '20 pA'
+        '50 uV'    '50 pA'           '50 pA'
+        '100 uV'   '100 pA'          '100 pA'
+        '200 uV'   '200 pA'           200 pA'
+        '500 uV'   '500 pA'          '500 pA'
+        '1 mV'     '1 nA'            '1 nA'
+        '2 mV'     '2 nA'            '2 nA'
+        '5 mV'     '5 nA'            '5 nA'
+        '10 mV'    '10 nA'           ---
+        '20 mV'    '20 nA'           ---
+        '50 mV'    '50 nA'           ---
+        '100 mV'   '100 nA'          ---
+        '200 mV'   '200 nA'          ---
+        '500 mV'   '500 nA'          ---
+        '1 V'      '1 uA'            ---
+        =========  ================  ===========
+
     :ivar ac_gain: The gain of the signal channel amplifier. An integer between
         0 and 9, corresponding to 0dB to 90dB.
     :ivar ac_gain_auto: A boolean corresponding to the ac gain automatic mode.
@@ -321,8 +355,33 @@ class SR7225(InstrumentBase):
         self.fet = Command('FET', 'FET', Enum('bipolar', 'fet'))
         self.grounding = Command('FLOAT', 'FLOAT', Enum('ground', 'float'))
         self.coupling = Command('CP', 'CP', Enum('ac', 'dc'))
-        self.sensitivity = Command('SEN', 'SEN', Integer(min=1, max=27))
-        self.ac_gain = Command('ACGAIN', 'ACGAIN', Integer(min=0, max=9))
+        volt_sens = Enum(
+            '2 nV', '5 nV', '10 nV', '20 nV', '50 nV', '100 nV', '200 nV',
+            '500 nV', '1 uV', '2 uV', '5 uV', '10 uV', '20 uV', '50 uV',
+            '100 uV', '200 uV', '500 uV', '1 mV', '2 mV', '5 mV', '10 mV',
+            '20 mV', '50 mV', '100 mV', '200 mV', '500 mV', '1 V',
+            start=1
+        )
+        self._voltage_sensitivity = Command('SEN', 'SEN', volt_sens)
+        highbw_sens = Enum(
+            '2 fA', '5 fA', '10 fA', '20 fA', '50 fA', '100 fA', '200 fA',
+            '500 fA', '1 pA', '2 pA', '5 pA', '10 pA', '20 pA', '50 pA',
+            '100 pA', '200 pA', '500 pA', '1 nA', '2 nA', '5 nA', '10 nA',
+            '20 nA', '50 nA', '100 nA', '200 nA', '500 nA', '1 uA',
+            start=1
+        )
+        self._highbandwidth_sensitivity = Command('SEN', 'SEN', highbw_sens)
+        lownoise_sens = Enum(
+            '2 fA', '5 fA', '10 fA', '20 fA', '50 fA', '100 fA', '200 fA',
+            '500 fA', '1 pA', '2 pA', '5 pA', '10 pA', '20 pA', '50 pA',
+            '100 pA', '200 pA', '500 pA', '1 nA', '2 nA', '5 nA', '10 nA',
+            start=7
+        )
+        self._lownoise_sensitivity = Command('SEN', 'SEN', lownoise_sens)
+        self.ac_gain = Command('ACGAIN', 'ACGAIN',
+                               Enum('0 dB', '10 dB', '20 dB', '30 dB', '40 dB',
+                                    '50 dB', '60 dB', '70 db', '80 dB', '90 dB'
+                                    ))
         self.auto_ac_gain = Command('AUTOMATIC', 'AUTOMATIC', Boolean)
         self.line_filter = Command('LF', 'LF',
                                    [Enum('off', 'notch', 'double', 'both'),
@@ -336,7 +395,7 @@ class SR7225(InstrumentBase):
         self.harmonic = Command('REFN', 'REFN', Integer(min=1, max=32))
         self.reference_phase = Command('REFP.', 'REFP.',
                                        Float(min=-360., max=360.))
-        self.reference_frequency = Command('FRQ.', type_=Float)
+        self.reference_frequency = Command(('FRQ.', Float))
 
         # Signal channel output filters
         # =============================
@@ -483,6 +542,26 @@ class SR7225(InstrumentBase):
         parameters.
         """
         self.connection.write('LOCK')
+
+    @property
+    def sensitivity(self):
+        imode = self.current_mode
+        if imode == 'off':
+            return self._voltage_sensitivity
+        elif imode == 'high bandwidth':
+            return self._highbandwidth_sensitivity
+        else:
+            return self._lownoise_sensitivity
+
+    @sensitivity.setter
+    def sensitivity(self, value):
+        imode = self.current_mode
+        if imode == 'off':
+            self._voltage_sensitivity = value
+        elif imode == 'high bandwidth':
+            self._highbandwidth_sensitivity = value
+        else:
+            self._lownoise_sensitivity = value
 
     def stop(self):
         """Stops/Pauses the current sweep."""
