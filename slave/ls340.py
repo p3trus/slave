@@ -141,6 +141,8 @@ class Curve(InstrumentBase):
         return cmd.query((self.idx, item + 1))
 
     def __setitem__(self, item, value):
+        if not self._writeable:
+            raise AttributeError('Curve is not writeable.')
         if isinstance(item, slice):
             indices = item.indices(len(self))
             for i in range(*indices):
@@ -149,7 +151,7 @@ class Curve(InstrumentBase):
             item = self.__make_index(item)
             unit, temp = value
             data_t = [Integer(min=1), Integer(min=1, max=200), Float, Float]
-            cmd = Command(write=('CRVDEL {0};CRVPT'.format(self.idx), data_t),
+            cmd = Command(write=('CRVPT', data_t),
                           connection=self.connection, cfg=self._cfg)
             # Since indices in LS304 start at 1, it must be added.
             cmd.write((self.idx, item + 1, unit, temp))
