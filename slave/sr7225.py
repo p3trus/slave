@@ -11,12 +11,14 @@ class Float(slave.types.Float):
     """Custom float class used to correct a bug in the SR7225 firmware.
 
     When the SR7225 is queried in floating point mode and the value is exactly
-    zero, it appends a `\x00` value, a null byte. To bypass this firmware bug,
-    the null byte is stripped before the conversion to float happens.
+    zero, it appends a `\x00` value, a null byte. To workaround this firmware
+    bug, the null byte is stripped before the conversion to float happens.
 
     """
     def __convert__(self, value):
-        return super(Float, self).__convert__(value.strip('\x00'))
+        if isinstance(value, basestring):
+            value = value.strip('\x00')
+        return super(Float, self).__convert__(value)
 
 
 class SR7225(InstrumentBase):
@@ -550,11 +552,33 @@ class SR7225(InstrumentBase):
         """Triggers the auto offset mode."""
         self.connection.write('AXO')
 
+    def halt(self):
+        """Halts the data acquisition."""
+        self.connection.write('HC')
+
+    def init_curves(self):
+        """Initializes the curve storage memory and its status variables.
+
+        .. warning:: All records of previously taken curves is removed.
+
+        """
+        self.connection.write('NC')
+
     def lock(self):
         """Updates all frequency-dependent gain and phase correction
         parameters.
         """
         self.connection.write('LOCK')
+
+    def reset(self, complete=False):
+        """Resets the lock-in to factory defaults.
+
+        :param complete: If True all settings are reseted to factory defaults.
+           If it's False, all settings are reseted to factory defaults with the
+           exception of communication and LCD contrast settings.
+
+        """
+        self.connection.write('ADF {0:d}'.format(complete))
 
     @property
     def sensitivity(self):
@@ -576,28 +600,8 @@ class SR7225(InstrumentBase):
         else:
             self._lownoise_sensitivity = value
 
-    def stop(self):
-        """Stops/Pauses the current sweep."""
-        self.connection.write('SWEEP 0')
-
-    def start_fsweep(self, start=None, stop=None, step=None):
-        """Starts a frequency sweep.
-
-        :param start: Sets the start frequency.
-        :param stop: Sets the target frequency.
-        :param step: Sets the frequency step.
-
-        """
-        if start:
-            self.frequency_start = start
-        if stop:
-            self.frequency_stop = stop
-        if step:
-            self.frequency_step = step
-        self.connection.write('SWEEP 1')
-
     def start_asweep(self, start=None, stop=None, step=None):
-        """Starts a frequency sweep.
+        """Starts a amplitude sweep.
 
         :param start: Sets the start frequency.
         :param stop: Sets the target frequency.
@@ -616,13 +620,25 @@ class SR7225(InstrumentBase):
         """Starts a frequency and amplitude sweep."""
         self.connection.write('SWEEP 3')
 
-    def init_curves(self):
-        """Initializes the curve storage memory and its status variables.
+    def start_fsweep(self, start=None, stop=None, step=None):
+        """Starts a frequency sweep.
 
-        .. note:: All records of previously taken curves is removed.
+        :param start: Sets the start frequency.
+        :param stop: Sets the target frequency.
+        :param step: Sets the frequency step.
 
         """
-        self.connection.write('NC')
+        if start:
+            self.frequency_start = start
+        if stop:
+            self.frequency_stop = stop
+        if step:
+            self.frequency_step = step
+        self.connection.write('SWEEP 1')
+
+    def stop(self):
+        """Stops/Pauses the current sweep."""
+        self.connection.write('SWEEP 0')
 
     def take_data(self, continuously=False):
         """Starts data acquisition.
@@ -652,17 +668,3 @@ class SR7225(InstrumentBase):
             self.connection.write('TDT 1')
         else:
             raise ValueError('mode must be either "curve" or "point"')
-
-    def halt(self):
-        """Halts the data acquisition."""
-        self.connection.write('HC')
-
-    def reset(self, complete=False):
-        """Resets the lock-in to factory defaults.
-
-        :param complete: If True all settings are reseted to factory defaults.
-           If it's False, all settings are reseted to factory defaults with the
-           exception of communication and LCD contrast settings.
-
-        """
-        self.connection.write('ADF {0:d}'.format(complete))
