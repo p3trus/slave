@@ -198,7 +198,7 @@ class ParallelPoll(object):
     """
     def __init__(self, ppr=None, *args, **kw):
         super(ParallelPoll, self).__init__(*args, **kw)
-        ppr = __construct_register(ppr, PARALLEL_POLL_REGISTER)
+        ppr = _construct_register(ppr, PARALLEL_POLL_REGISTER)
         # The first 8 bits represent the status byte.
         ppr.update(self._stb)
         self._ppr = ppr
