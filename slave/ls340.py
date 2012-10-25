@@ -50,6 +50,26 @@ def _invert(dct):
     return dict((v, k) for k, v in dct.iteritems())
 
 
+def _index(index, length):
+    """Generates an index.
+
+    :param index: The index, can be positive or negative.
+    :param length: The length of the sequence to index.
+
+    :raises: IndexError
+
+    Negative indices are typically used to index a sequence in reverse order.
+    But to use them, the indexed object must convert them to the correct,
+    positive index. This function can be used to do this.
+
+    """
+    if index < 0:
+        index += length
+    if 0 <= index < length:
+        return index
+    raise IndexError()
+
+
 class Curve(InstrumentBase):
     """Represents a LS340 curve.
 
@@ -80,20 +100,35 @@ class Curve(InstrumentBase):
     To access the points of this curve, use slicing operations, e.g.::
 
         # assuming an LS340 instance named ls340, the following will print the
-        # sixth point.
-        print ls340.curve4[5]
+        # sixth point of the first user curve.
+        curve = ls340.user_curve[0]
+        print curve[5]
 
         # You can use negative indices. This will print the last point.
-        print ls340.curve4[-1]
+        print curve[-1]
 
-        # You can use the builtin function `len()` to get the number of points.
-        print len(ls340.curve4)
+        # You can use the builtin function len() to get the length of the curve
+        # buffer. This is **not** the length of the stored points, but the
+        # maximum number of points that can be stored in this curve.
+        print len(curve)
 
         #Extended slicing is available too. This will print every second point.
-        print ls340.curve4[::2]
+        print curve[::2]
 
         # Set this curves data point to 0.10191 sensor units and 470.000 K.
-        ls340.curve21[5] = 0.10191, 470.000
+        curve[5] = 0.10191, 470.000
+
+        # You can use slicing as well
+        points = [
+            (0.1, 470.),
+            (0.2, 480.),
+            (0.4, 490.),
+        ]
+        curve[2:6:2] = points
+        # To copy a complete sequence of points in one go, do
+        curve[:] = sequence_of_points
+        # This will copy all points in the sequence, but points exceeding the
+        # buffer length are stripped.
 
     .. warning ::
 
@@ -116,23 +151,15 @@ class Curve(InstrumentBase):
                                Enum('negative', 'positive', start=1)])
 
     def __len__(self):
+        """The length of the curve buffer **not** the number of points."""
         return self.__length
-
-    def __make_index(self, index):
-        index = int(index)
-        if index < 0:
-            index += len(self)
-        if 0 <= index < len(self):
-            return index
-        else:
-            raise IndexError()
 
     def __getitem__(self, item):
         if isinstance(item, slice):
             indices = item.indices(len(self))
             return [self[i] for i in range(*indices)]
         # Simple index
-        item = self.__make_index(item)
+        item = _index(item, len(self))
         response_t = [Float, Float]
         data_t = [Integer(min=1), Integer(min=1, max=200)]
         cmd = Command(('CRVPT?', response_t, data_t),
@@ -144,11 +171,11 @@ class Curve(InstrumentBase):
         if not self._writeable:
             raise AttributeError('Curve is not writeable.')
         if isinstance(item, slice):
-            indices = item.indices(len(self))
+            indices = item.indices(min(len(self), len(value)))
             for i in range(*indices):
                 self[i] = value[i]
         else:
-            item = self.__make_index(item)
+            item = _index(item, len(self))
             unit, temp = value
             data_t = [Integer(min=1), Integer(min=1, max=200), Float, Float]
             cmd = Command(write=('CRVPT', data_t),
