@@ -366,7 +366,7 @@ class SR7225(InstrumentBase):
         self.current_mode = Command('IMODE', 'IMODE',
                                     Enum('off', 'high bandwidth', 'low noise'))
         self.voltage_mode = Command('VMODE', 'VMODE',
-                                    Enum('test', 'A', 'A-B'))
+                                    Enum('test', 'A', 'A-B'), start=1)
         self.fet = Command('FET', 'FET', Enum('bipolar', 'fet'))
         self.grounding = Command('FLOAT', 'FLOAT', Enum('ground', 'float'))
         self.coupling = Command('CP', 'CP', Enum('ac', 'dc'))
