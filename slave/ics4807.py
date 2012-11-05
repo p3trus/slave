@@ -91,10 +91,12 @@ class ICS4807(IEC60488):
     def __init__(self, connection):
         super(ICS4807, self).__init__(connection)
         self.gpib = GPIB(connection)
-        for i in range(1, 5):
-            cmd = Command(('MEAS:TEMP? {0}'.format(i)))
-            setattr(self, 'temperature{0}'.format(i), cmd)
         self.input = tuple(Input(connection, i) for i in range(1, 7))
-
+        # relays
         for i in range(1, 7):
             setattr(self, 'relay{0}'.format(i), Relay(connection, i))
+        # temperature
+        # TODO Use tuple instead of four instance vars.
+        for i in range(1, 5):
+            cmd = Command(('MEAS:TEMP? {0}'.format(i)))
+            setattr(self, 'temperatures'.format(i), cmd)
