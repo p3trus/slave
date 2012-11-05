@@ -350,7 +350,9 @@ class InstrumentBase(object):
         try:
             attr = object.__getattribute__(self, name)
         except AttributeError:
+            # Attribute is missing
             if isinstance(value, Command):
+                # If value is a Command instance, inject connection and config.
                 if value.connection is None:
                     value.connection = self.connection
                 if self._cfg:
@@ -371,3 +373,5 @@ class InstrumentBase(object):
         else:
             if isinstance(attr, Command):
                 attr.write(value)
+            else:
+                object.__setattr__(self, name, value)
