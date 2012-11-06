@@ -100,3 +100,7 @@ class ICS4807(IEC60488):
         for i in range(1, 5):
             cmd = Command(('MEAS:TEMP? {0}'.format(i)))
             setattr(self, 'temperatures'.format(i), cmd)
+
+    def abort(self):
+        """Disables the trigger function."""
+        self.connection.write('ABORT')
