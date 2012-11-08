@@ -41,6 +41,14 @@ slave Package
     :undoc-members:
     :show-inheritance:
 
+:mod:`sr7225` Module
+--------------------
+
+.. automodule:: slave.sr7225
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 :mod:`sr830` Module
 -------------------
 
