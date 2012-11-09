@@ -258,7 +258,6 @@ class Relay(InstrumentBase):
     :ivar status: The relay status.
 
     """
-
     def __init__(self, connection, idx):
         super(Relay, self).__init__(connection)
         idx = int(idx)
@@ -272,6 +271,47 @@ class Relay(InstrumentBase):
             ]
         )
         self.status = Command(('RELAYST? {0}'.format(idx), Boolean))
+
+
+class Zone(InstrumentBase):
+    """A LS370 zone.
+
+    :param connection: A connection object.
+    :param idx: The zone index.
+
+    :ivar config: The zone configuration.
+        *(<top>, <p>, <i>, <d>, <manual>, <heater>, <low>, <high>, <analog1>*
+        *, <analog2>)*, where
+
+        * *<top>* The setpoint limit of this zone.
+        * *<p>* The proportional action, 0.001 to 1000.
+        * *<i>* The integral action, 0 to 10000.
+        * *<d>* The derivative action, 0 to 10000.
+        * *<manual>* The manual output in percent, 0 to 100.
+        * *<heater>* The heater range.
+        * *<low>* The low relay state, either `True` or `False`.
+        * *<high>* The high relay state, either `True` or `False`.
+        * *<analog1>* The output value of the first analog output in percent.
+          From -100 to 100.
+        * *<analog2>* The output value of the second analog output in percent.
+          From -100 to 100.
+
+    """
+    def __init__(self, connection, idx):
+        super(Zone, self).__init__(connection)
+        idx = int(idx)
+        self.config = Command(
+            'ZONE? {0}'.format(idx),
+            'ZONE {0},'.format(idx),
+            # TODO check if P, I and D are float or integer
+            [
+                Float, Float(min=0.001, max=1000.), Integer(min=0, max=10000),
+                Integer(min=0, max=10000), Integer(min=0, max=100),
+                Enum(*Heater.RANGE), Boolean, Boolean,
+                Integer(min=-100, max=100),Integer(min=-100, max=100)
+            ]
+        )
+
 
 # TODO CHGALL, CRVDEL, CRVHDR, CRVPT, 
 class LS370(IEC60488):
