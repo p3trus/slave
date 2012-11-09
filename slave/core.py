@@ -34,6 +34,7 @@ except ImportError:
             pass
 
 import slave.types
+import slave.misc
 
 
 _logger = logging.getLogger(__name__)
@@ -375,3 +376,14 @@ class InstrumentBase(object):
                 attr.write(value)
             else:
                 object.__setattr__(self, name, value)
+
+
+class CommandSequence(slave.misc.ForwardSequence):
+    """A sequence forwarding item access to the query and write methods."""
+    def __init__(self, iterable):
+        super(CommandSequence, self).__init__(
+            iterable,
+            get=lambda i: i.query(),
+            set=lambda i, v: i.write(v)
+        )
+
