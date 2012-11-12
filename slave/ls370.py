@@ -8,6 +8,116 @@
 from slave.core import Command, InstrumentBase, CommandSequence
 from slave.iec60488 import IEC60488
 from slave.types import Boolean, Enum, Float, Integer, Register, Set, String
+import slave.misc
+
+
+class Curve(InstrumentBase):
+    """A LS370 curve.
+
+    :param connection: A connection object.
+    :param idx: The curve index.
+    :param length: The curve buffer length.
+
+    :ivar header: The curve header configuration.
+        *(<name><serial><format><limit><coefficient>)*, where
+
+        * *<name>* The name of the curve, a string limited to 15 characters.
+        * *<serial>* The serial number, a string limited to 10 characters.
+        * *<format>* Specifies the curve data format. Valid entries are
+          'Ohm/K' and 'logOhm/K'.
+        * *<limit>* The curve temperature limit in Kelvin.
+        * *<coefficient>* The curves temperature coefficient. Valid entries are
+          `'negative'` and `'positive'`.
+
+    The Curve is implementing the `collections.sequence` protocoll. It models a
+    sequence of points. These are tuples with the following structure
+    *(<units value>, <temp value>)*, where
+
+    * *<units value>* specifies the sensor units for this point.
+    * *<temp value>* specifies the corresponding temperature in kelvin.
+
+    To access the points of this curve, use indexing and slicing operations,
+    e.g.::
+
+        # assuming an LS30 instance named ls30, the following will print the
+        # sixth point of the first user curve.
+        curve = ls370.user_curve[0]
+        print curve[1]   # print second point
+        print curve[-1]  # print last point
+        print curve[::2] # print every second point
+
+        # Set the fifth data point to 0.10191 sensor units and 470.000 K.
+        curve[5] = 0.10191, 470.000
+
+    .. note::
+
+        Be aware that the builtin :func:`len()` function returns the buffer
+        length, **not** the number of points.
+
+    .. warning ::
+
+        In contrast to the LS370 device, point indices start at 0 **not** 1.
+
+    """
+    def __init__(self, connection, idx, length):
+        super(Curve, self).__init__(connection)
+        self.idx = idx = int(idx)
+        self.header = Command(
+            'CRVHDR? {0}'.format(idx),
+            'CRVHDR {0},'.format(idx),
+            [
+                String(max=15),
+                String(max=10),
+                Enum('Ohm/K', 'logOhm/K', start=3),
+                Float(min=0.),Enum('negative', 'positive', start=1)
+            ]
+        )
+        if length > 0:
+            self.__length = int(length)
+        else:
+            raise ValueError('length must be a positive integer > 0')
+
+    def __len__(self):
+        """The length of the curve buffer **not** the number of points."""
+        return self.__length
+
+    def __getitem__(self, item):
+        if isinstance(item, slice):
+            indices = item.indices(len(self))
+            return [self[i] for i in range(*indices)]
+        # Simple index
+        item = slave.misc._index(item, len(self))
+        # contruct command
+        response_t = [Float, Float]
+        data_t = [Integer(min=1), Integer(min=1, max=200)]
+        cmd = Command(
+            ('CRVPT?', response_t, data_t),
+            connection=self.connection,
+            cfg=self._cfg
+        )
+        # Since indices in LS304 start at 1, it must be added.
+        return cmd.query((self.idx, item + 1))
+
+    def __setitem__(self, item, value):
+        if isinstance(item, slice):
+            indices = item.indices(min(len(self), len(value)))
+            for i in range(*indices):
+                self[i] = value[i]
+        else:
+            item = slave.misc._index(item, len(self))
+            unit, temp = value
+            data_t = [Integer(min=1), Integer(min=1, max=200), Float, Float]
+            cmd = Command(
+                write=('CRVPT', data_t),
+                connection=self.connection,
+                cfg=self._cfg
+            )
+            # Since indices in LS304 start at 1, it must be added.
+            cmd.write((self.idx, item + 1, unit, temp))
+
+    def delete(self):
+        """Deletes this curve."""
+        self.connection.write('CRVDEL {0}'.format(self.idx))
 
 
 class Display(InstrumentBase):
@@ -101,6 +211,7 @@ class Input(InstrumentBase):
         * *<high state>* is either `True`or `False`.
         * *<low state>* is either `True`or `False`.
 
+    :ivar autoscan: Enables/disables autoscanning of this channel.
     :ivar config: The input channel configuration.
         *(<enabled>, <dwell>, <pause>, <curve>, <coefficient>)*, where
 
@@ -145,10 +256,28 @@ class Input(InstrumentBase):
 
     :ivar minmax_param: Configures the source data to use with the minmax
         filter. Valid are 'kelvin', 'ohm' and 'linear'.
+    :ivar reading_status: The channel reading status. A register with the
+        following keys
+
+        * 'cs overload' Current source overload.
+        * 'vcm overload' Common mode voltage overload.
+        * 'vmix overload' Mixer overload.
+        * 'vdif overload' Differential overload.
+        * 'range over' The selected resistance range is too low.
+        * 'range under' The the polarity (+/-) of the current or voltage
+          leads is wrong and the selected resistance range is too low.
+
     :ivar resistance: The input reading in ohm.
+    :ivar resistance_range: The resistance range configuration.
+        *(<mode>, <excitation>, <range>, <autorange>, <excitation_enabled>)*
+
+        * *<mode>* The excitation mode, either 'current' or 'voltage'.
+        * *<excitation>* The excitation range, either 1-22 for current
+          excitation or 1-12 for voltage excitation.
 
     """
     def __init__(self, connection, idx):
+        super(Input, self).__init__(connection)
         self.index = idx = int(idx)
         self.alarm = Command(
             'ALARM ? {0}'.format(idx),
@@ -158,6 +287,11 @@ class Input(InstrumentBase):
         )
         self.alarm_status = Command(
             ('ALARMST? {0}'.format(idx), [Boolean, Boolean])
+        )
+        self.autoscan = Command(
+            'SCAN? {0}'.format(idx),
+            'SCAN {0},'.format(idx),
+            Boolean
         )
         self.config = Command(
             'INSET? {0}'.format(idx),
@@ -181,8 +315,8 @@ class Input(InstrumentBase):
             Float,  # b value
         ]
         self.linear_equation = Command(
-            'LINEAR? {0}'.format(name),
-            'LINEAR {0},'.format(name),
+            'LINEAR? {0}'.format(idx),
+            'LINEAR {0},'.format(idx),
             [
                 Enum('slope-intercept', 'point-slope'),
                 Float,  # m value
@@ -191,13 +325,37 @@ class Input(InstrumentBase):
                 Float,  # b value
             ]
         )
-        self.minmax = Command(('MDAT? {0}'.format(name), [Float, Float]))
+        self.minmax = Command(('MDAT? {0}'.format(idx), [Float, Float]))
         self.minmax_parameter = Command(
-            'MNMX? {0}'.format(name),
-            'MNMX {0},'.format(name),
+            'MNMX? {0}'.format(idx),
+            'MNMX {0},'.format(idx),
             Enum('kelvin', 'ohm', 'linear'),
         )
+        self.reading_status = Command((
+            'RDGST? {0}'.format(idx),
+            Register({
+                'cs overload': 0,  # current source overload
+                'vcm overload': 1,  # voltage common mode overload
+                'vmix overload': 2,  # differential overload
+                'vdif overload': 3,  # mixer overload
+                'range over': 4,
+                'range under': 5,
+                'temp over': 6,
+                'temp under': 7,
+            })
+        ))
         self.resistance = Command(('RDGR?', Float))
+        self.resistance_range = Command(
+            'RDGRNG? {0}'.format(idx),
+            'RDGRNG {0},'.format(idx),
+            [
+                Enum('voltage', 'current'),
+                Integer(min=1, max=22),
+                Integer(min=1, max=22),
+                Boolean,
+                Boolean
+            ]
+        )
 
 
 class Output(InstrumentBase):
@@ -272,7 +430,7 @@ class Relay(InstrumentBase):
         )
         self.status = Command(('RELAYST? {0}'.format(idx), Boolean))
 
-# TODO CHGALL, CRVDEL, CRVHDR, CRVPT, 
+
 class LS370(IEC60488):
     """A lakeshore mode ls370 resistance bridge.
 
@@ -323,6 +481,8 @@ class LS370(IEC60488):
         * *<address>* The IEEE-488.1 address of the device, an integer between
           0 and 30.
 
+    :ivar input_change: Defines if range and excitation keys affects all or
+        only one channel. Valid entries are 'all', 'one'.
     :ivar mode: Represents the interface mode. Valid entries are
         `"local"`, `"remote"`, `"lockout"`.
     :ivar monitor: The monitor output selection, one of 'off', 'cs neg',
@@ -350,6 +510,8 @@ class LS370(IEC60488):
             The still only works, if it's properly configured in the analog
             output 2.
 
+    :ivar user_curve: A tuple of 20 :class:`.Curve` instances.
+
     :ivar zones: A sequence of 10 Zones. Each zone is represented by a tuple
         *(<top>, <p>, <i>, <d>, <manual>, <heater>, <low>, <high>, <analog1>*
         *, <analog2>)*, where
@@ -368,7 +530,7 @@ class LS370(IEC60488):
           From -100 to 100.
 
     """
-    def __init__(self, connection):
+    def __init__(self, connection, scanner=None):
         super(LS370, self).__init__(connection)
         self.baud = Command('BAUD?', 'BAUD', Enum(300, 1200, 9600))
         self.beeper = Command('BEEP?', 'BEEP', Boolean)
@@ -409,6 +571,8 @@ class LS370(IEC60488):
                             [Enum(None, '\r\n', '\n\r', '\r', '\n'),
                              Boolean,
                              Integer(min=0, max=30)])
+        # TODO only active if model scanner 3716 is installed.
+        self.input_change = Command('CHGALL?', 'CHGALL', Enum('one', 'all'))
         self.mode = Command('MODE?', 'MODE',
                             Enum('local', 'remote', 'lockout', start=1))
         self.monitor = Command(
@@ -431,8 +595,10 @@ class LS370(IEC60488):
             [Boolean, Float(min=1e-3, max=10.)]
         )
         self.ramping = Command(('RAMPST?', Boolean))
+        self.scanner = scanner
         self.setpoint = Command('SETP?', 'SETP', Float)
         self.still = Command('STILL?', 'STILL', Float)
+        self.user_curve = tuple(Curve(connection, i, 200) for i in range(20))
 
         def make_zone(i):
             """Helper function to create a zone command."""
@@ -466,4 +632,36 @@ class LS370(IEC60488):
     def reset_minmax(self):
         """Resets Min/Max functions for all inputs."""
         self.connection.write('MNMXRST')
+
+    @property
+    def scanner(self):
+        """The scanner option in use.
+        
+        Changing the scanner option changes number of channels available. Valid
+        values are
+
+        =======  ========
+        scanner  channels
+        =======  ========
+        None     1
+        '3708'   8
+        '3716'   16
+        '3716L'  16
+        =======  ========
+
+        """
+        return self._scanner
+
+    @scanner.setter
+    def scanner(self, value):
+        scanner_channels = {
+            None: 1,
+            '3716': 16,
+            '3716L': 16,
+            '3708': 8,
+        }
+        self.channels = tuple(
+            Input(self.connection, i) for i in xrange(scanner_channels[value])
+        )
+        self._channel = value
 
