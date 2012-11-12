@@ -43,31 +43,11 @@ ture-controllers/model-340/Pages/Overview.aspx
 from slave.core import Command, InstrumentBase
 from slave.iec60488 import IEC60488
 from slave.types import Boolean, Enum, Float, Integer, Register, Set, String
-
+import slave.misc
 
 def _invert(dct):
     """Returns an inverted dict, keys become values and vice versa."""
     return dict((v, k) for k, v in dct.iteritems())
-
-
-def _index(index, length):
-    """Generates an index.
-
-    :param index: The index, can be positive or negative.
-    :param length: The length of the sequence to index.
-
-    :raises: IndexError
-
-    Negative indices are typically used to index a sequence in reverse order.
-    But to use them, the indexed object must convert them to the correct,
-    positive index. This function can be used to do this.
-
-    """
-    if index < 0:
-        index += length
-    if 0 <= index < length:
-        return index
-    raise IndexError()
 
 
 class Curve(InstrumentBase):
@@ -89,9 +69,9 @@ class Curve(InstrumentBase):
         * *<limit>* The curve temperature limit in Kelvin.
         * *<coefficient>* The curves temperature coefficient. Valid entries are
           `'negative'` and `'positive'`.
-    :ivar point: The curve data point
 
-    Points are tuples with the following structure
+    The Curve is implementing the `collections.sequence` protocoll. It models a
+    sequence of points. These are tuples with the following structure
     *(<units value>, <temp value>)*, where
 
     * *<units value>* specifies the sensor units for this point.
@@ -159,7 +139,7 @@ class Curve(InstrumentBase):
             indices = item.indices(len(self))
             return [self[i] for i in range(*indices)]
         # Simple index
-        item = _index(item, len(self))
+        item = slave.misc._index(item, len(self))
         response_t = [Float, Float]
         data_t = [Integer(min=1), Integer(min=1, max=200)]
         cmd = Command(('CRVPT?', response_t, data_t),
@@ -175,7 +155,7 @@ class Curve(InstrumentBase):
             for i in range(*indices):
                 self[i] = value[i]
         else:
-            item = _index(item, len(self))
+            item = slave.misc._index(item, len(self))
             unit, temp = value
             data_t = [Integer(min=1), Integer(min=1, max=200), Float, Float]
             cmd = Command(write=('CRVPT', data_t),
