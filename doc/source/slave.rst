@@ -41,6 +41,14 @@ slave Package
     :undoc-members:
     :show-inheritance:
 
+:mod:`ls370` Module
+-------------------
+
+.. automodule:: slave.ls370
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 :mod:`sr7225` Module
 --------------------
 
