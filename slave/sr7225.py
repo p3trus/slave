@@ -11,7 +11,7 @@ class Float(slave.types.Float):
     """Custom float class used to correct a bug in the SR7225 firmware.
 
     When the SR7225 is queried in floating point mode and the value is exactly
-    zero, it appends a `\x00` value, a null byte. To workaround this firmware
+    zero, it appends a `\\x00` value, a null byte. To workaround this firmware
     bug, the null byte is stripped before the conversion to float happens.
 
     """
