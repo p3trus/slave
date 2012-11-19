@@ -27,6 +27,18 @@ class SR850(InstrumentBase):
     :ivar frequency_sweep: The type of the frequency sweep, either 'linear' or
         'log', when in 'internal' reference_mode.
 
+    :ivar start_frequency: The start frequency of the internal frequency sweep
+        mode. A float in the range 0.001 to 102000.
+    :ivar stop_frequency: The stop frequency of the internal frequency sweep
+        mode. A float in the range 0.001 to 102000.
+    :ivar reference_slope: The reference slope in the external mode. Valid are:
+
+        =========  ==================
+        'sine'     sine zero crossing
+        'rising'   TTL rising edge
+        'falling'  TTL falling edge
+        =========  ==================
+
     """
     def __init__(self, connection):
         super(SR850, self).__init__(connection)
@@ -39,3 +51,18 @@ class SR850(InstrumentBase):
         )
         self.frequency = Command('FREQ?', 'FREQ', Float(min=0.001, max=102000))
         self.frequency_sweep = Command('SWPT?', 'SWPT', Enum('linear', 'log'))
+        self.start_frequency = Command(
+            'SLLM?',
+            'SLLM',
+            Float(min=0.001, max=102000)
+        )
+        self.stop_frequency = Command(
+            'SULM?',
+            'SULM',
+            Float(min=0.001, max=102000)
+        )
+        self.reference_slope = Command(
+            'RSLP?',
+            'RSLP',
+            Enum('sine', 'rising', 'falling')
+        )
