@@ -3,7 +3,7 @@
 # Slave, (c) 2012, see AUTHORS.  Licensed under the GNU GPL.
 from slave.core import Command, InstrumentBase
 from slave.iec60488 import IEC60488
-from slave.types import Boolean, Enum, Float, Integer, Set
+from slave.types import Boolean, Enum, Float, Integer, Set, String
 
 
 class Relay(InstrumentBase):
@@ -16,15 +16,15 @@ class Relay(InstrumentBase):
     def __init__(self, connection, idx):
         super(Relay, self).__init__(connection)
         self.idx = idx = int(idx)
-        self.status = Command('ROUT:STAT? {0}'.format(id), )
+        self.status = Command(('ROUT:CLOS:STAT? {0}'.format(self.idx), String))
 
     def open(self):
         """Open's the relay."""
-        self.connection.write('ROUT:OPEN {0}'.format(id))
+        self.connection.write('ROUT:OPEN {0}'.format(self.idx))
 
     def close(self):
         """Closes the relay."""
-        self.connection.write('ROUT:CLOSE {0}'.format(id))
+        self.connection.write('ROUT:CLOSE {0}'.format(self.idx))
 
 
 class Input(InstrumentBase):
@@ -48,10 +48,14 @@ class Input(InstrumentBase):
                                Integer(min=1, max=250))
         self.polarity = Command('MEAS:POL? {0}'.format(idx),
                                 'MEAS:POL {0},'.format(idx),
-                                Enum('unipolar', 'bipolar'))
-        self.range = Command('MEAS:RANG? {0}'.format(idx),
-                             'MEAS:RANG {0},'.format(idx),
-                             Set(5, 10))
+                                Enum('unipolar', 'bipolar', start=1))
+        # Due to a bug in the isc4807 firmware, a query returns 10.0001 instead
+        # of 10. This leads to problems when a Set type is used as query and
+        # write type.
+        self.range = Command(
+            ('MEAS:RANG? {0}'.format(idx), Integer),
+            ('MEAS:RANG {0},'.format(idx), Set(5, 10))
+        )
         self.voltage = Command(('MEAS:VOLT? {0}'.format(idx), Float))
 
 
@@ -99,7 +103,8 @@ class ICS4807(IEC60488):
         # TODO Use tuple instead of four instance vars.
         for i in range(1, 5):
             cmd = Command(('MEAS:TEMP? {0}'.format(i)))
-            setattr(self, 'temperatures'.format(i), cmd)
+			# TODO use command sequence.
+            setattr(self, 'temperature{0}'.format(i), cmd)
 
     def abort(self):
         """Disables the trigger function."""
