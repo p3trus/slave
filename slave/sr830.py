@@ -4,6 +4,9 @@
 
 """
 The sr830 module implements an interface for the Stanford Research SR830.
+
+The SR830 lock in amplifier is an IEEE Std. 488-2 1987 compliant device.
+
 """
 
 from slave.core import Command, InstrumentBase
@@ -333,7 +336,7 @@ class SR830(InstrumentBase):
         # Interface Commands
         # ==================
         #: Queries the device identification string
-        self.idn = Command('*IDN?', type=[String, String, String, String])
+        self.idn = Command('*IDN?', type_=[String, String, String, String])
         #: Queries or sets the state of the frontpanel.
         self.state = Command('LOCL?', 'LOCL',
                              Enum('local', 'remote', 'lockout'))
