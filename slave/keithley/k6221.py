@@ -132,7 +132,7 @@ class Current(InstrumentBase):
             'SOUR:CURR:STEP',
             Float(min=1e-13, max=105e-3)
         )
-        self.filter = Command
+        self.filter = Command(
             'SOUR:CURR:FILT?',
             'SOUR:CURR:FILT',
             Boolean
