@@ -132,9 +132,6 @@ class Current(InstrumentBase):
             'SOUR:CURR:STEP',
             Float(min=1e-13, max=105e-3)
         )
-        self.delay = Command(
-            'SOUR:CURR:
-        )
         self.filter = Command
             'SOUR:CURR:FILT?',
             'SOUR:CURR:FILT',
