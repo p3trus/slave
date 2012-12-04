@@ -329,9 +329,11 @@ class InstrumentBase(object):
     """
     def __init__(self, connection, cfg=None, *args, **kw):
         """Constructs a InstrumentBase instance."""
-        super(InstrumentBase, self).__init__(*args, **kw)
         self.connection = connection
         self._cfg = cfg
+        # super must be the last call, otherwise mixin classes relying on the
+        # existance of _cfg and connection will fail.
+        super(InstrumentBase, self).__init__(*args, **kw)
 
     def __getattribute__(self, name):
         """Redirects read access of command attributes to
