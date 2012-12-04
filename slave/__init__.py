@@ -4,6 +4,9 @@
 
 import warnings
 
+
+__version__ = '0.2.0'
+
 # Test if ipythons autocall feature is enabled. It can cause serious problems,
 # because attributes are executed twice. This means commands are send twice and
 # e.g. error flags might get cleared.
