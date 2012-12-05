@@ -148,6 +148,14 @@ class GpibDevice(Connection):
         self._lib.ibrd(self._device, ct.byref(buffer), ct.c_long(bytes))
         return buffer.value
 
+    def trigger(self):
+        """Triggers the device.
+
+        The trigger method sens a GET(group execute trigger) command byte to
+        the device.
+        """
+        self._lib.ibtrg(self._device)  # TODO check error conditions.
+
 
 class TCPIPDevice(Connection):
     def __init__(self, address, port):
