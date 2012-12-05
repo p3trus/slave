@@ -1,16 +1,16 @@
 keithley Package
 ================
 
-:mod:`k6221` Package
---------------------
+:mod:`keithley` Package
+-----------------------
 
 .. automodule:: slave.keithley
     :members:
     :undoc-members:
     :show-inheritance:
 
-:mod:`keithley` Module
-----------------------
+:mod:`k6221` Module
+-------------------
 
 .. automodule:: slave.keithley.k6221
     :members:

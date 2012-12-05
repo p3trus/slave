@@ -5,7 +5,7 @@
 from slave.core import Command, InstrumentBase
 from slave.iec60488 import (IEC60488, Trigger, ObjectIdentification,
     StoredSetting)
-from slave.types import Boolean, Enum, Float, Mapping
+from slave.types import Boolean, Enum, Float, Integer, Mapping
 
 
 class Output(InstrumentBase):
@@ -139,13 +139,59 @@ class Current(InstrumentBase):
         )
 
 
+class Sweep(InstrumentBase):
+    """The current subgroup of the keithley 6221`Source command group.
+
+    :param connection: A connection object.
+
+    :ivar compliance_abort: The state of the compliance abort, `True` if it's
+        enabled, `False` otherwise.
+    :ivar points: The number of sweep points, 1 to 65535.
+    :ivar ranging: The sweep ranging mode, either 'auto', 'best' or 'fixed'.
+    :ivar type: The sweep type, either 'linear', 'log' or 'custom'.
+
+    """
+    def __init__(self, connection):
+        super(Sweep, self).__init__(connection)
+        self.type = Command(
+            'SOUR:SWE:SPAC?',
+            'SOUR:SWE:SPAC',
+            Mapping({'linear': 'LIN', 'log': 'LOG', 'custom': 'LIST'})
+        )
+        self.points = Command(
+            'SOUR:SWE:POIN?',
+            'SOUR:SWE:POIN',
+            Integer(min=1, max=65535)
+        )
+        self.ranging(
+            'SOUR:SWE:RANG?',
+            'SOUR:SWE:RANG?',
+            Mapping({'auto': 'AUTO', 'best': 'BEST', 'fixed': 'FIX'})
+        )
+        # TODO self.count = Command()
+        self.compliance_abort = Command(
+            'SOUR:SWE:CAB?',
+            'SOUR:SWE:CAB',
+            Boolean
+        )
+
+    def abort(self):
+        """Abort sweep immediately."""
+        self.connection.write('SOUR:SWE:ABOR')
+
+    def arm(self):
+        """Arm the sweep."""
+        self.connection.write('SOUR:SWE:ARM')
+
+
 class Source(InstrumentBase):
     """Represents the keithley 6221`Source command group.
 
     :param connection: A connection object.
 
-    :ivar connection: An instance of :class:`.Current`.
+    :ivar current: An instance of :class:`.Current`.
     :ivar delay: The source delay in seconds in the range 1e-3 to 999999.999.
+    :ivar sweep: An instance of :class:`.Sweep`.
 
     """
     def __init__(self, connection):
@@ -156,6 +202,7 @@ class Source(InstrumentBase):
             'SOUR:DEL',
             Float(min=1e-3, max=999999.999)
         )
+        self.sweep = Sweep(connection)
 
     def clear(self):
         self.connection.write('SOUR:CLE')
