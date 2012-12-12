@@ -29,6 +29,17 @@ Requirements
 ------------
  * Python 2.6 or higher
  * Sphinx (optional, to build the documentation)
+ * distribute (Python 3.x)
+
+Installation
+------------
+
+To install Slave, simply type
+
+    python setup.py install
+
+**Note** To install Slave in Python 3.x distribute is required.
+
 
 Documentation
 -------------
