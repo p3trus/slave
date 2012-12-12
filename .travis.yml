@@ -2,8 +2,9 @@ language: python
 python:
   - "3.2"
   - "2.7"
-  - "2.6"
 
-install: python setup.py -q install
+install:
+  - pip install distribute
+  - python setup.py -q install
 # command to run tests, e.g. python setup.py test
 script: nosetests
