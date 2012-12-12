@@ -349,32 +349,22 @@ class InstrumentBase(object):
         :class:`~Command.write` function and injects connection, and command
         config into commands.
         """
-        # Redirect write access
         try:
             attr = object.__getattribute__(self, name)
         except AttributeError:
             # Attribute is missing
             if isinstance(value, Command):
-                # If value is a Command instance, inject connection and config.
+                # If value is a Command instance, inject connection and custom
+                # config, if available.
                 if value.connection is None:
                     value.connection = self.connection
-                if self._cfg:
-                    # TODO doesn't feel right...
-                    cfg = dict(value._default_cfg)
-                    cfg.update(self._cfg)
-                    cfg.update(value._custom_cfg)
-                    value._cfg = cfg
-            if isinstance(value, InstrumentBase):
-                # inject config into InstrumentBase attributes.
-                if self._cfg:
-                    cfg = dict(self._cfg)
-                    if value._cfg:
-                        cfg.update(value._cfg)
-                    value._cfg = cfg
+                if self._cfg and (value.cfg == Command.CFG):
+                    value.cfg.update(self._cfg)
 
             object.__setattr__(self, name, value)
         else:
             if isinstance(attr, Command):
+                # Redirect write access
                 attr.write(value)
             else:
                 object.__setattr__(self, name, value)
