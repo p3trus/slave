@@ -4,7 +4,11 @@ python:
   - "2.7"
 
 install:
-  - pip install distribute
   - python setup.py -q install
-# command to run tests, e.g. python setup.py test
-script: nosetests
+
+script:
+    # cd to different directory otherwise python3 import the source not the
+    # 2to3 converted source
+    cd ../
+    nosetests
+

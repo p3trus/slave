@@ -302,7 +302,7 @@ class SR7225(InstrumentBase):
        * Implement * and ? high speed mode.
        * Implement DC, DCB, DCT command.
        * Use Enum for adc_trigger mode.
-       * Implement daisy chain address command `\N`.
+       * Implement daisy chain address command `\\N`.
 
     """
     #: All valid time constant values.
