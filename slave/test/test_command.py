@@ -24,7 +24,6 @@ class MockConnection(object):
 
     def write(self, cmd):
         tokens = re.split('[\s,]+', cmd)
-        print tokens
         key = tokens.pop(0)
         # TODO check if args are valid
         self._state[key] = ','.join(tokens) or '1'
