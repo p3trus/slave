@@ -23,8 +23,9 @@ implementation might look like::
 
 """
 import collections
+import itertools as it
 import logging
-from itertools import izip, izip_longest
+
 try:
     from logging import NullHandler
 except ImportError:
@@ -32,13 +33,17 @@ except ImportError:
     class NullHandler(logging.Handler):
         def emit(self, record):
             pass
-
 import slave.types
 import slave.misc
 
 
 _logger = logging.getLogger(__name__)
 _logger.addHandler(NullHandler())
+
+_Message = collections.namedtuple(
+    '_Message',
+    ['header', 'data_type', 'response_type']
+)
 
 
 class SimulatedConnection(object):
@@ -47,6 +52,18 @@ class SimulatedConnection(object):
 
     def write(self, value):
         pass
+
+
+def _to_instance(x):
+    """Converts x to an instance if its a class."""
+    return x() if isinstance(x, type) else x
+
+
+def _typelist(x):
+    """Helper function converting all items of x to instances."""
+    if isinstance(x, collections.Iterable):
+        return map(_to_instance, x)
+    return None if x is None else [_to_instance(x)]
 
 
 class Command(object):
@@ -70,30 +87,24 @@ class Command(object):
         `'*IDN?'`. To allow customisation of the queriing a 2-tuple or 3-tuple
         value with the following meaning is also possible.
 
-        * (<query program header>, <response type>)
-        * (<query program header>, <response type>, <query program data type>)
+        * (<query header>, <response data type>)
+        * (<query header>, <response data type>, <query data type>)
 
         The types have the same requirements as the type parameter. If they are
     :param write: A string representing the *command program header*, e.g.
-        `'*CLS'`. To allow for customization of the writing a 2-tuple value
+        '*CLS'. To allow for customization of the writing a 2-tuple value
         with the following requirements is valid as well.
 
-        * (<command program header>, <response type>)
+        * (<command header>, <response data type>)
 
         The types have the same requirements as the type parameter.
     :param connection: A connection object, used for the communication.
     :param cfg: The configuration dictionary is used to customize the
         configuration.
 
-    :ivar _query: The query program header.
-    :ivar _response_type: The response data type.
-    :ivar _query_type: The query program data type.
-
-    :ivar _write: The command program header.
-    :ivar _write_type: The command program data type.
-
     """
-    _default_cfg = {
+    #: Default configuration
+    CFG = {
         'program header prefix': '',
         'program header separator': ' ',
         'program data separator': ',',
@@ -102,68 +113,26 @@ class Command(object):
     }
 
     def __init__(self, query=None, write=None,
-                 type_=None, connection=None, cfg=None):
-        def to_instance(x):
-            """If x is a type class, it is converted to an instance of it."""
-            if isinstance(x, slave.types.Type):
-                return x
-            elif isinstance(x, type) and issubclass(x, slave.types.Type):
-                return x()
-            else:
-                raise ValueError('Invalid value.')
+                 type_=None, connection=None, cfg={}):
+        default = _typelist(type_)
+        def write_message(header, data_type=default):
+            return _Message(str(header), _typelist(data_type), None)
 
-        def typelist(types):
-            """Applies to_instance to every element of types."""
-            if not isinstance(types, collections.Sequence):
-                types = (types,)
-            return [to_instance(t) for t in types]
+        def query_message(header, response_type=default, data_type=None):
+            if response_type is None:
+                raise ValueError('Missing response type in query:{0}'.format(header))
+            return _Message(str(header), _typelist(data_type), _typelist(response_type))
 
-        def parse_arg(x, n):
-            """
-            :param x: The argument to parse.
-            :param n: The number of types or typelists.
+        def assign(x, fn):
+            return x and (fn(x) if isinstance(x, basestring) else fn(*x))
 
-            :returns: A tuple containing the header and n typelists.
-            """
-            if isinstance(x, basestring):
-                header = x
-                types = ()
-            else:  # should be at least a 1-tuple
-                header = x[0]
-                types = x[1:]
-            args = types + (n - len(types)) * ((),)
-            return [header] + [typelist(x) for x in args]
-
+        self.cfg = dict(it.chain(Command.CFG.iteritems(), cfg.iteritems()))
         self.connection = connection
+        self._query = assign(query, query_message)
+        self._write = assign(write, write_message)
+        _logger.debug('Command: "{0}"'.format(self))
 
-        # convert the type param to a type instance list, e.g.
-        # (String(),) or (String(), Float())
-        default_type = typelist(type_) if type_ else ()
-
-        # initialize write related attributes
-        if write:
-            write, write_t = parse_arg(write, 1)
-        else:
-            write, write_t = (None, ())
-        self._write = write
-        self._write_type = write_t or default_type
-
-        # initialize query related attributes
-        if query:
-            query, response_t, query_t = parse_arg(query, 2)
-        else:
-            query, response_t, query_t = (None, (), ())
-        self._query = query
-        self._response_type = response_t or default_type
-        self._query_type = query_t
-
-        # initialize configuration dictionary
-        self._custom_cfg = dict(cfg) if cfg else {}
-        self._cfg = dict(self._default_cfg)
-        self._cfg.update(self._custom_cfg)
-
-        _logger.debug('created {0}'.format(self))
-
+    # XXX This is a messy way.
     @property
     def connection(self):
         return self._connection
@@ -176,7 +145,7 @@ class Command(object):
             self.write = self.__simulate_write
         self._connection = value
 
-    def program_message_unit(self, header, datas, types):
+    def program_message_unit(self, message, datas):
         """Constructs a program message unit.
 
         :param header: The program header, can either be a command program
@@ -200,14 +169,14 @@ class Command(object):
         if (not isinstance(datas, collections.Sequence) or
             isinstance(datas, basestring)):
             datas = (datas,)
-        if len(datas) != len(types):
+        if len(datas) != len(message.data_type):
             raise ValueError('Number of datas must match the number of types.')
 
-        php = self._cfg['program header prefix']
-        phs = self._cfg['program header separator']
-        pds = self._cfg['program data separator']
-        program_data = [t.dump(v) for v, t in izip(datas, types)]
-        return php + header + phs + pds.join(program_data)
+        php = self.cfg['program header prefix']
+        phs = self.cfg['program header separator']
+        pds = self.cfg['program data separator']
+        program_data = [t.dump(v) for v, t in it.izip(datas, message.data_type)]
+        return php + message.header + phs + pds.join(program_data)
 
     def write(self, datas=None):
         """Generates and sends a command message unit.
@@ -219,10 +188,11 @@ class Command(object):
             raise AttributeError('Command is not writeable')
         # construct the command message unit
         if datas is None:
-            cmu = self._write
+            php = self.cfg['program header prefix']
+            cmu = php + self._write.header
         else:
-            cmu = self.program_message_unit(self._write, datas,
-                                        self._write_type)
+            # TODO pass _Message instead
+            cmu = self.program_message_unit(self._write, datas)
         # Send command message unit
         _logger.info('command message unit: "{0}"'.format(cmu))
         self.connection.write(cmu)
@@ -237,13 +207,13 @@ class Command(object):
             raise AttributeError('Command is not queryable')
         # construct the query message unit
         if datas is None:
-            php = self._cfg['program header prefix']
-            qmu = php + self._query
+            php = self.cfg['program header prefix']
+            qmu = php + self._query.header
         else:
-            if not self._query_type:
+            if not self._query.data_type:
                 raise ValueError('Query type missing')
-            qmu = self.program_message_unit(self._query, datas,
-                                            self._query_type)
+            # TODO pass _Message instead
+            qmu = self.program_message_unit(self._query, datas)
         # Send query message unit.
         _logger.info('query message unit: "{0}"'.format(qmu))
         response = self.connection.ask(qmu)
@@ -261,8 +231,8 @@ class Command(object):
 
     def parse_response(self, response):
         """Parses the response."""
-        rhs = self._cfg['response header separator']
-        rds = self._cfg['response data separator']
+        rhs = self.cfg['response header separator']
+        rds = self.cfg['response data separator']
 
         response = response.split(rhs) if rhs else [response]
         if len(response) == 2:
@@ -272,10 +242,10 @@ class Command(object):
             header = None
             data = response[0]
         parsed_data = []
-        for val, typ in izip_longest(data.split(rds), self._response_type):
-            if typ:
-                val = typ.load(val)
-            parsed_data.append(val)
+        for v, t in it.izip_longest(data.split(rds),self._query.response_type):
+            if t:
+                v = t.load(v)
+            parsed_data.append(v)
         return header, tuple(parsed_data)
 
     def __simulate_query(self, datas=None):
@@ -284,9 +254,16 @@ class Command(object):
         # TODO: validate datas
         if self._buffer is None or self._write is None:
             # generate values from response type
-            self._buffer = tuple(t.dump(t.simulate()) for t in self._response_type)
-        res = tuple(t.load(v) for v, t in izip(self._buffer, self._response_type))
-                # Return single value instead of 1-tuple
+            self._buffer = tuple(
+                t.dump(t.simulate()) for t in self._query.response_type
+            )
+        res = tuple(
+            t.load(v) for v, t in it.izip(
+                self._buffer,
+                self._query.response_type
+            )
+        )
+        # Return single value instead of 1-tuple
         if len(res) == 1:
             return res[0]
         else:
@@ -296,21 +273,17 @@ class Command(object):
         if (not isinstance(datas, collections.Sequence) or
             isinstance(datas, basestring)):
             datas = (datas,)
-        if len(datas) != len(self._write_type):
+        if len(datas) != len(self._write.data_type):
             raise ValueError('Number of datas must match the number of types.')
 
-        self._buffer = [t.dump(v) for v, t in izip(datas, self._write_type)]
+        self._buffer = [
+            t.dump(v) for v, t in it.izip(datas, self._write.data_type)
+        ]
 
     def __repr__(self):
         """The commands representation."""
-        query = 'query=({0!r}, {1!r}, {2!r})'.format(self._query,
-                                                     self._response_type,
-                                                     self._query_type)
-        write = 'write=({0!r}, {1!r})'.format(self._write, self._write_type)
-        connection = 'connection={0!r}'.format(self.connection)
-        cfg = 'cfg={0!r}'.format(self._cfg)
-        return 'Command({0}, {1}, {2}, {3})'.format(query, write,
-                                                    connection, cfg)
+        return '<Command({0},{1},{2},{3})>'.format(self._query, self._write,
+                                                   self.connection, self.cfg)
 
 
 class InstrumentBase(object):
@@ -326,9 +299,9 @@ class InstrumentBase(object):
     of the Command is already set. If all Commands of a Instrument need a non
     standard configuration, it is more convenient to inject it as well. This is
     done via the cfg parameter.
+
     """
     def __init__(self, connection, cfg=None, *args, **kw):
-        """Constructs a InstrumentBase instance."""
         self.connection = connection
         self._cfg = cfg
         # super must be the last call, otherwise mixin classes relying on the

@@ -92,6 +92,14 @@ class SingleType(Type):
         """
         return self.__convert__(value)
 
+    def __eq__(self, other):
+        if type(other) is type(self):
+            return self.__dict__ == other.__dict__
+        return NotImplemented
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
 
 class Range(SingleType):
     """Abstract base class for types representing ranges.
