@@ -145,7 +145,7 @@ class Command(object):
             self.write = self.__simulate_write
         self._connection = value
 
-    def program_message_unit(self, message, datas):
+    def program_message_unit(self, message, *datas):
         """Constructs a program message unit.
 
         :param header: The program header, can either be a command program
@@ -166,19 +166,21 @@ class Command(object):
                                                           +-----------+
 
         """
-        if (not isinstance(datas, collections.Sequence) or
-            isinstance(datas, basestring)):
-            datas = (datas,)
+        php = self.cfg['program header prefix']
+        if not message.data_type:
+            # Short cut if data_type is None
+            # XXX Should we check if datas are available?
+            return php + message.header
+
         if len(datas) != len(message.data_type):
             raise ValueError('Number of datas must match the number of types.')
 
-        php = self.cfg['program header prefix']
         phs = self.cfg['program header separator']
         pds = self.cfg['program data separator']
         program_data = [t.dump(v) for v, t in it.izip(datas, message.data_type)]
         return php + message.header + phs + pds.join(program_data)
 
-    def write(self, datas=None):
+    def write(self, *datas):
         """Generates and sends a command message unit.
 
         :param datas: The program data or an iterable of program datas.
@@ -186,18 +188,11 @@ class Command(object):
         """
         if not self._write:
             raise AttributeError('Command is not writeable')
-        # construct the command message unit
-        if datas is None:
-            php = self.cfg['program header prefix']
-            cmu = php + self._write.header
-        else:
-            # TODO pass _Message instead
-            cmu = self.program_message_unit(self._write, datas)
-        # Send command message unit
+        cmu = self.program_message_unit(self._write, *datas)
         _logger.info('command message unit: "{0}"'.format(cmu))
         self.connection.write(cmu)
 
-    def query(self, datas=None):
+    def query(self, *datas):
         """Generates and sends a query message unit.
 
         :param datas: The program data or an iterable of program datas.
@@ -205,29 +200,16 @@ class Command(object):
         """
         if not self._query:
             raise AttributeError('Command is not queryable')
-        # construct the query message unit
-        if datas is None:
-            php = self.cfg['program header prefix']
-            qmu = php + self._query.header
-        else:
-            if not self._query.data_type:
-                raise ValueError('Query type missing')
-            # TODO pass _Message instead
-            qmu = self.program_message_unit(self._query, datas)
-        # Send query message unit.
+        qmu = self.program_message_unit(self._query, *datas)
         _logger.info('query message unit: "{0}"'.format(qmu))
         response = self.connection.ask(qmu)
 
-        # Parse response
         _logger.info('response:"{0}"'.format(response))
         header, parsed_data = self.parse_response(response)
         # TODO handle the response header
 
-        # Return single value instead of 1-tuple
-        if len(parsed_data) == 1:
-            return parsed_data[0]
-        else:
-            return parsed_data
+        # Return single value if parsed_data is 1-tuple.
+        return parsed_data[0] if len(parsed_data) == 1 else parsed_data
 
     def parse_response(self, response):
         """Parses the response."""
@@ -263,11 +245,7 @@ class Command(object):
                 self._query.response_type
             )
         )
-        # Return single value instead of 1-tuple
-        if len(res) == 1:
-            return res[0]
-        else:
-            return res
+        return res[0] if len(res) == 1 else res
 
     def __simulate_write(self, datas=None):
         if (not isinstance(datas, collections.Sequence) or
@@ -338,7 +316,10 @@ class InstrumentBase(object):
         else:
             if isinstance(attr, Command):
                 # Redirect write access
-                attr.write(value)
+                if isinstance(value, collections.Iterable) and not isinstance(value, basestring):
+                    attr.write(*value)
+                else:
+                    attr.write(value)
             else:
                 object.__setattr__(self, name, value)
 
