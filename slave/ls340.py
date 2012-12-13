@@ -45,6 +45,7 @@ from slave.iec60488 import IEC60488
 from slave.types import Boolean, Enum, Float, Integer, Register, Set, String
 import slave.misc
 
+
 def _invert(dct):
     """Returns an inverted dict, keys become values and vice versa."""
     return dict((v, k) for k, v in dct.iteritems())
@@ -139,11 +140,11 @@ class Curve(InstrumentBase):
             indices = item.indices(len(self))
             return [self[i] for i in range(*indices)]
         # Simple index
-        item = slave.misc._index(item, len(self))
+        item = slave.misc.index(item, len(self))
         response_t = [Float, Float]
         data_t = [Integer(min=1), Integer(min=1, max=200)]
         cmd = Command(('CRVPT?', response_t, data_t),
-                      connection=self.connection, cfg=self._cfg)
+                      connection=self.connection)
         # Since indices in LS304 start at 1, it must be added.
         return cmd.query((self.idx, item + 1))
 
@@ -155,11 +156,11 @@ class Curve(InstrumentBase):
             for i in range(*indices):
                 self[i] = value[i]
         else:
-            item = slave.misc._index(item, len(self))
+            item = slave.misc.index(item, len(self))
             unit, temp = value
             data_t = [Integer(min=1), Integer(min=1, max=200), Float, Float]
             cmd = Command(write=('CRVPT', data_t),
-                          connection=self.connection, cfg=self._cfg)
+                          connection=self.connection)
             # Since indices in LS304 start at 1, it must be added.
             cmd.write((self.idx, item + 1, unit, temp))
 

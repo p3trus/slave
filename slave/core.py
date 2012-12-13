@@ -33,7 +33,7 @@ except ImportError:
     class NullHandler(logging.Handler):
         def emit(self, record):
             pass
-import slave.types
+
 import slave.misc
 
 
@@ -113,20 +113,24 @@ class Command(object):
     }
 
     def __init__(self, query=None, write=None,
-                 type_=None, connection=None, cfg={}):
+                 type_=None, connection=None, cfg=None):
         default = _typelist(type_)
         def write_message(header, data_type=default):
             return _Message(str(header), _typelist(data_type), None)
 
         def query_message(header, response_type=default, data_type=None):
             if response_type is None:
-                raise ValueError('Missing response type in query:{0}'.format(header))
-            return _Message(str(header), _typelist(data_type), _typelist(response_type))
+                raise ValueError('Missing response type')
+            return _Message(str(header), _typelist(data_type),
+                            _typelist(response_type))
 
         def assign(x, fn):
             return x and (fn(x) if isinstance(x, basestring) else fn(*x))
 
-        self.cfg = dict(it.chain(Command.CFG.iteritems(), cfg.iteritems()))
+        if cfg:
+            self.cfg = dict(it.chain(Command.CFG.iteritems(), cfg.iteritems()))
+        else:
+            self.cfg = dict(Command.CFG)
         self.connection = connection
         self._query = assign(query, query_message)
         self._write = assign(write, write_message)
@@ -215,19 +219,18 @@ class Command(object):
         """Parses the response."""
         rhs = self.cfg['response header separator']
         rds = self.cfg['response data separator']
+        resp_t = self._query.response_type
 
-        response = response.split(rhs) if rhs else [response]
-        if len(response) == 2:
-            header = response[0]
-            data = response[1]
+        if rhs:
+            # Strip of response header.
+            # XXX What if we wan't to split on any whitespace?
+            header, response = response.split(rhs, 1)
         else:
             header = None
-            data = response[0]
+
         parsed_data = []
-        for v, t in it.izip_longest(data.split(rds),self._query.response_type):
-            if t:
-                v = t.load(v)
-            parsed_data.append(v)
+        for v, t in it.izip_longest(response.split(rds), resp_t):
+            parsed_data.append(t.load(v) if t else v)
         return header, tuple(parsed_data)
 
     def __simulate_query(self, datas=None):
@@ -311,12 +314,12 @@ class InstrumentBase(object):
                     value.connection = self.connection
                 if self._cfg and (value.cfg == Command.CFG):
                     value.cfg.update(self._cfg)
-
             object.__setattr__(self, name, value)
         else:
             if isinstance(attr, Command):
                 # Redirect write access
-                if isinstance(value, collections.Iterable) and not isinstance(value, basestring):
+                if (isinstance(value, collections.Iterable) and
+                    not isinstance(value, basestring)):
                     attr.write(*value)
                 else:
                     attr.write(value)

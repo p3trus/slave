@@ -69,7 +69,7 @@ class LockedConnection(object):
             self._connection.write(value)
 
 
-def _index(index, length):
+def index(index, length):
     """Generates an index.
 
     :param index: The index, can be positive or negative.
