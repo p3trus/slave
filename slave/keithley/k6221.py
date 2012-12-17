@@ -8,6 +8,21 @@ from slave.iec60488 import (IEC60488, Trigger, ObjectIdentification,
 from slave.types import Boolean, Enum, Float, Integer, Mapping
 
 
+class Arm(InstrumentBase):
+    """Arm layer commands."""
+    def __init__(self, connection):
+        super(Arm, self).__init__(connection)
+        self.source = Command(
+            'ARM:SOUR?',
+            'ARM:SOUR',
+            Mapping({
+                'immediate': 'IMM', 'timer': 'TIM', 'bus': 'BUS',
+                'tlink': 'TLIN', 'bstest': 'BST', 'pstest': 'PST',
+                'nstest': 'NST', 'manual': 'MAN',
+            })
+        )
+
+
 class Output(InstrumentBase):
     """A keithley 6221 output object.
 
@@ -163,9 +178,9 @@ class Sweep(InstrumentBase):
             'SOUR:SWE:POIN',
             Integer(min=1, max=65535)
         )
-        self.ranging(
+        self.ranging = Command(
             'SOUR:SWE:RANG?',
-            'SOUR:SWE:RANG?',
+            'SOUR:SWE:RANG',
             Mapping({'auto': 'AUTO', 'best': 'BEST', 'fixed': 'FIX'})
         )
         # TODO self.count = Command()
@@ -213,12 +228,21 @@ class K6221(IEC60488, Trigger, ObjectIdentification, StoredSetting):
 
     :param connection: A connection object.
 
+    :ivar arm: An instance of :class:`.Arm`.
     :ivar output: An instance of :class:`.Output`.
     :ivar source: An instance of :class:`.Source`.
 
     """
     def __init__(self, connection):
         super(K6221, self).__init__(connection)
+        self.arm = Arm(connection)
         self.output = Output(connection)
         self.source = Source(connection)
 
+    def abort(self):
+        """Resets the trigger system."""
+        self.connection.write('ABOR')
+
+    def initiate(self):
+        """Initiates the trigger system."""
+        self.connection.write('INIT')
