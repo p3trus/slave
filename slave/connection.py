@@ -119,7 +119,7 @@ class GpibDevice(Connection):
                  eos=0):
         # Use visa resource identifier as key in the resource lock dict.
         super(GpibDevice, self).__init__(
-            lock=_resource_locks['GPIB{0}::{1}'.format(primary, secondary)]
+            lock=_resource_locks['GPIB{0}::{1}'.format(board, primary)]
         )
 
         lib = ctypes.util.find_library('gpib')
@@ -137,6 +137,9 @@ class GpibDevice(Connection):
         self._term_chars = '\n'
 
     def __del__(self):
+        # XXX Should we catch exceptions here? ctypes might not be available in
+        # some cases due to the import system shutting down.
+        # Alternatively we could use 0 directly instead of ct.c_int(0).
         self._lib.ibonl(self._device, ct.c_int(0))
 
     def __write__(self, value):
