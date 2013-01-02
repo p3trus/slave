@@ -298,8 +298,18 @@ class Trigger(object):
         super(Trigger, self).__init__(*args, **kw)
 
     def trigger(self):
-        """Creates a trigger event."""
-        self.connection.write('*TRG')
+        """Creates a trigger event.
+
+        .. note::
+
+            It first tries to execute `connection.trigger()`. If this fails,
+            the `*TRG` is sent.
+
+        """
+        try:
+            self.connection.trigger()
+        except AttributeError:
+            self.connection.write('*TRG')
 
 
 class TriggerMacro(object):
