@@ -47,6 +47,7 @@ _Message = collections.namedtuple(
 
 
 class SimulatedConnection(object):
+    """A dummy connection, doing nothing."""
     def ask(self, value):
         return ''
 
@@ -64,6 +65,19 @@ def _typelist(x):
     if isinstance(x, collections.Iterable):
         return map(_to_instance, x)
     return None if x is None else [_to_instance(x)]
+
+
+def _make_response(data, resp_t, sep):
+    """Helper function to generate a response string.
+
+    :param data: An iterable of datas.
+    :param resp_t: An iterable of corresponding response types.
+    :param sep: A string representing the response data separator.
+
+    .. note:: No response header is used.
+
+    """
+    return sep.join(t.dump(v) for t, v in it.izip(resp_t, data))
 
 
 class Command(object):
@@ -134,22 +148,10 @@ class Command(object):
         self.connection = connection
         self._query = assign(query, query_message)
         self._write = assign(write, write_message)
+        self._simulated_resp = None  # Used as a buffer in the simulation mode
         _logger.debug('Command: "{0}"'.format(self))
 
-    # XXX This is a messy way.
-    @property
-    def connection(self):
-        return self._connection
-
-    @connection.setter
-    def connection(self, value):
-        if isinstance(value, SimulatedConnection):
-            self._buffer = None
-            self.query = self.__simulate_query
-            self.write = self.__simulate_write
-        self._connection = value
-
-    def program_message_unit(self, message, *datas):
+    def _program_message_unit(self, message, *datas):
         """Constructs a program message unit.
 
         :param header: The program header, can either be a command program
@@ -192,9 +194,16 @@ class Command(object):
         """
         if not self._write:
             raise AttributeError('Command is not writeable')
-        cmu = self.program_message_unit(self._write, *datas)
-        _logger.info('command message unit: "{0}"'.format(cmu))
-        self.connection.write(cmu)
+        if isinstance(self.connection, SimulatedConnection):
+            # If queriable and types match buffer datas, else do nothing.
+            resp_t = self._query.response_type
+            sep = self.cfg['response data separator']
+            if self._query and resp_t == self._write.data_type:
+                self._simulated_resp = _make_response(datas, resp_t, sep)
+        else:
+            cmu = self._program_message_unit(self._write, *datas)
+            _logger.info('command message unit: "{0}"'.format(cmu))
+            self.connection.write(cmu)
 
     def query(self, *datas):
         """Generates and sends a query message unit.
@@ -204,18 +213,20 @@ class Command(object):
         """
         if not self._query:
             raise AttributeError('Command is not queryable')
-        qmu = self.program_message_unit(self._query, *datas)
-        _logger.info('query message unit: "{0}"'.format(qmu))
-        response = self.connection.ask(qmu)
-
+        if isinstance(self.connection, SimulatedConnection):
+            response = self._simulate()
+        else:
+            qmu = self._program_message_unit(self._query, *datas)
+            _logger.info('query message unit: "{0}"'.format(qmu))
+            response = self.connection.ask(qmu)
         _logger.info('response:"{0}"'.format(response))
-        header, parsed_data = self.parse_response(response)
+        header, parsed_data = self._parse_response(response)
         # TODO handle the response header
 
         # Return single value if parsed_data is 1-tuple.
         return parsed_data[0] if len(parsed_data) == 1 else parsed_data
 
-    def parse_response(self, response):
+    def _parse_response(self, response):
         """Parses the response."""
         rhs = self.cfg['response header separator']
         rds = self.cfg['response data separator']
@@ -233,33 +244,20 @@ class Command(object):
             parsed_data.append(t.load(v) if t else v)
         return header, tuple(parsed_data)
 
-    def __simulate_query(self, datas=None):
-        if not self._query:
-            raise AttributeError('Command is not queryable')
-        # TODO: validate datas
-        if self._buffer is None or self._write is None:
-            # generate values from response type
-            self._buffer = tuple(
-                t.dump(t.simulate()) for t in self._query.response_type
+    def _simulate(self):
+        response = self._simulated_resp
+        if not response:
+            response = _make_response(
+                (t.simulate() for t in self._query.response_type),
+                self._query.response_type,
+                self.cfg['response data separator']
             )
-        res = tuple(
-            t.load(v) for v, t in it.izip(
-                self._buffer,
-                self._query.response_type
-            )
-        )
-        return res[0] if len(res) == 1 else res
-
-    def __simulate_write(self, datas=None):
-        if (not isinstance(datas, collections.Sequence) or
-            isinstance(datas, basestring)):
-            datas = (datas,)
-        if len(datas) != len(self._write.data_type):
-            raise ValueError('Number of datas must match the number of types.')
-
-        self._buffer = [
-            t.dump(v) for v, t in it.izip(datas, self._write.data_type)
-        ]
+            # This simulates a response without a response header.
+            assert(self.cfg['response header separator'] is None)
+            # store response if writeable
+            if self._write:
+                self._simulated_resp = response
+        return response
 
     def __repr__(self):
         """The commands representation."""
