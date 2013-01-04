@@ -304,7 +304,7 @@ class Input(InstrumentBase):
             'FILTER {0},'.format(idx),
             [Boolean, Integer(min=1, max=200), Integer(min=1, max=80)]
         )
-        self.kelvin = Command(('RDGK? {0}'.format(idx)))
+        self.kelvin = Command(('RDGK? {0}'.format(idx), Float))
         self.linear = Command(('LDAT? {0}'.format(idx), Float))
         self.linear_equation = Command(
             'LINEAR? {0}'.format(idx),
