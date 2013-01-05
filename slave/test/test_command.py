@@ -7,7 +7,7 @@ import re
 import collections
 import itertools
 
-from slave.core import Command, InstrumentBase, _Message
+from slave.core import Command, InstrumentBase, _Message, _to_instance
 from slave.types import Boolean, String, Float, Integer, Mapping
 
 
@@ -57,9 +57,14 @@ class MockInstrument(InstrumentBase):
         cmd = Command(('FN?', Boolean), connection=self.connection)
         return cmd.query()
 
+
 class TestCommand(unittest.TestCase):
     def setUp(self):
         self.instrument = MockInstrument()
+
+    def test_to_instance_helper(self):
+        self.assertTrue(isinstance(_to_instance(object), object))
+        self.assertTrue(isinstance(_to_instance(object()), object))
 
     def test_constructor(self):
         types = [
