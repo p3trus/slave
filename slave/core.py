@@ -219,7 +219,8 @@ class Command(object):
             raise AttributeError('Command is not writeable')
         # construct the command message unit
         if datas is None:
-            cmu = self._write
+            php = self._cfg['program header prefix']
+            cmu = php + self._write
         else:
             cmu = self.program_message_unit(self._write, datas,
                                         self._write_type)
