@@ -334,6 +334,11 @@ class InstrumentBase(object):
         self.connection = connection
         self._cfg = cfg
 
+    def _write(self, cmd, datas=None):
+        """Helper function to simplify writing."""
+        cmd = Command(write=cmd, connection=self.connection, cfg=self._cfg)
+        cmd.write(datas)
+
     def __getattribute__(self, name):
         """Redirects read access of command attributes to
         the :class:`~Command.query` function.
