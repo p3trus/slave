@@ -33,18 +33,18 @@ class Range(InstrumentBase):
     :ivar rate: The sweep rate of this current range.
 
     """
-    def __init__(self, connection, idx):
-        super(Range, self).__init__(connection)
+    def __init__(self, connection, cfg, idx):
+        super(Range, self).__init__(connection, cfg)
         self.idx = idx = int(idx)
         if not idx in range(0, 5):
             raise ValueError('Invalid range index.'
                              ' Must be one of {0}'.format(range(0, 5)))
         self.limit = Command('RANGE? {0}'.format(idx),
                              'RANGE {0} '.format(idx),
-                             Float)
+                             Float(fmt='{0:.4f}'))
         self.rate = Command('RATE? {0}'.format(idx),
                             'RATE {0}'.format(idx),
-                            Float)
+                            Float(min=1e-4, max=100., fmt='{0:.4f}'))
 
 
 class Shim(InstrumentBase):
@@ -61,8 +61,8 @@ class Shim(InstrumentBase):
         must be supplied in the configured units (ampere, kilo gauss).
 
     """
-    def __init__(self, connection, shim):
-        super(Shim, self).__init__(connection)
+    def __init__(self, connection, cfg, shim):
+        super(Shim, self).__init__(connection, cfg)
         if not shim in SHIMS:
             raise ValueError('Invalid shim identifier, '
                              'must be one of {0}'.format(SHIMS))
@@ -78,11 +78,11 @@ class Shim(InstrumentBase):
 
     def disable(self):
         """Disables the shim."""
-        self.connection.write('SHIM Disable {0}'.format(self._shim))
+        self._write('SHIM Disable {0}'.format(self._shim))
 
     def select(self):
         """Selects the shim as the current active shim."""
-        self.connection.write('SHIM {0}'.format(self._shim))
+        self._write('SHIM {0}'.format(self._shim))
 
 
 class MPS4G(IEC60488):
@@ -160,7 +160,7 @@ class MPS4G(IEC60488):
             if isinstance(shims, basestring):
                 shims = [shims]
             for shim in list(shims):
-                setattr(self, str(shim), Shim(connection, shim))
+                setattr(self, str(shim), Shim(connection, self._cfg, shim))
 
         if channel:
             # Channel is read only if channel is fixed
@@ -171,16 +171,17 @@ class MPS4G(IEC60488):
         self.error = Command('ERROR?', 'ERROR', Boolean)
         self.current = Command('IMAG?', 'IMAG', UnitFloat)
         self.output_current = Command(('IOUT?', UnitFloat))
-        # Custom format string to fix bug in firmware.
-        self.lower_limit = Command('LLIM?', 'LLIM', UnitFloat(fmt='{0};'))
+        # Custom format string to fix bug in firmware. The `;` must be appended
+        self.lower_limit = Command('LLIM?', 'LLIM', UnitFloat(fmt='{0:.4f};'))
         self.mode = Command(('MODE?', String))
         self.name = Command('NAME?', 'NAME', String)
         self.switch_heater = Command('PSHTR?', 'PSHTR',
                                      Mapping({True: 'ON', False: 'OFF'}))
         for idx in range(0, 5):
-            setattr(self, 'range{0}'.format(idx), Range(connection, idx))
-        # Custom format string to fix bug in firmware.
-        self.upper_limit = Command('ULIM?', 'ULIM', UnitFloat(fmt='{0};'))
+            rng = Range(connection, self._cfg, idx)
+            setattr(self, 'range{0}'.format(idx), rng)
+        # Custom format string to fix bug in firmware. The `;` must be appended
+        self.upper_limit = Command('ULIM?', 'ULIM', UnitFloat(fmt='{0:.4f};'))
         self.unit = Command('UNITS?', 'UNITS', Set('A', 'G'))
         self.voltage_limit = Command('VLIM?', 'VLIM',
                                      UnitFloat(min=0., max=10.))
@@ -191,27 +192,27 @@ class MPS4G(IEC60488):
 
     def local(self):
         """Sets the front panel in local mode."""
-        self.connection.write('LOCAL')
+        self._write('LOCAL')
 
     def remote(self):
         """Sets the front panel in remote mode."""
-        self.connection.write('REMOTE')
+        self._write('REMOTE')
 
     def quench_reset(self):
         """Resets the quench condition."""
-        self.connection.write('QRESET')
+        self._write('QRESET')
 
     def locked(self):
         """Sets the front panel in locked remote mode."""
-        self.connection.write('RWLOCK')
+        self._write('RWLOCK')
 
     def disable_shims(self):
         """Disables all shims."""
-        self.connection.write('SHIM Disable All')
+        self._write('SHIM Disable All')
 
     def enable_shims(self):
         """Enables all shims."""
-        self.connection.write('SHIM Enable All')
+        self._write('SHIM Enable All')
 
     def sweep(self, mode, speed=None):
         """Starts the output current sweep.
@@ -229,6 +230,6 @@ class MPS4G(IEC60488):
         if not speed in sweep_speed:
             raise ValueError('Invalid sweep speed.')
         if speed is None:
-            self.connection.write('SWEEP {0}'.format(mode))
+            self._write('SWEEP {0}'.format(mode))
         else:
-            self.connection.write('SWEEP {0} {1}'.format(mode, speed))
+            self._write('SWEEP {0} {1}'.format(mode, speed))
