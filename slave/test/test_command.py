@@ -4,8 +4,10 @@
 
 import unittest
 import re
+import collections
+import itertools
 
-from slave.core import Command, InstrumentBase
+from slave.core import Command, InstrumentBase, _Message, _to_instance
 from slave.types import Boolean, String, Float, Integer, Mapping
 
 
@@ -17,10 +19,16 @@ class MockConnection(object):
             'FLOAT': 1.337,
             'MAPPING': 1337,
             'FN': '0',
+            'LIST': (1337, 1337),
         }
 
     def ask(self, cmd):
-        return str(self._state[cmd[:-1]])
+        state = self._state[cmd[:-1]]
+        if (isinstance(state, collections.Iterable) and
+            not isinstance(state, basestring)):
+            return ','.join(map(str, state))
+        else:
+            return str(state)
 
     def write(self, cmd):
         tokens = re.split('[\s,]+', cmd)
@@ -39,6 +47,7 @@ class MockInstrument(InstrumentBase):
                                Mapping({'elite': 1337, 'notelite': 1338}))
         self.read_only = Command(('STRING?', String))
         self.write_only = Command(write=('STRING', String))
+        self.list = Command('LIST?', 'LIST', [Integer, Integer])
 
     def write_fn(self):
         cmd = Command(write='FN', connection=self.connection)
@@ -48,9 +57,53 @@ class MockInstrument(InstrumentBase):
         cmd = Command(('FN?', Boolean), connection=self.connection)
         return cmd.query()
 
+
 class TestCommand(unittest.TestCase):
     def setUp(self):
         self.instrument = MockInstrument()
+
+    def test_to_instance_helper(self):
+        self.assertTrue(isinstance(_to_instance(object), object))
+        self.assertTrue(isinstance(_to_instance(object()), object))
+
+    def test_constructor(self):
+        types = [
+            Integer,
+            Integer(),
+            (Integer,),
+            (Integer(),),
+            (Integer, Integer),
+            (Integer(), Integer()),
+        ]
+        type_ = [Integer()]
+        result = [
+            type_,
+            type_,
+            type_,
+            type_,
+            type_ + type_,
+            type_ + type_,
+        ]
+
+        # All these commands should be equal.
+        for type_, result in itertools.izip(types, result):
+            query = _Message('QUERY?', None, result)
+            write = _Message('WRITE', result, None)
+
+            self.assertEqual(_Message('QUERY?', None, result), query)
+
+            commands = [
+                Command('QUERY?', 'WRITE', type_),
+                Command(('QUERY?', type_), ('WRITE', type_)),
+                Command(('QUERY?', type_), ('WRITE', type_), Float),
+            ]
+            for cmd in commands:
+                print 'QUERY: {0}; {1}; {2}'.format(query.header, cmd._query.header, query.header == cmd._query.header)
+                print 'QUERY: {0}; {1}; {2}'.format(query.data_type, cmd._query.data_type, query.data_type == cmd._query.data_type)
+                print 'QUERY: {0}; {1}; {2}'.format(query.response_type, cmd._query.response_type, query.response_type == cmd._query.response_type)
+
+                self.assertEqual(query, cmd._query)
+                self.assertEqual(write, cmd._write)
 
     def test_query_and_write(self):
         state = self.instrument.connection._state
@@ -59,6 +112,7 @@ class TestCommand(unittest.TestCase):
         self.assertEqual(state['FLOAT'], self.instrument.float)
         self.assertEqual('elite', self.instrument.mapping)
         self.assertEqual(False, self.instrument.ask_fn())
+        self.assertEqual(state['LIST'], self.instrument.list)
 
         # Test writing
         self.instrument.string = value = '1338'
@@ -69,6 +123,8 @@ class TestCommand(unittest.TestCase):
         self.assertEqual(value, self.instrument.float)
         self.instrument.mapping = value = 'notelite'
         self.assertEqual(value, self.instrument.mapping)
+        self.instrument.list = value = 1338, 1338
+        self.assertEqual(value, self.instrument.list)
 
         self.instrument.write_fn()
         self.assertEqual(True, self.instrument.ask_fn())
