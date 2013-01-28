@@ -4,7 +4,22 @@
 """Contains the type factory classes used to load and dump values to string.
 
 The type module contains several type classes used by the :class:`~.Command`
-class to load and dump values.
+class to load and dump values. 
+
+Custom Types
+------------
+
+The :class:`~.Command` class needs an object with three methods:
+
+ * :meth:`.load(value)`, takes the value and returns the userspace representation.
+ * :meth:`.dump(value)`, returns the device space representation of value.
+ * :meth:`.simulate()`, generates a valid user space value.
+
+The abstract :class:`~.Type` class implements this interface but most of the
+time it is sufficient to inherit from :class:`~.SingleType`. 
+
+:class:`~.SingleType` provides a default implementation, as well as three hooks
+to modify the behaviour.
 
 """
 import random
