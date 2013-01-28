@@ -4,7 +4,7 @@
 """Contains the type factory classes used to load and dump values to string.
 
 The type module contains several type classes used by the :class:`~.Command`
-class to load and dump values. 
+class to load and dump values.
 
 Custom Types
 ------------
@@ -145,7 +145,7 @@ class Range(SingleType):
 class Boolean(SingleType):
     """Represents a Boolean type.
 
-    :ṕaram fmt: Boolean uses a default format string of `'{0:d}'`. This means
+    :param fmt: Boolean uses a default format string of `'{0:d}'`. This means
         `True` will get serialized to `'1'` and `False` to `'0'`.
 
     """
@@ -185,7 +185,7 @@ class Float(Range):
 class String(SingleType):
     """Represents a string type.
 
-    :param min: Minimum number of characters allowed.
+    :param min: Minimum number of characters required.
     :param max: Maximum number of characters allowed.
 
     """
