@@ -24,8 +24,15 @@ setup(
     author_email='marco.halder@frm2.tum.de',
     license = 'GNU General Public License (GPL), Version 3',
     classifiers=[
+        'Intended Audience :: Developers',
+        'Intended Audience :: Science/Research',
+        'License :: OSI Approved :: GNU General Public License v3 (GPLv3)',
+        'Operating System :: POSIX :: Linux',
         'Programming Language :: Python',
-        'Programming Language :: Python :: 3'
+        'Programming Language :: Python :: 3',
+        'Topic :: Communications',
+        'Topic :: Scientific/Engineering :: Interface Engine/Protocol Translator',
+        'Topic :: Software Development :: Libraries :: Python Modules',
     ],
     url='https://github.com/p3trus/slave',
     description=desc,
