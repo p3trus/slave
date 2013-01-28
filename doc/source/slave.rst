@@ -9,6 +9,14 @@ slave Package
     :undoc-members:
     :show-inheritance:
 
+:mod:`connection` Module
+------------------------
+
+.. automodule:: slave.connection
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 :mod:`core` Module
 ------------------
 

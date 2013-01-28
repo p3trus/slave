@@ -271,6 +271,11 @@ class Enum(Mapping):
         map_ = dict((k, v) for k, v in zip(args, range(start, stop, step)))
         super(Enum, self).__init__(map_, **kw)
 
+    def load(self, value):
+        # XXX Nasty hack so that device values '4', '04' return the same
+        # user value.
+        return super(Enum, self).load(str(int(value)))
+
 
 class Register(SingleType):
     """Represents a binary register, where bits are mapped with a name."""
