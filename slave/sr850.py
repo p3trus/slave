@@ -73,6 +73,30 @@ class SR850(InstrumentBase):
             Syncronous filtering is only vailable if the detection frequency is
             below 200Hz
 
+    .. rubric:: Output and Offset Commands
+
+    :ivar ch1_display: The channel 1 frontpanel output source. Valid are 'x',
+        'r', 'theta', 'trace1', 'trace2', 'trace3' and 'trace4'.
+    :ivar ch2_display: The channel 2 frontpanel output source. Valid are 'y',
+        'r', 'theta', 'trace1', 'trace2', 'trace3' and 'trace4'.
+    :ivar x_offset_and_expand: The output offset and expand of the x quantity.
+        A tuple (<offset>, <expand>), where
+
+         * <offset> the offset in percent, in the range -105.0 to 105.0.
+         * <expand> the expand in the range 1 to 256.
+
+    :ivar y_offset_and_expand: The output offset and expand of the y quantity.
+        A tuple (<offset>, <expand>), where
+
+         * <offset> the offset in percent, in the range -105.0 to 105.0.
+         * <expand> the expand in the range 1 to 256.
+
+    :ivar r_offset_and_expand: The output offset and expand of the r quantity.
+        A tuple (<offset>, <expand>), where
+
+         * <offset> the offset in percent, in the range -105.0 to 105.0.
+         * <expand> the expand in the range 1 to 256.
+
     """
     def __init__(self, connection):
         super(SR850, self).__init__(connection)
@@ -143,3 +167,38 @@ class SR850(InstrumentBase):
         )
         self.filter_slope = Command('OFSL?', 'OFSL', Enum(6, 12, 18, 24))
         self.syncronous_filtering = Command('SYNC?', 'SYNC', Boolean)
+        # Output and Offset Commands
+        self.ch1_display = Command(    
+            'FOUT? 1',
+            'FOUT 1,',
+            Enum('x', 'r', 'theta', 'trace1', 'trace2', 'trace3', 'trace4')
+        )
+        self.ch2_display = Command(
+            'FOUT? 2',
+            'FOUT 2,',
+            Enum('y', 'r', 'theta', 'trace1', 'trace2', 'trace3', 'trace4')
+        )
+        self.x_offset_and_expand = Command(
+            'OEXP? 1',
+            'OEXP 1,',
+            (Float(min=-105., max=105.), Integer(min=1, max=256))
+        )
+        self.y_offset_and_expand = Command(
+            'OEXP? 2',
+            'OEXP 2,',
+            (Float(min=-105., max=105.), Integer(min=1, max=256))
+        )
+        self.r_offset_and_expand = Command(
+            'OEXP? 3',
+            'OEXP 3,',
+            (Float(min=-105., max=105.), Integer(min=1, max=256))
+        )
+
+    def auto_offset(quantity):
+        """Automatically offsets the given quantity.
+
+        :param quantity: The quantity to offset, either 'x', 'y' or 'r'
+
+        """
+        self._write(('AOFF', Enum('x', 'y', 'r', start=1), quantity)
+
