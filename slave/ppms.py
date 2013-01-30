@@ -51,7 +51,6 @@ class PPMS(IEC60488):
     def __init__(self, connection):
         super(PPMS, self).__init__(connection)
         self.advisory_number = Command(('ADVNUM?', Integer(min=0, max=999)))
-        self.beep = Command('BEEP')
         self.chamber = Command(
             'CHAMBER?',
             'CHAMBER',
