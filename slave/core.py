@@ -287,10 +287,15 @@ class InstrumentBase(object):
         # existance of _cfg and connection will fail.
         super(InstrumentBase, self).__init__(*args, **kw)
 
-    def _write(self, cmd, datas=None):
+    def _write(self, cmd, *datas):
         """Helper function to simplify writing."""
         cmd = Command(write=cmd, connection=self.connection, cfg=self._cfg)
-        cmd.write(datas)
+        cmd.write(*datas)
+
+    def _query(self, cmd, *datas):
+        """Helper function to allow method queries."""
+        cmd = Command(query=cmd, connection=self.connection, cfg=self._cfg)
+        return cmd.query(*datas)
 
     def __getattribute__(self, name):
         """Redirects read access of command attributes to
