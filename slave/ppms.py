@@ -85,7 +85,7 @@ class PPMS(IEC60488):
 
         """
         cmd = 'BEEP', [Float(min=0.1, max=5.0), Integer(min=500, max=5000)]
-        self._write(cmd)
+        self._write(cmd, duration, frequency)
 
     def shutdown(self):
         """The temperature controller shutdown.
