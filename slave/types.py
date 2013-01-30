@@ -133,9 +133,9 @@ class Range(SingleType):
 
     def __validate__(self, value):
         if self._min is not None and value < self._min:
-            raise ValueError('Value:{0}<Min:{0}'.format(value, self._min))
+            raise ValueError('Value:{0}<Min:{1}'.format(value, self._min))
         if self._max is not None and value > self._max:
-            raise ValueError('Value:{0}>Max:{0}'.format(value, self._max))
+            raise ValueError('Value:{0}>Max:{1}'.format(value, self._max))
 
     def __repr__(self):
         return '{0}(min={1!r}, max={2!r})'.format(type(self).__name__,
