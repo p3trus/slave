@@ -3,9 +3,10 @@
 # Slave, (c) 2012, see AUTHORS. Licensed under the GNU GPL.
 from slave.core import Command
 from slave.types import Enum, Float, Integer
+from slave.iec60488 import IEC60488
 
 
-class PPMS(object):
+class PPMS(IEC60488):
     """A Quantum Design Model 6000 PPMS.
 
     .. note::
@@ -15,19 +16,28 @@ class PPMS(object):
 
     :ivar advisory_number: The advisory code number, a read only integer in the
         range 0 to 999.
+    :ivar chamber: The configuration of the sample chamber. Valid entries are
+        'seal', 'purge seal', 'vent seal', 'pump' and 'vent', where
+
+        * 'seal' seals the chamber immediately.
+        * 'purge seal' purges and then seals the chamber.
+        * 'vent seal' ventilates and then seals the chamber.
+        * 'pump' pumps the chamber continuously.
+        * 'vent' ventilates the chamber continuously.
+
     :ivar field: The magnetic field configuration, represented by the following
         tuple *(<field>, <rate>, <approach mode>, <magnet mode>)*, where
 
-         * *<field>* is the magnetic field setpoint in Oersted with a
-           resolution of 0.01 Oersted. The min and max fields depend on the
-           magnet used.
-         * *<rate>* is the ramping rate in Oersted/second with a resolution of
-           0.1 Oersted/second. The min and max values depend on the magnet
-           used.
-         * *<approach mode>* is the approach mode, either 'linear',
-           'no overshoot' or 'oscillate'.
-         * *<magnet mode>* is the state of the magnet at the end of the
-           charging process, either 'persistent' or 'driven'.
+        * *<field>* is the magnetic field setpoint in Oersted with a
+          resolution of 0.01 Oersted. The min and max fields depend on the
+          magnet used.
+        * *<rate>* is the ramping rate in Oersted/second with a resolution of
+          0.1 Oersted/second. The min and max values depend on the magnet
+          used.
+        * *<approach mode>* is the approach mode, either 'linear',
+          'no overshoot' or 'oscillate'.
+        * *<magnet mode>* is the state of the magnet at the end of the
+          charging process, either 'persistent' or 'driven'.
 
     :ivar temperature: The temperature configuration, a tuple consisting of
         *(<temperature>, <rate>, <approach mode>)*, where
@@ -41,6 +51,11 @@ class PPMS(object):
     def __init__(self):
         self.advisory_number = Command(('ADVNUM?', Integer(min=0, max=999)))
         self.beep = Command('BEEP')
+        self.chamber = Command(
+            'CHAMBER?',
+            'CHAMBER',
+            Enum('seal', 'purge seal', 'vent seal', 'pump', 'vent')
+        )
         # TODO Allow for configuration of the ranges
         self.field = Command(
             'FIELD?',
@@ -71,3 +86,13 @@ class PPMS(object):
         """
         cmd = 'BEEP', [Float(min=0.1, max=5.0), Integer(min=500, max=5000)]
         self._write(cmd)
+
+    def shutdown(self):
+        """The temperature controller shutdown.
+
+        Invoking this method puts the PPMS in standby mode, both drivers used
+        to control the system temperature are turned off and helium flow is set
+        to a minimum value.
+
+        """
+        self._write('SHUTDOWN')
