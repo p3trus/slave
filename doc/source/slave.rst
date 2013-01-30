@@ -57,6 +57,14 @@ slave Package
     :undoc-members:
     :show-inheritance:
 
+:mod:`ppms` Module
+------------------
+
+.. automodule:: slave.ppms
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 :mod:`sr7225` Module
 --------------------
 
