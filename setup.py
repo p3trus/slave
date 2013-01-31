@@ -18,7 +18,7 @@ if sys.version_info >= (3, 0):
 
 
 setup(
-    name='Slave',
+    name='slave',
     version=__import__('slave').__version__,
     author='Marco Halder',
     author_email='marco.halder@frm2.tum.de',
@@ -36,7 +36,7 @@ setup(
     ],
     url='https://github.com/p3trus/slave',
     description=desc,
-    long_description=open('README.md').read(),
+    long_description=open('README.rst').read(),
     packages=['slave', 'slave.test'],
     # make sure to add custom_fixers to the MANIFEST.in 
     include_package_data=True,
