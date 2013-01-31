@@ -132,7 +132,7 @@ class PPMS(IEC60488):
     @property
     def system_status(self):
         """The system status codes."""
-        timestamp, status = self._query(('GETDAT? 1', Integer, Integer))
+        timestamp, status = self._query(('GETDAT? 1', (Integer, Integer)))
         return {
             'timestamp': timestamp,
             'temperature': STATUS_TEMPERATURE[status & 0xf],
