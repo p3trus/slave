@@ -86,14 +86,13 @@ class Curve(InstrumentBase):
             indices = item.indices(len(self))
             return [self[i] for i in range(*indices)]
         # Simple index
-        item = slave.misc._index(item, len(self))
-        # contruct command
+        item = slave.misc.index(item, len(self))
+        # construct command
         response_t = [Float, Float]
         data_t = [Integer(min=1), Integer(min=1, max=200)]
         cmd = Command(
             ('CRVPT?', response_t, data_t),
-            connection=self.connection,
-            cfg=self._cfg
+            connection=self.connection
         )
         # Since indices in LS304 start at 1, it must be added.
         return cmd.query((self.idx, item + 1))
@@ -104,14 +103,10 @@ class Curve(InstrumentBase):
             for i in range(*indices):
                 self[i] = value[i]
         else:
-            item = slave.misc._index(item, len(self))
+            item = slave.misc.index(item, len(self))
             unit, temp = value
             data_t = [Integer(min=1), Integer(min=1, max=200), Float, Float]
-            cmd = Command(
-                write=('CRVPT', data_t),
-                connection=self.connection,
-                cfg=self._cfg
-            )
+            cmd = Command(write=('CRVPT', data_t), connection=self.connection)
             # Since indices in LS304 start at 1, it must be added.
             cmd.write((self.idx, item + 1, unit, temp))
 
@@ -296,8 +291,12 @@ class Input(InstrumentBase):
         self.config = Command(
             'INSET? {0}'.format(idx),
             'INSET {0},'.format(idx),
-            [Boolean, Integer(min=1, max=200), Integer(min=3, max=200),
-             Enum('no curve', *range(20)), Enum('negative', 'positive', start=1)]
+            [
+                Boolean, Integer(min=1, max=200),
+                Integer(min=3, max=200),
+                Enum('no curve', *range(20)),
+                Enum('negative', 'positive', start=1)
+            ]
         )
         self.excitation_power = Command(('RDGPWR? {0}'.format(idx), Float))
         self.filter = Command(
@@ -305,15 +304,8 @@ class Input(InstrumentBase):
             'FILTER {0},'.format(idx),
             [Boolean, Integer(min=1, max=200), Integer(min=1, max=80)]
         )
-        self.kelvin = Command(('RDGK? {0}'.format(idx)))
+        self.kelvin = Command(('RDGK? {0}'.format(idx), Float))
         self.linear = Command(('LDAT? {0}'.format(idx), Float))
-        leq = [
-            Enum('slope-intercept', 'point-slope'),
-            Float,  # m value
-            Enum('kelvin', 'celsius', 'sensor units', start=1),
-            Enum('value', '+sp1', '-sp1', '+sp2', '-sp2', start=1),
-            Float,  # b value
-        ]
         self.linear_equation = Command(
             'LINEAR? {0}'.format(idx),
             'LINEAR {0},'.format(idx),
@@ -608,8 +600,8 @@ class LS370(IEC60488):
                 Enum(*Heater.RANGE), Boolean, Boolean,
                 Integer(min=-100, max=100),Integer(min=-100, max=100)
             ]
-            return Command('ZONE? {0}'.format(i), 'ZONE {0},'.format(i), type_,
-                           connection=self.connection, cfg=self._cfg)
+            return Command('ZONE? {0}'.format(i), 'ZONE {0},'.format(i),
+                           type_, connection=self.connection)
 
         self.zones = CommandSequence(make_zone(i) for i in xrange(1, 11))
 
@@ -636,7 +628,7 @@ class LS370(IEC60488):
     @property
     def scanner(self):
         """The scanner option in use.
-        
+
         Changing the scanner option changes number of channels available. Valid
         values are
 
@@ -663,5 +655,4 @@ class LS370(IEC60488):
         self.channels = tuple(
             Input(self.connection, i) for i in xrange(scanner_channels[value])
         )
-        self._channel = value
-
+        self._scanner = value

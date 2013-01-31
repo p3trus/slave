@@ -6,6 +6,21 @@
 The type module contains several type classes used by the :class:`~.Command`
 class to load and dump values.
 
+Custom Types
+------------
+
+The :class:`~.Command` class needs an object with three methods:
+
+ * :meth:`.load(value)`, takes the value and returns the userspace representation.
+ * :meth:`.dump(value)`, returns the device space representation of value.
+ * :meth:`.simulate()`, generates a valid user space value.
+
+The abstract :class:`~.Type` class implements this interface but most of the
+time it is sufficient to inherit from :class:`~.SingleType`. 
+
+:class:`~.SingleType` provides a default implementation, as well as three hooks
+to modify the behaviour.
+
 """
 import random
 import string
@@ -92,6 +107,14 @@ class SingleType(Type):
         """
         return self.__convert__(value)
 
+    def __eq__(self, other):
+        if type(other) is type(self):
+            return self.__dict__ == other.__dict__
+        return NotImplemented
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
 
 class Range(SingleType):
     """Abstract base class for types representing ranges.
@@ -110,9 +133,9 @@ class Range(SingleType):
 
     def __validate__(self, value):
         if self._min is not None and value < self._min:
-            raise ValueError('Value:{0}<Min:{0}'.format(value, self._min))
+            raise ValueError('Value:{0}<Min:{1}'.format(value, self._min))
         if self._max is not None and value > self._max:
-            raise ValueError('Value:{0}>Max:{0}'.format(value, self._max))
+            raise ValueError('Value:{0}>Max:{1}'.format(value, self._max))
 
     def __repr__(self):
         return '{0}(min={1!r}, max={2!r})'.format(type(self).__name__,
@@ -122,7 +145,7 @@ class Range(SingleType):
 class Boolean(SingleType):
     """Represents a Boolean type.
 
-    :ṕaram fmt: Boolean uses a default format string of `'{0:d}'`. This means
+    :param fmt: Boolean uses a default format string of `'{0:d}'`. This means
         `True` will get serialized to `'1'` and `False` to `'0'`.
 
     """
@@ -162,7 +185,7 @@ class Float(Range):
 class String(SingleType):
     """Represents a string type.
 
-    :param min: Minimum number of characters allowed.
+    :param min: Minimum number of characters required.
     :param max: Maximum number of characters allowed.
 
     """

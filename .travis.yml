@@ -1,0 +1,14 @@
+language: python
+python:
+  - "3.2"
+  - "2.7"
+
+install:
+  - python setup.py -q install
+
+script:
+    # cd to different directory otherwise python3 import the source not the
+    # 2to3 converted source
+    cd ../
+    nosetests
+

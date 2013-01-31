@@ -1,0 +1,7 @@
+include README.md
+include AUTHORS.md
+include COPYING
+
+include doc/make.bat
+include doc/Makefile
+recursive-include doc/source *
