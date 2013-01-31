@@ -6,6 +6,57 @@ from slave.types import Enum, Float, Integer
 from slave.iec60488 import IEC60488
 
 
+STATUS_TEMPERATURE = {
+    0x0: 'unknown',
+    0x1: 'normal stability at target temperature',
+    0x2: 'stable',
+    0x5: 'within tolerance, waiting for equilibrium',
+    0x6: 'temperature not in tolerance, not valid',
+    0x7: 'filling/emptying reservoir',
+    0xa: 'standby mode invoked',
+    0xd: 'temperature control disabled',
+    0xe: 'request cannot complete, impedance not functioning',
+    0xf: 'failure',
+}
+
+
+STATUS_MAGNET = {
+    0x0: 'unknown',
+    0x1: 'persistent, stable',
+    0x2: 'persist switch warming',
+    0x3: 'persist switch cooling',
+    0x4: 'driven, stable',
+    0x5: 'driven, final approach',
+    0x6: 'charging',
+    0x7: 'discharging',
+    0x8: 'current error',
+    0xf: 'failure',
+}
+
+
+STATUS_CHAMBER = {
+    0x0: 'unknown',
+    0x1: 'purged, sealed',
+    0x2: 'vented, sealed',
+    0x3: 'sealed, condition unknown',
+    0x4: 'performing purge/seal',
+    0x5: 'performing vent/seal',
+    0x8: 'pumping continuously',
+    0x9: 'venting continuously',
+    0xf: 'failure',
+}
+
+
+STATUS_SAMPLE_POSITION = {
+    0x0: 'unknown',
+    0x1: 'stopped',
+    0x5: 'moving',
+    0x8: 'limit',
+    0x9: 'index',
+    0xf: 'failure',
+}
+
+
 class PPMS(IEC60488):
     """A Quantum Design Model 6000 PPMS.
 
@@ -39,6 +90,7 @@ class PPMS(IEC60488):
         * *<magnet mode>* is the state of the magnet at the end of the
           charging process, either 'persistent' or 'driven'.
 
+    :ivar system_status: The general system status.
     :ivar temperature: The temperature configuration, a tuple consisting of
         *(<temperature>, <rate>, <approach mode>)*, where
 
@@ -76,6 +128,18 @@ class PPMS(IEC60488):
                 Enum('fast', 'no overshoot')
             )
         )
+
+    @property
+    def system_status(self):
+        """The system status codes."""
+        timestamp, status = self._query(('GETDAT? 1', Integer, Integer))
+        return {
+            'timestamp': timestamp,
+            'temperature': STATUS_TEMPERATURE[status & 0xf],
+            'magnet': STATUS_MAGNET[(status >> 4) & 0xf],
+            'chamber': STATUS_CHAMBER[(status >> 8) & 0xf],
+            'sample_position': STATUS_SAMPLE_POSITION[(status >> 12) & 0xf],
+        }
 
     def beep(self, duration, frequency):
         """Generates a beep.
