@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 #
 # Slave, (c) 2012, see AUTHORS. Licensed under the GNU GPL.
+import datetime
+
 from slave.core import Command
 from slave.types import Enum, Float, Integer
 from slave.iec60488 import IEC60488
@@ -134,11 +136,16 @@ class PPMS(IEC60488):
         """The system status codes."""
         flag, timestamp, status = self._query(('GETDAT? 1', (Integer, Float, Integer)))
         return {
-            'timestamp': timestamp,
+            # convert unix timestamp to datetime object
+            'timestamp': datetime.datetime.fromtimestamp(timestamp),
+            # bit 0-3 represent the temperature controller status
             'temperature': STATUS_TEMPERATURE[status & 0xf],
+            # bit 4-7 represent the magnet status
             'magnet': STATUS_MAGNET[(status >> 4) & 0xf],
+            # bit 8-11 represent the chamber status
             'chamber': STATUS_CHAMBER[(status >> 8) & 0xf],
-            'sample_position': STATUS_SAMPLE_POSITION[(status >> 12) & 0xf],
+            # bit 12-15 represent the sample position status
+            'samiple_position': STATUS_SAMPLE_POSITION[(status >> 12) & 0xf],
         }
 
     def beep(self, duration, frequency):
