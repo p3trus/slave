@@ -1,4 +1,6 @@
-Custom Device drivers
+.. _custom_device_drivers:
+
+Custom Device Drivers
 =====================
 
 First steps

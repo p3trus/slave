@@ -1,9 +1,16 @@
+.. _getting_started:
+
 Getting started
 ===============
 
-The main goal of slave is to make it easier to communicate with scientific
-instruments. Slave tries to ease the implementation of new instruments and
-comes with a variety of ready-to-use implementations.
+Python has several advantages that make it interresting for the scientifc
+community as well as the test & measurement industry. It's easy to learn yet
+powerfull. It supports a variety of communication protocolls through builtin
+and third party packages such as `pyvisa`_, `pyserial`_ or `pyparallel`_.
+
+.. _pyvisa:     http://pyvisa.sourceforge.net/
+.. _pyserial:   http://pyserial.sourceforge.net/
+.. _pyparallel: http://pyserial.sourceforge.net/pyparallel.html
 
 Basic usage
 -----------
@@ -78,6 +85,7 @@ level applications using slave. In simulation mode you can use the devices
 without a real connection. The communication is simulated randomly. Creating a 
 device in simulation mode is easy and shown below using the
 :class:`~.slave.sr830.SR830` device.
+
 ::
 
     from slave.core import SimulatedConnection
@@ -86,7 +94,7 @@ device in simulation mode is easy and shown below using the
     lockin = SR830(SimulatedConnection())
     print lockin.x # Will output a random float
 
-Instead of a real connection object, you pass in a
+Instead of a real connection object, you inject a
 :class:`~.slave.core.SimulatedConnection`.
 
 Logging
@@ -107,6 +115,7 @@ Info level
 At the *INFO* logging level, the generated command message units, query message
 units and responses are logged. This is usefull to check if the device
 communication is working correctly. A generated log entry might look like
+
 ::
 
     INFO:slave.core:query message unit: "RMOD?"
@@ -129,6 +138,7 @@ Usage
 ^^^^^
 
 To use logging with Slave, you can do something like this
+
 ::
 
     import logging
