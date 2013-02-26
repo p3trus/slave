@@ -78,7 +78,12 @@ class PPMS(IEC60488):
         * 'pump' pumps the chamber continuously.
         * 'vent' ventilates the chamber continuously.
 
-    :ivar field: The magnetic field configuration, represented by the following
+    :ivar system_status: The general system status.
+
+    .. rubric:: Magnet Control
+
+    :ivar field: The current magnetic field in Oersted(read only).
+    :ivar target_field: The magnetic field configuration, represented by the following
         tuple *(<field>, <rate>, <approach mode>, <magnet mode>)*, where
 
         * *<field>* is the magnetic field setpoint in Oersted with a
@@ -92,14 +97,41 @@ class PPMS(IEC60488):
         * *<magnet mode>* is the state of the magnet at the end of the
           charging process, either 'persistent' or 'driven'.
 
-    :ivar system_status: The general system status.
-    :ivar temperature: The temperature configuration, a tuple consisting of
+    .. rubric:: Temperature Control
+
+    :ivar temperature: The temperature at the sample position in Kelvin
+        (read only).
+    :ivar target_temperature: The temperature configuration, a tuple consisting of
         *(<temperature>, <rate>, <approach mode>)*, where
 
-        * *<temperature>* The temperature settpoint in kelvin in the range 1.9
+        * *<temperature>* The temperature setpoint in kelvin in the range 1.9
           to 350.
         * *<rate>* The sweep rate in kelvin per minute in the range 0 to 20.
         * *<approach mode>* The approach mode, either 'fast' or 'no overshoot'.
+
+    .. rubric:: Sample Position
+
+    :ivar move_config: The move configuration, a tuple consisting of
+        *(<unit>, <unit/step>, <range>)*, where
+
+        * *<unit>* The unit, valid are 'steps', 'degree', 'radian', 'mm', 'cm',
+          'mils' and 'inch'.
+        * *<unit/step>* the units per step.
+        * *<range>* The allowed travel range.
+
+    :ivar move_limits: The position of the limit switch and the max travel
+        limit, represented by the following tuple
+        *(<lower limit>, <upper limit>)*, where
+
+        * *<lower limit>* The lower limit represents the position of the limit
+          switch in units specified by the move configuration.
+        * *<upper limit>* The upper limit in units specified by the move
+          configuration. It is defined by the position of the limit switch and
+          the configured travel range.
+
+        (read only)
+
+    :ivar position: The current sample position.
 
     """
     def __init__(self, connection):
@@ -110,8 +142,19 @@ class PPMS(IEC60488):
             'CHAMBER',
             Enum('seal', 'purge seal', 'vent seal', 'pump', 'vent')
         )
+        self.field = Command(('GETDAT? 4', Float))
+        self.move_config = Command(
+            'MOVECFG?',
+            'MOVECFG',
+            (
+                Enum('steps', 'degree', 'radian', 'mm', 'cm', 'mils', 'inch'),
+                Float,  # Units per step
+                Float  # The total range
+            )
+        )
+        self.sample_position = Command(('GETDAT? 8', Float))
         # TODO Allow for configuration of the ranges
-        self.field = Command(
+        self.target_field = Command(
             'FIELD?',
             'FIELD',
             (
@@ -121,7 +164,8 @@ class PPMS(IEC60488):
                 Enum('persistent', 'driven')
             )
         )
-        self.temperature = Command(
+        # TODO Allow for the configuration of the ranges
+        self.target_temperature = Command(
             'TEMP?',
             'TEMP',
             (
@@ -130,6 +174,7 @@ class PPMS(IEC60488):
                 Enum('fast', 'no overshoot')
             )
         )
+        self.temperature = Command(('GETDAT? 2', Float))
 
     @property
     def system_status(self):
@@ -145,7 +190,7 @@ class PPMS(IEC60488):
             # bit 8-11 represent the chamber status
             'chamber': STATUS_CHAMBER[(status >> 8) & 0xf],
             # bit 12-15 represent the sample position status
-            'samiple_position': STATUS_SAMPLE_POSITION[(status >> 12) & 0xf],
+            'sample_position': STATUS_SAMPLE_POSITION[(status >> 12) & 0xf],
         }
 
     def beep(self, duration, frequency):
@@ -157,6 +202,36 @@ class PPMS(IEC60488):
         """
         cmd = 'BEEP', [Float(min=0.1, max=5.0), Integer(min=500, max=5000)]
         self._write(cmd, duration, frequency)
+
+    def move(self, position, slowdown=0):
+        """Move to the specified sample position.
+
+        :param position: The target position.
+        :param slowdown: The slowdown code, an integer in the range 0 to 14,
+            used to scale the stepper motor speed. 0, the default, is the
+            fastest rate and 14 the slowest.
+
+        """
+        cmd = 'MOVE', [Float, Integer, Integer(min=0, max=14)]
+        self._write(cmd, position, 0, slowdown)
+
+    def move_to_limit(self, position):
+        """Move to limit switch and define it as position.
+
+        :param position: The new position of the limit switch.
+
+        """
+        cmd = 'MOVE', [Float, Integer]
+        self._write(cmd, position, 1)
+
+    def redefine_position(self, position):
+        """Redefines the current position to the new position.
+
+        :param position: The new position.
+
+        """
+        cmd = 'MOVE', [Float, Integer]
+        self._write(cmd, position, 2)
 
     def shutdown(self):
         """The temperature controller shutdown.
