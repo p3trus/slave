@@ -1,7 +1,7 @@
 #  -*- coding: utf-8 -*-
 #
 # Slave, (c) 2012, see AUTHORS.  Licensed under the GNU GPL.
-
+import csv
 import collections
 import threading
 
@@ -116,7 +116,7 @@ class Measurement(object):
             self._writer = None
 
     def __call__(self):
-        self._writer.writerow([str(x) for x in self._measurables()])
+        self._writer.writerow([str(x()) for x in self._measurables()])
 
     def __enter__(self):
         return self
