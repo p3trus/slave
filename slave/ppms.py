@@ -2,12 +2,13 @@
 #
 # Slave, (c) 2012, see AUTHORS. Licensed under the GNU GPL.
 import datetime
+import time
 
 from slave.core import Command
 from slave.types import Enum, Float, Integer
 from slave.iec60488 import IEC60488
 
-
+# Temperature controller status code.
 STATUS_TEMPERATURE = {
     0x0: 'unknown',
     0x1: 'normal stability at target temperature',
@@ -21,7 +22,7 @@ STATUS_TEMPERATURE = {
     0xf: 'failure',
 }
 
-
+#: Magnet status codes.
 STATUS_MAGNET = {
     0x0: 'unknown',
     0x1: 'persistent, stable',
@@ -35,7 +36,7 @@ STATUS_MAGNET = {
     0xf: 'failure',
 }
 
-
+#: Chamber status codes.
 STATUS_CHAMBER = {
     0x0: 'unknown',
     0x1: 'purged, sealed',
@@ -48,7 +49,7 @@ STATUS_CHAMBER = {
     0xf: 'failure',
 }
 
-
+#: Sample Position status codes.
 STATUS_SAMPLE_POSITION = {
     0x0: 'unknown',
     0x1: 'stopped',
@@ -142,7 +143,6 @@ class PPMS(IEC60488):
             'CHAMBER',
             Enum('seal', 'purge seal', 'vent seal', 'pump', 'vent')
         )
-        self.field = Command(('GETDAT? 4', Float))
         self.move_config = Command(
             'MOVECFG?',
             'MOVECFG',
@@ -174,7 +174,12 @@ class PPMS(IEC60488):
                 Enum('fast', 'no overshoot')
             )
         )
-        self.temperature = Command(('GETDAT? 2', Float))
+
+    @property
+    def field(self):
+        """The field at sample position."""
+        # omit dataflag and timestamp
+        return self._query(('GETDAT? 4', (Integer, Float, Float)))[2]
 
     @property
     def system_status(self):
@@ -192,6 +197,12 @@ class PPMS(IEC60488):
             # bit 12-15 represent the sample position status
             'sample_position': STATUS_SAMPLE_POSITION[(status >> 12) & 0xf],
         }
+
+    @property
+    def temperature(self):
+        "The current temperature at the sample position."
+        # omit dataflag and timestamp
+        return self._query(('GETDAT? 2', (Integer, Float, Float)))[2]
 
     def beep(self, duration, frequency):
         """Generates a beep.
@@ -232,6 +243,74 @@ class PPMS(IEC60488):
         """
         cmd = 'MOVE', [Float, Integer]
         self._write(cmd, position, 2)
+
+    def scan_temperature(self, measure, temperature, rate, delay=1):
+        """Performs a temperature scan.
+
+        :param measure: A callable called repeatedly until stability at target
+            temperature is reached.
+        :param temperature: The target temperature in kelvin.
+        :param rate: The sweep rate in kelvin per minute.
+        :param delay: The time delay between each call to measure in seconds.
+
+        """
+        if not hasattr(measure, '__call__'):
+            raise TypeError('measure parameter not callable.')
+
+        self.set_temperature(temperature, rate, 'no overshoot', wait_for_stability=False)
+        while True:
+            if self.system_status['temperature'] == 'normal stability at target temperature':
+                break
+            measure()
+            time.sleep(delay)
+
+    def set_field(self, field, rate, approach='linear', mode='persistent',
+                  wait_for_stability=True, delay=1):
+        """Sets the magnetic field.
+
+        :param field: The target field in Oersted.
+
+            .. note:: The conversion is 1 Oe = 0.1 mT.
+
+        :param rate: The field rate in Oersted per minute.
+        :param approach: The approach mode, either 'linear', 'no overshoot' or
+            'oscillate'.
+        :param mode: The state of the magnet at the end of the charging
+            process, either 'persistent' or 'driven'.
+        :param wait_for_stability: If `True`, the function call blocks until
+            the target field is reached and stable.
+        :param delay: Specifies the frequency in seconds how often the magnet
+            status is checked. (This has no effect if wait_for_stability is
+            `False`).
+
+        """
+        self.target_field = field, rate, approach, mode
+        if wait_for_stability and (mode == 'persistent'):
+            # Wait a few seconds because the ppms does not update the field
+            # status fast enough.
+            time.sleep(10)
+        while wait_for_stability:
+            if self.system_status['magnet'] == 'persistent, stable':
+                break
+            time.sleep(delay)
+
+    def set_temperature(self, temperature, rate, mode='fast', wait_for_stability=True, delay=1):
+        """Sets the temperature.
+
+        :param temperature: The target temperature in kelvin.
+        :param rate: The sweep rate in kelvin per minute.
+        :param mode: The sweep mode, either 'fast' or 'no overshoot'.
+        :param wait_for_stability: If wait_for_stability is `True`, the function call blocks
+            until the target temperature is reached and stable.
+        :param delay: The delay specifies the frequency how often the status is checked.
+
+        """
+        self.target_temperature = temperature, rate, mode
+        while wait_for_stability:
+            status = self.system_status['temperature']
+            if status == 'normal stability at target temperature':
+                break
+            time.sleep(delay)
 
     def shutdown(self):
         """The temperature controller shutdown.
