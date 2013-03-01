@@ -2,10 +2,13 @@
 in the [P]hysical [P]roperties [M]easurement [S]ystem PPMS Model 6000.
 
 """
+import datetime
+
 import visa
 
 from slave.ppms import PPMS
 from slave.sr830 import SR830
+from slave.misc import Measurement
 
 # Connect to the lockin amplifier and the ppms
 lockin = SR830(visa.instrument('GPIB::10'))
