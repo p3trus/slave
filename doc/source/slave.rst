@@ -1,5 +1,6 @@
-slave Package
-=============
+API
+===
+This part covers the complete api documentation of the slave library.
 
 :mod:`slave` Package
 --------------------
