@@ -38,6 +38,8 @@ Class                                    Description                            
 :class:`~slave.connection.UsbTmcDevice`  A connection object, wrapping a usbtmc file descriptor.  linux only
 =======================================  =======================================================  ===========
 
+.. _simulated_connection:
+
 Simulating a connection
 -----------------------
 

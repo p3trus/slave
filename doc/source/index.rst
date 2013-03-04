@@ -12,7 +12,6 @@ simplify instrument communication and control. It is divided into three parts,
 a quick :ref:`overview <overview>`, the :ref:`user guide <user_guide>` and of
 course the :ref:`api reference <api_reference>`.
 
-<<<<<<< Updated upstream
 .. _overview:
 
 Overview
@@ -22,21 +21,6 @@ Slave provides an intuitive way of creating instrument api's, inspired by
 object relational mappers.
 
 ::
-=======
-User Guide
-==========
-
-.. toctree::
-  :maxdepth: 2
-
-  getting_started
-
-It provides an intuitive way of creating instrument api's, inspired by object
-relational mappers. This adds an additional layer of abstraction, separating
-the user space from the device space representation of the command.
-Command message creation as well as argument and response parsing is done
-automatically, e.g. (see :ref:`custom_device_drivers`)::
->>>>>>> Stashed changes
 
     from slave.iec60488 import IEC60488, PowerOn
     from slave.core import Command
