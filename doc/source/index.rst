@@ -72,6 +72,7 @@ User Guide
    installation
    quickstart
    connection
+   logging
    builtin_drivers
    custom_device_drivers
    examples
