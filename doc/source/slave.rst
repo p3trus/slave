@@ -1,5 +1,6 @@
-slave Package
-=============
+API
+===
+This part covers the complete api documentation of the slave library.
 
 :mod:`slave` Package
 --------------------
@@ -53,6 +54,14 @@ slave Package
 -------------------
 
 .. automodule:: slave.ls370
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+:mod:`misc` Module
+-------------------
+
+.. automodule:: slave.misc
     :members:
     :undoc-members:
     :show-inheritance:

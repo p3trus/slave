@@ -1,73 +1,62 @@
-.. _custom_device_drivers:
+Implementing Custom Device Drivers
+==================================
 
-Custom Device Drivers
-=====================
+Implementing custom device drivers is straight forward. The following sections
+will guide you through several use cases. We will implement a driver for an
+imaginary device, extending it's interface step-by-step, showing more and more
+functionallity and tricks.
 
-First steps
+.. note::
+
+   When developing new device drivers, it is usefull to enable logging. See
+   :ref:`logging` for more information.
+
+First Steps
 -----------
 
-Implementing a custom device driver is straight forward. The code below shows a
-simple class supporting a single query and writeable command.
-::
+Let's assume we've got a simple device supporting the following commands:
+
+ * 'ENABLED <on/off>' -- Enables/disables the control loop of the device.
+   *<on/off>* is either 0 or 1.
+ * 'ENABLED?' -- returns <on/off>
+
+A possible implementation could look like this::
 
     from slave.core import Command, InstrumentBase
-    from slave.types import Integer
+    from slave.types import Boolean
 
-    class CustomDevice(InstrumentBase):
+    class Device(InstrumentBase):
         def __init__(self, connection):
-            super(CustomDevice, self).__init__(connection) # Don't forget this!
-            self.cmd = Command('QUERY?', 'WRITE', Integer)
+            super(Device, self).__init__(connection)
+            self.enabled = Command('ENABLED?', 'ENABLED', Boolean())
 
-The first step is deriving from :class:`~.InstrumentBase`. It
-applies some magic to redirect attribute read and write access to the 
-:meth:`~.Command.query` and :meth:`~.Command.write` methods of the 
-:class:`~.Command` class.
+Now let's try it. We're using a :class:`~slave.core.SimulatedConnection` here (see
+:ref:`simulated_connection` for a detailed explanation)::
 
-The next step is implementing the commands itself. This is done in the
-`.__init__()` method via the :class:`~.Command` class.
+    >>> from slave.core import SimulatedConnection
+    >>> device = Device(SimulatedConnection())
+    >>> device.enabled = False
+    >>> device.enabled
+    False
 
-The Command class
------------------
+It looks as if an instance variable with the name 'enabled' and a value of
+`False` was created. But this is not the case. We can check it with the
+following line::
 
-The :class:`~.Command` class is at the heart of slave. It converts
-user input into the appropriate command and parses the response.
-The initializer takes five arguments, these are
+    >>> type(device.__dict__['enabled'])
+    <class 'slave.core.Command'>
 
- * query
- * write
- * type
- * connection
- * cfg
+The assignement did not overwrite the Command attribute. Instead, the
+:class:`~slave.core.InstrumentBase` base class forwarded the `False` to the
+:meth:`~slave.core.Command.write` method of the :class:`~slave.core.Command`. The 
+:meth:`~slave.core.Command.write` method then created the command message
+**'ENABLED 0'**, using the :class:`~slave.types.Boolean` type to convert the
+False and passed it to the connection's
+:meth:`~slave.core.SimulatedConnection.write` method. Likewise the read call was
+forwarded to the :class:`~slave.core.Command`'s query method.
 
-The usage is best shown by a simple example.
-::
-
-    from slave.core import Command, InstrumentBase
-    from slave.types import Integer
-
-    class CustomDevice(InstrumentBase):
-        def __init__(self, connection):
-            super(CustomDevice, self).__init__(connection)
-            # A read only command, returning an integer.
-            self.readable = Command('QUERY?', type=Integer())
-            # A write only command, taking an integer.
-            self.writeable = Command(write='WRITE', type=Integer(min=0, max=10))
-            # A read and writeable command, taking and returning an integer.
-            self.read_and_write = Command('QUERY?', 'WRITE', Integer)
-
-So lets have a look at the readable attribute. 'QUERY?', the first argument of
-the :class:`~.Command`, is the string sent to the instrument. `Integer`
-specifies the return value. It is one of many special classes defined in the
-:mod:`slave.types` module. These are responsible for parsing and validation of
-the input and output. Similarly `writeable` is a write-only attribute, taking
-an integer in the range 0 to 10.
-
-Most of the time you can forget about connection and cfg. When using the
-:class:`~.Command` as an instance variable, the :class:`~.InstrumentBase` base
-class automatically injects the config and the connection object.
-
-IEC 60488-2
------------
+The IEC60488-2 standard
+-----------------------
 
 The `IEC 60488-2`_ describes a standard digital interface for programmable
 instrumentation. It is used by devices connected via the IEEE 488.1 bus,
@@ -97,7 +86,7 @@ Synchronisation commands
  * `*WAI` - Wait to continue [#]_ .
 
 To ease development, these are implemented in the
-:class:`~.IEEE488` base class. To implement a `IEC 60488-2`_
+:class:`~slave.iec60488.IEC60488` base class. To implement a `IEC 60488-2`_
 compliant device driver, you only have to inherit from it and implement the
 device specific commands, e.g::
 

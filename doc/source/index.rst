@@ -8,63 +8,85 @@ Welcome to Slave
 ################
 
 This is the documentation of the Slave library, a micro framework designed to
-simplify instrument communication and control.
+simplify instrument communication and control. It is divided into three parts,
+a quick :ref:`overview <overview>`, the :ref:`user guide <user_guide>` and of
+course the :ref:`api reference <api_reference>`.
 
-It provides an intuitive way of creating instrument api's, inspired by object
-relational mappers. This adds an additional layer of abstraction, separating
-the user space from the device space representation of the command.
-Command message creation as well as argument and response parsing is done
-automatically, e.g. (see :ref:`custom_device_drivers`)::
+.. _overview:
+
+Overview
+========
+
+Slave provides an intuitive way of creating instrument api's, inspired by
+object relational mappers.
+
+::
 
     from slave.iec60488 import IEC60488, PowerOn
     from slave.core import Command
     from slave.types import Integer, Enum
 
     class Device(IEC60488, PowerOn):
+        """An iec60488 conforming device api with additional commands."""
         def __init__(self, connection):
             super(Device, self).__init__(connection)
-            self.command = Command(
-                'QRY?',  # query message header 
+            # A custom command
+            self.my_command = Command(
+                'QRY?', # query message header
                 'WRT',  # command message header
-                [Integer, Enum('first', 'second')] # response and command data type
+                # response and command data type
+                [Integer, Enum('first', 'second')]
             )
 
-This way command message creation as well as argument and response parsing is done
-automatically.
+Commands mimic instance attributes. Read access queries the device, parses and
+converts the response and finally returns it. Write access parses and converts
+the arguments and sends them to the device. This leads to very intuitive
+interfaces.
 
-Additionally slave comes with a variety of ready-to-use implementations of
-device drivers, such as
+Several device drivers are already implemented, and many more are under
+development. A short usage example is given below::
 
-* Stanford Research SR830 lockin amplifier (:mod:`slave.sr830`)
-* Signal Recovery SR7225 lockin amplifier (:mod:`slave.sr7225`)
-* Lakeshore LS370 AC Resistance Bridge (:mod:`slave.ls370`)
-* Lakeshore LS340 Temperature Controller (:mod:`slave.ls340`)
-
-and several more are in work.
-
-Usage is quite simple, a simple example is shown below (see :ref:`getting_started`)::
-
-    #!/usr/bin/env python
     import time
-
     import visa
     from slave.sr830 import SR830
 
     lockin = SR830(visa.instrument('GPIB::08'))
+    # configure the lockin amplifier
     lockin.reserve = 'high'
     lockin.time_constant = 3
+    # take 60 measurements and print the result
     for i in range(60):
         print lockin.x
         time.sleep(1)
 
-Content
-=======
+For a complete list of built-in device drivers, see :ref:`builtin_drivers`.
+
+.. _user_guide:
+
+User Guide
+==========
 
 .. toctree::
    :maxdepth: 2
 
-   intro
-   custom_device
+   installation
+   quickstart
+   connection
+   logging
+   builtin_drivers
+   custom_device_drivers
+   examples
+
+.. _api_reference:
+
+API Reference
+=============
+
+This part of the documentation covers the complete api of the slave library.
+
+.. toctree::
+   :maxdepth: 2
+
    slave
 
 Indices and tables
@@ -73,7 +95,3 @@ Indices and tables
 * :ref:`genindex`
 * :ref:`modindex`
 * :ref:`search`
-
-.. _Python: http://www.python.org
-.. _pyvisa: http://pyvisa.sourceforge.net/
-.. _pyserial: http://pyserial.sourceforge.net/
