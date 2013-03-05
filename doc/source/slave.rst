@@ -58,6 +58,14 @@ This part covers the complete api documentation of the slave library.
     :undoc-members:
     :show-inheritance:
 
+:mod:`misc` Module
+-------------------
+
+.. automodule:: slave.misc
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 :mod:`sr7225` Module
 --------------------
 
