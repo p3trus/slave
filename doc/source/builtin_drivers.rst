@@ -14,6 +14,7 @@ Manufacturer       Model                       Class
 Lakeshore          LS370 AC Resistance Bridge  :class:`slave.ls370.LS370`
 Signal Recovery    SR7225                      :class:`slave.sr7225.SR7225`
 Stanford Research  SR830                       :class:`slave.sr830.SR830`
+Stanford Research  SR850                       :class:`slave.sr850.SR850`
 =================  ==========================  ============================
 
 Temperature Controllers
