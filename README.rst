@@ -28,6 +28,7 @@ Requirements
 
  * Python 2.6 or higher
  * Sphinx (optional, to build the documentation)
+ * sphinx_bootstrap_theme(optional, default theme used for the documentation)
  * distribute (Python 3.x)
 
 Installation
@@ -46,7 +47,8 @@ Documentation
 Slave is fully documented. Both the latest `stable`_ as well as the `develop`_
 documentations are available online. To build the documentation manually, e.g.
 the html documentation, navigate into the `/doc/` subfolder and execute
-`make html`.
+`make html`. For a prettier theme, install sphinx_boostrap_theme first
+(`pip install sphinx_bootstrap_theme`).
 
 .. _stable: http://slave.readthedocs.org/en/latest/
 .. _develop: http://slave.readthedocs.org/en/develop/
