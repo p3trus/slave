@@ -184,7 +184,7 @@ class Command(object):
         phs = self.cfg['program header separator']
         pds = self.cfg['program data separator']
         program_data = [t.dump(v) for v, t in it.izip(datas, message.data_type)]
-        return php + message.header + phs + pds.join(program_data)
+        return ''.join(php, message.header, phs, pds.join(program_data))
 
     def write(self, *datas):
         """Generates and sends a command message unit.
