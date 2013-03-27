@@ -2,7 +2,7 @@
 #
 # Slave, (c) 2012, see AUTHORS.  Licensed under the GNU GPL.
 from slave.core import Command, InstrumentBase, CommandSequence
-from slave.types import Enum, Float, Integer
+from slave.types import Boolean, Enum, Float, Integer, Register, String
 from slave.iec60488 import IEC60488, PowerOn
 
 
@@ -123,8 +123,10 @@ class SR850(IEC60488, PowerOn):
 
     .. rubric:: Display and Scale Commands
 
-    :ivar active_display: Selects the active display. Valid are 'full', 'top'
+    :ivar active_display: Sets the active display. Valid are 'full', 'top'
         or 'bottom'.
+    :ivar selected_display: Selects the active display, either 'top' or
+        'bottom'. If the active display 'full' it is already selected.
     :ivar screen_format: Selects the screen format. Valid are
 
         * 'single', The complete screen is used.
@@ -141,8 +143,8 @@ class SR850(IEC60488, PowerOn):
 
     .. rubric:: Cursor Commands
 
-        :class:`~.Cursor`.
     :ivar cursor: The cursor of the active display, an instance of
+        :class:`~.Cursor`.
 
     .. rubric:: Aux Input and Output Commands
 
@@ -153,9 +155,41 @@ class SR850(IEC60488, PowerOn):
     :ivar bool start_on_trigger: If start on trigger is True, a trigger signal will
         start the scan.
 
+    .. rubric: Mark Commands
+
+    :ivar marks: An instance of :class:`~.MarkList`, a sequence like structure
+        giving access to the SR850 marks.
+
     .. rubric:: Math Commands
 
+    :ivar math_operation: Sets the math operation used by the
+        :meth:`~.SR850.calculate operation. Valid are '+', '-', '*', '/',
+        'sin', 'cos', 'tan', 'sqrt', '^2', 'log' and '10^x'.
+    :ivar math_argument_type: The argument type used in the :meth:`calculate`
+        method, either 'trace' or 'constant'.
+    :ivar float math_constant: Specifies the constant value used by the
+        :meth:`~.SR850.calculate` operation if the
+        :attr:`~.SR850.math_argument_type` is set to 'constant'.
+    :ivar math_trace_argument: Specifies the trace number used by the
+        :meth:`~.SR850.calculate` operation if the
+        :attr:`~.SR850.math_argument_type` is set to 'trace'.
+
+    :ivar fit_function: The function used to fit the data, either 'linear',
+        'exp' or 'gauss'.
+    :ivar fit_params: An instance of :class:`~.FitParameter` used to access the
+        fit parameters.
+    :ivar statistics: An instance of :class:`~.Statistics` used to access the
+        results of the statistics calculation.
+
     .. rubric:: Store and Recall File Commands
+
+    :ivar filename: The active filename.
+
+        .. warning::
+
+            The SR850 supports filenames with up to eight characters and an
+            optional extension with up to three characters. The filename
+            must be in the DOS format. Slave does not validate this yet.
 
     .. rubric:: Setup Commands
 
@@ -455,12 +489,13 @@ class SR850(IEC60488, PowerOn):
         self.scan_length = Command('SLEN?', 'SLEN', Float(min=1))
         self.scan_mode = Command('SEND?', 'SEND', Enum('shot', 'loop'))
         # Display and Scale Commands
-        # TODO check whats the difference to the ATRC command.
+        # XXX Not shure about the difference between ADSP and ATRC command.
         self.active_display = Command(
             'ADSP?',
             'ADSP',
             Enum('full', 'top', 'bottom')
         )
+        self.selected_display = Command('ATRC?', 'ATRC', Enum('top', 'bottom'))
         self.screen_format = Command(
             'SMOD?',
             'SMOD',
@@ -477,21 +512,47 @@ class SR850(IEC60488, PowerOn):
         # Cursor Commands
         self.cursor = Cursor(self.connection, self._cfg)
         # Mark Commands
-        # TODO MACT, MBIN, MTXT
-
+        self.marks = MarkList(self.connection, self._cfg)
         # Aux Input and Output Comnmands
-        self.aux_input = CommandSequence(
-            Command(('OAUX? {0}'.format(i) for i in range(1, 5)))
-        )
+        def aux_in(i):
+            """Helper function to create an aux input command."""
+            return Command(query=('OAUX? {0}'.format(i), Float),
+                           connection=self.connection,
+                           cfg=self._cfg)
+
+        self.aux_input = CommandSequence(aux_in(i) for i in xrange(1, 5))
         self.aux_output = tuple(
             Output(i, self.connection, self._cfg) for i in xrange(1, 5)
         )
         self.start_on_trigger = Command('TSTR?', 'TSTR', Boolean)
         # Math Commands
-        # TODO
-
+        self.math_argument_type = Command(
+            'CAGT?',
+            'CAGT',
+            Enum('trace', 'constant')
+        )
+        self.math_operation = Command(
+            'COPR?',
+            'COPR',
+            Enum('+', '-', '*', '/', 'sin', 'cos',
+                 'tan', 'sqrt', '^2', 'log', '10^x')
+        )
+        self.math_constant = Command('CARG?', 'CARG', Float)
+        self.math_trace_argument = Command(
+            'CTRC?',
+            'CTRC',
+            Integer(min=1, max=4)
+        )
+        self.fit_function = Command(
+            'FTYP?',
+            'FTYP',
+            Enum('line', 'exp', 'gauss')
+        )
+        self.fit_params = FitParameters(self.connection, self._cfg)
+        self.statistics = Statistics(self.connection, self._cfg)
         # Store and Recall File Commands
-        # TODO
+        # TODO The filename syntax is not validated yet.
+        self.filename = Command('FNAM?', 'FNAM', String(max=12))
 
         # Setup Commands
         self.interface = Command('OUTX?', 'OUTX', Enum('rs232', 'gpib'))
@@ -578,7 +639,7 @@ class SR850(IEC60488, PowerOn):
         """
         self._write('ASCL')
 
-    def mark(self):
+    def place_mark(self):
         """Places a mark in the data buffer at the next sample.
 
         .. note:: This has no effect if no scan is running.
@@ -663,6 +724,183 @@ class SR850(IEC60488, PowerOn):
         # construct command,
         cmd = 'SNAP?', (Float,) * length, (param, ) * length
         return self._ask(cmd, *args)
+
+    def save(self, mode='all'):
+        """Saves to the file specified by :attr:`~SR850.filename`.
+
+        :param mode: Defines what to save.
+
+            =======  ================================================
+            Value    Description
+            =======  ================================================
+            'all'    Saves the active display's data trace, the trace
+                     definition and the instrument state.
+            'data'   Saves the active display's data trace.
+            'state'  Saves the instrument state.
+            =======  ================================================
+
+        """
+        if mode == 'all':
+            self._write('SDAT')
+        elif mode == 'data':
+            self._write('SASC')
+        elif mode=='state':
+            self._write('SSET')
+        else:
+            raise ValueError('Invalid save mode.')
+
+    def recall(self, mode='all'):
+        """Recalls from the file specified by :attr:`~SR850.filename`.
+
+        :param mode: Specifies the recall mode.
+
+            =======  ==================================================
+            Value    Description
+            =======  ==================================================
+            'all'    Recalls the active display's data trace, the trace
+                     definition and the instrument state.
+            'state'  Recalls the instrument state.
+            =======  ==================================================
+
+        """
+        if mode == 'all':
+            self._write('RDAT')
+        elif mode == 'state':
+            self._write('RSET')
+        else:
+            raise ValueError('Invalid recall mode.')
+
+    def smooth(self, window):
+        """Smooths the active display's data trace within the time window of
+        the active chart display.
+
+        :param window: The smoothing window in points. Valid are 5, 11, 17, 21
+            and 25.
+
+        .. note::
+
+            Smoothing takes some time. Check the status byte to see when the
+            operation is done. A running scan will be paused until the
+            smoothing is complete.
+
+        .. warning::
+
+            The SR850 will generate an error if the active display trace is not
+            stored when the smooth command is executed.
+
+        """
+        self._write(('SMTH', Enum(5, 11, 17, 21, 25)), window)
+
+    def fit(self, range, function=None):
+        """Fits a function to the active display's data trace within a
+        specified range of the time window.
+
+        E.g.::
+
+            # Fit's a gaussian to the first 30% of the time window.
+            lockin.fit(range=(0, 30), function='gauss')
+
+        :param start: The left limit of the time window in percent.
+        :param stop: The right limit of the time window in percent.
+        :param function: The function used to fit the data, either 'line',
+            'exp', 'gauss' or None, the default. The configured fit function is
+            left unchanged if function is None.
+
+        .. note::
+
+            Fitting takes some time. Check the status byte to see when the
+            operation is done. A running scan will be paused until the
+            fitting is complete.
+
+        .. warning::
+
+            The SR850 will generate an error if the active display trace is not
+            stored when the fit command is executed.
+
+        """
+        if function is not None:
+            self.fit_function = function
+        cmd = 'FITT', Integer(min=0, max=100), Integer(min=0, max=100)
+        self._write(cmd, start, stop)
+
+    def calculate_statistics(self, start, stop):
+        """Starts the statistics calculation.
+
+        :param start: The left limit of the time window in percent.
+        :param stop: The right limit of the time window in percent.
+
+        .. note::
+
+            The calculation takes some time. Check the status byte to see when
+            the operation is done. A running scan will be paused until the
+            operation is complete.
+
+        .. warning::
+
+            The SR850 will generate an error if the active display trace is not
+            stored when the command is executed.
+
+        """
+        cmd = 'STAT', Integer, Integer
+        self._write(cmd, start, stop)
+
+    def calculate(self, operation=None, trace=None, constant=None, type=None):
+        """Starts the calculation.
+
+        The calculation operates on the trace graphed in the active display.
+        The math operation is defined by the :attr:`~.SR850.math_operation`,
+        the second argument by the :attr:`~.SR850.math_argument_type`.
+
+        For convenience, the operation and the second argument, can be
+        specified via the parameters
+
+        :param operation: Set's the math operation if not `None`. See
+            :attr:`~.SR850.math_operation` for details.
+        :param trace: If the trace argument is used, it sets the
+            :attr:`~.math_trace_argument' to it and sets the
+            :attr:`~.math_argument_type`to 'trace'
+        :param constant: If constant is not `None`, the
+            :attr:`~.math_constant`is set with this value and the
+            :attr:`~.math_argument_type` is set to 'constant'
+        :param type: If type is not `None`, the :attr:`~.math_argument_type` is
+            set to this value.
+
+        E.g. instead of::
+
+            lockin.math_operation = '*'
+            lockin.math_argument_type = 'constant'
+            lockin.math_constant = 1.337
+            lockin.calculate()
+
+        one can write::
+
+            lockin.calculate(operation='*', constant=1.337)
+
+        .. note:: Do not use trace, constant and type together.
+
+        .. note::
+
+            The calculation takes some time. Check the status byte to see when
+            the operation is done. A running scan will be paused until the
+            operation is complete.
+
+        .. warning::
+
+            The SR850 will generate an error if the active display trace is not
+            stored when the command is executed.
+
+        """
+        if operation is not None:
+            self.math_operation = operation
+        if trace is not None:
+            self.math_trace_argument = trace
+            type = 'trace'
+        elif constant is not None:
+            self.math_constant = constant
+            type = 'constant'
+        if type is not None:
+            self.math_argument_type = type
+        self._write('CALC')
 
 
 class Display(InstrumentBase):
@@ -877,7 +1115,7 @@ class Trace(InstrumentBase):
     def __init__(self, idx, connection, cfg):
         super(Trace, self).__init__(connection, cfg)
         self.idx = idx = int(idx)
-        self.value = Command(('OUTR? {0}'.format(idx)))
+        self.value = Command(('OUTR? {0}'.format(idx), Float))
 
         quantities = Enum(
             '1', 'x', 'y', 'r', 'theta', 'xn', 'yn', 'rn', 'Al1', 'Al2', 'Al3',
@@ -908,3 +1146,145 @@ class Trace(InstrumentBase):
             (Float,) * length
         )
         return self._ask(cmd)
+
+
+class Mark(InstrumentBase):
+    """A SR850 mark.
+
+    :ivar idx: The index of the mark.
+
+    """
+    def __init__(self, idx, connection, cfg):
+        super(Mark, self).__init__(connection, cfg)
+        self.idx = idx = int(idx)
+
+    @property
+    def bin(self):
+        """The bin index of this mark.
+
+        :returns: An integer bin index or None if the mark is inactive.
+
+        """
+        bin = self._query(('MBIN?', Integer, Integer), self.idx)
+        return None if bin == -1 else bin
+
+    @property
+    def active(self):
+        """The active state of the mark.
+
+        :returns: True if the mark is active, False otherwise.
+
+        """
+        return False if self.bin is None else True
+
+    @property
+    def label(self):
+        """The label string of the mark.
+
+        .. note:: The label should not contain any whitespace charactes.
+
+        """
+        return self._query(('MTXT?', Integer), self.idx)
+
+    @label.setter
+    def label(self, value):
+        if [c for c in value if c in string.whitespace]:
+            raise ValueError('Invalid argument. Whitespaces are not allowed.')
+        self._write(('MTXT', Integer, String), self.idx, value)
+
+
+class MarkList(InstrumentBase):
+    """A sequence like structure holding the eight SR850 marks."""
+    def __init__(self, connection, cfg):
+        super(MarkList, self).__init__(connection, cfg)
+        self._marks = [Mark(i, self.connection, self._cfg) for i in xrange(8)]
+
+    def active(self):
+        """The indices of the active marks."""
+        # TODO avoid direct usage of connection object.
+        marks = tuple(int(x) for x in self.connection.ask('MACT').split(','))
+        return marks[1:]
+
+    def __getitem__(self, item):
+        return self._marks[item]
+
+
+class FitParameters(InstrumentBase):
+    """The calculated fit parameters.
+
+    The meaning of the fit parameters depends on the fit function used to
+    obtain them. These are
+
+    ========  ===============================
+    Function  Definition
+    ========  ===============================
+
+    line   `y = a + b * (t - t0)`
+    exp    `y = a * exp(-(t - t0) / b) + c`
+    gauss  `y = a * exp(0.5 * (t / b)^2) + c`
+    ========  ===============================
+
+    :ivar a: The a parameter.
+
+        ========  ===============================
+        Function  Meaning
+        ========  ===============================
+        linear    Vertical offset in trace units.
+        exp       Amplitude in trace units.
+        gauss     Amplitude in trace units.
+        ========  ===============================
+
+    :ivar b: The b parameter.
+
+        ========  ================================
+        Function  Meaning
+        ========  ================================
+        linear    Slope in trace units per second.
+        exp       Time constant in time.
+        gauss     Line width in time.
+        ========  ================================
+
+    :ivar c: The c parameter.
+
+        ========  ===============================
+        Function  Meaning
+        ========  ===============================
+        linear    Unused.
+        exp       Vertical offset in trace units.
+        gauss     Vertical offset in trace units.
+        ========  ===============================
+
+    :ivar t0: The t0 parameter.
+
+        ========  =============================
+        Function  Meaning
+        ========  =============================
+        linear    Horizontal offset in time.
+        exp       Horizontal offset in time.
+        gauss     Peak center position in time.
+        ========  =============================
+
+    """
+    def __init__(self, connection, cfg):
+        super(FitParameters, self).__init__(connection, cfg)
+        self.a = Command(('PARS? 0', Float))
+        self.b = Command(('PARS? 1', Float))
+        self.c = Command(('PARS? 2', Float))
+        self.t0 = Command(('PARS? 3', Float))
+
+
+class Statistics(InstrumentBase):
+    """Provides access to the results of the statistics calculation.
+
+    :ivar mean: The mean value.
+    :ivar standard_deviation: The standart deviation.
+    :ivar total_data: The sum of all the data points within the range.
+    :ivar time_delta: The time delta of the range.
+
+    """
+    def __init__(self, connection, cfg):
+        super(Statistics, self).__init__(connection, cfg)
+        self.mean = Command(('SPAR? 0', Float))
+        self.standard_deviation = Command(('SPAR? 1', Float))
+        self.total_data = Command(('SPAR? 2', Float))
+        self.time_delta = Command(('SPAR? 3', Float))
