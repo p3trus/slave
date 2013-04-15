@@ -467,8 +467,7 @@ class LS370(IEC60488):
     :ivar ieee: The IEEE-488 interface parameters, represented by the following
         tuple *(<terminator>, <EOI enable>, <address>)*, where
 
-        * *<terminator>* is `None`, `\\\\r\\\\n`, `\\\\n\\\\r`, `\\\\r` or
-          `\\\\n`.
+        * *<terminator>* is `None`, `\\\\r\\\\n`, `\\\\n\\\\r` or `\\\\n`.
         * *<EOI enable>* A boolean.
         * *<address>* The IEEE-488.1 address of the device, an integer between
           0 and 30.
@@ -502,8 +501,11 @@ class LS370(IEC60488):
             The still only works, if it's properly configured in the analog
             output 2.
 
+    :ivar all_curves: A :class:`.Curve` instance that can be used to configure
+        all user curves simultaneously. Instead of iterating of the
+        :attr:`.user_curve` attribute one can use this command. This way less
+        commands will be send.
     :ivar user_curve: A tuple of 20 :class:`.Curve` instances.
-
     :ivar zones: A sequence of 10 Zones. Each zone is represented by a tuple
         *(<top>, <p>, <i>, <d>, <manual>, <heater>, <low>, <high>, <analog1>*
         *, <analog2>)*, where
@@ -560,7 +562,7 @@ class LS370(IEC60488):
         )
         self.guard = Command('GUARD?', 'GUARD', Boolean)
         self.ieee = Command('IEEE?', 'IEEE',
-                            [Enum(None, '\r\n', '\n\r', '\r', '\n'),
+                            [Enum('\r\n', '\n\r', '\n', None),
                              Boolean,
                              Integer(min=0, max=30)])
         # TODO only active if model scanner 3716 is installed.
@@ -590,7 +592,8 @@ class LS370(IEC60488):
         self.scanner = scanner
         self.setpoint = Command('SETP?', 'SETP', Float)
         self.still = Command('STILL?', 'STILL', Float)
-        self.user_curve = tuple(Curve(connection, i, 200) for i in range(20))
+        self.all_curves = Curve(connection, 0, 200)
+        self.user_curve = tuple(Curve(connection, i, 200) for i in range(1, 21))
 
         def make_zone(i):
             """Helper function to create a zone command."""
