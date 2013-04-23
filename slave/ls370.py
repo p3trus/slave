@@ -196,11 +196,17 @@ class Input(InstrumentBase, collections.Sequence):
 
         >>> ls370.input.scan = 2, True
 
+    .. note::
+
+        In contrast to the LS37 internal commands the channel indexing is zero
+        based.
+
     """
     def __init__(self, channels, connection, cfg):
         super(Input, self).__init__(connection, cfg)
+        # The ls370 channels start at 1
         self._channels = tuple(
-            InputChannel(idx, connection, cfg) for idx in xrange(channels)
+            InputChannel(idx, connection, cfg) for idx in xrange(1, channels + 1)
         )
         self.scan = Command(
             'SCAN?',
