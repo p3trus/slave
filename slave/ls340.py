@@ -16,10 +16,10 @@ temperature controller. Using it is simple::
     # We assume the LS340 is listening on GPIB channel.
     ls340 = LS340(visa.instrument('GPIB::08'))
     # Show kelvin reading of channel A.
-    print ls340.a.kelvin
+    print ls340.input['A'].kelvin
 
     # Filter channel 'B' data through 10 readings with 2% of full scale window.
-    ls340.b.filter = True, 10, 2
+    ls340.input['B'].filter = True, 10, 2
 
 Since the :class:`~.LS340` supports different scanner options, these are
 supported as well. They extend the available input channels. To use them one
@@ -33,12 +33,13 @@ simply passes the model name at construction, e.g.::
     ls340 = LS340(visa.instrument('GPIB::08'), scanner='3468')
 
     # Show sensor reading of channel D2.
-    print ls340.scanner.d2.sensor_units
+    print ls340.input['D2'].sensor_units
 
 .. _Lakeshore model LS340: http://www.lakeshore.com/products/cryogenic-tempera\
 ture-controllers/model-340/Pages/Overview.aspx
 
 """
+import collections
 
 from slave.core import Command, InstrumentBase
 from slave.iec60488 import IEC60488
@@ -202,7 +203,24 @@ class Heater(InstrumentBase):
         self.status = Command(('HTRST?', Enum(*self.ERROR_STATUS)))
 
 
-class Input(InstrumentBase):
+class Input(InstrumentBase, collections.Mapping):
+    def __init__(self, channels, connection, cfg):
+        super(Input, self).__init__(connection, cfg)
+        self._channels = dict(
+            (ch, InputChannel(ch, connection, cfg)) for ch in channels
+        )
+    def __getitem__(self, channel):
+        return self._channels[channel]
+
+    def __iter__(self):
+        # TODO check if correct
+        return self._channels.itervalues()
+
+    def __len__(self):
+        return len(self._channels)
+
+
+class InputChannel(InstrumentBase):
     """Represents a LS340 input channel.
 
     :param connection: A connection object.
@@ -276,8 +294,8 @@ class Input(InstrumentBase):
                       7: 'units overrange',
     }
 
-    def __init__(self, connection, name):
-        super(Input, self).__init__(connection)
+    def __init__(self, name, connection, cfg):
+        super(InputChannel, self).__init__(connection, cfg)
         self.name = name = str(name)
         # The reading status register, used in linear_status, reading_status
         # and minmax_status.
@@ -585,43 +603,6 @@ class Loop(InstrumentBase):
                                           'CDISP {0},'.format(idx), cdisp)
 
 
-class Scanner(InstrumentBase):
-    """Represents a scanner option for the ls340 temperature controller.
-
-    :ivar channels: A tuple with all channel names.
-
-    """
-    def __init__(self, connection, channels):
-        super(Scanner, self).__init__(connection)
-        self.channels = tuple(channels)
-        for channel in channels:
-            setattr(self, channel.lower(), Input(connection, channel))
-
-
-def _get_scanner(connection, model):
-    """A factory function used to create the different scanner instances.
-
-    :param connection: A connection object.
-    :param model: A string representing the different scanner models supported
-        by the ls340 temperature controller. Valid entries are:
-
-        * `"3462"`, The dual standard input option card.
-        * `"3464"`, The dual thermocouple input option card.
-        * `"3465"`, The single capacitance input option card.
-        * `"3468"`, The eight channel input option card.
-
-    The different scanner options support a different number of input channels.
-
-    """
-    channels = {
-        '3462': ('C', 'D'),
-        '3464': ('C', 'D'),
-        '3465': ('C'),
-        '3468': ('C1', 'C2', 'C3', 'C4', 'D1', 'D2', 'D3', 'D4')
-    }
-    return Scanner(connection, channels[model])
-
-
 class LS340(IEC60488):
     """
     Represents a Lakeshore model LS340 temperature controller.
@@ -633,13 +614,13 @@ class LS340(IEC60488):
         communicate with the real instrument.
     :param scanner: A string representing the scanner in use. Valid entries are
 
+        * `None`, No scanner is used.
         * `"3462"`, The dual standard input option card.
         * `"3464"`, The dual thermocouple input option card.
         * `"3465"`, The single capacitance input option card.
         * `"3468"`, The eight channel input option card.
 
-    :ivar a: Input channel a.
-    :ivar b: Input channel b.
+    :ivar input: An instance of :class:`~.Input`.
     :ivar beeper: A boolean value representing the beeper mode. `True` means
         enabled, `False` means disabled.
     :ivar beeping: A Integer value representing the current beeper status.
@@ -776,9 +757,7 @@ class LS340(IEC60488):
 
     def __init__(self, connection, scanner=None):
         super(LS340, self).__init__(connection)
-        self.scanner = _get_scanner(connection, scanner) if scanner else None
-        self.a = Input(connection, 'A')
-        self.b = Input(connection, 'B')
+        self.scanner = scanner
         self.output1 = Output(connection, 1)
         self.output2 = Output(connection, 2)
         # Control Commands
@@ -941,3 +920,29 @@ class LS340(IEC60488):
             self.connection.write('DFLT 99')
         else:
             raise ValueError('Reset to factory defaults was not confirmed.')
+
+    @property
+    def scanner(self):
+        """A string representing the different scanner models supported
+        by the ls340 temperature controller. Valid entries are:
+
+        * `"3462"`, The dual standard input option card.
+        * `"3464"`, The dual thermocouple input option card.
+        * `"3465"`, The single capacitance input option card.
+        * `"3468"`, The eight channel input option card.
+
+        The different scanner options support a different number of input channels.
+        """
+        return self._scanner
+
+    @scanner.setter
+    def scanner(self, value):
+        channels = {
+            None:   ('A', 'B'),
+            '3462': ('A', 'B', 'C', 'D'),
+            '3464': ('A', 'B', 'C', 'D'),
+            '3465': ('A', 'B', 'C'),
+            '3468': ('A', 'B', 'C1', 'C2', 'C3', 'C4', 'D1', 'D2', 'D3', 'D4')
+        }
+        self.input = Input(channels[value], self.connection, self._cfg)
+        self._scanner = value
