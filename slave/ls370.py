@@ -4,6 +4,7 @@
 """
 
 """
+import collections
 
 from slave.core import Command, InstrumentBase, CommandSequence
 from slave.iec60488 import IEC60488
@@ -181,7 +182,46 @@ class Heater(InstrumentBase):
         )
 
 
-class Input(InstrumentBase):
+class Input(InstrumentBase, collections.Sequence):
+    """The LS370 Input.
+
+    It is a sequence like interface to each class:`~.InputChannel`.
+
+    E.g. to access the kelvin reading of channel 5, Assuming an instance of :class:`~.LS370` named
+    `ls370`, one would simply write.::
+
+        >>> ls370.input[5].kelvin
+
+    To scan the second channel, and activate the autoscan one would write::
+
+        >>> ls370.input.scan = 2, True
+
+    .. note::
+
+        In contrast to the LS37 internal commands the channel indexing is zero
+        based.
+
+    """
+    def __init__(self, channels, connection, cfg):
+        super(Input, self).__init__(connection, cfg)
+        # The ls370 channels start at 1
+        self._channels = tuple(
+            InputChannel(idx, connection, cfg) for idx in xrange(1, channels + 1)
+        )
+        self.scan = Command(
+            'SCAN?',
+            'SCAN',
+            (Integer(min=0, max=len(self)), Boolean)
+        )
+
+    def __len__(self):
+        return len(self._channels)
+
+    def __getitem__(self, channel):
+        return self._channels[channel]
+
+
+class InputChannel(InstrumentBase):
     """A LS370 input channel.
 
     :param connection: A connection object.
@@ -206,7 +246,6 @@ class Input(InstrumentBase):
         * *<high state>* is either `True`or `False`.
         * *<low state>* is either `True`or `False`.
 
-    :ivar autoscan: Enables/disables autoscanning of this channel.
     :ivar config: The input channel configuration.
         *(<enabled>, <dwell>, <pause>, <curve>, <coefficient>)*, where
 
@@ -271,8 +310,8 @@ class Input(InstrumentBase):
           excitation or 1-12 for voltage excitation.
 
     """
-    def __init__(self, connection, idx):
-        super(Input, self).__init__(connection)
+    def __init__(self, idx, connection, cfg):
+        super(InputChannel, self).__init__(connection, cfg)
         self.index = idx = int(idx)
         self.alarm = Command(
             'ALARM ? {0}'.format(idx),
@@ -472,6 +511,7 @@ class LS370(IEC60488):
         * *<address>* The IEEE-488.1 address of the device, an integer between
           0 and 30.
 
+    :ivar input: An instance of :class:`~.Input`.
     :ivar input_change: Defines if range and excitation keys affects all or
         only one channel. Valid entries are 'all', 'one'.
     :ivar mode: Represents the interface mode. Valid entries are
@@ -632,8 +672,8 @@ class LS370(IEC60488):
     def scanner(self):
         """The scanner option in use.
 
-        Changing the scanner option changes number of channels available. Valid
-        values are
+        Changing the scanner option changes number of input channels available.
+        Valid values are
 
         =======  ========
         scanner  channels
@@ -649,13 +689,11 @@ class LS370(IEC60488):
 
     @scanner.setter
     def scanner(self, value):
-        scanner_channels = {
+        channels = {
             None: 1,
             '3716': 16,
             '3716L': 16,
             '3708': 8,
         }
-        self.channels = tuple(
-            Input(self.connection, i) for i in xrange(scanner_channels[value])
-        )
+        self.input = Input(channels=channels[value], connection=self.connection, cfg=self._cfg)
         self._scanner = value

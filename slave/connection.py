@@ -108,6 +108,20 @@ class Connection(object):
         raise NotImplementedError()
 
 
+class SimulatedConnection(object):
+    """A dummy connection.
+
+    The SimmulatedConnection is used as a dummy connection, telling a
+    :class:`Command` to use it's simulation mode.
+
+    """
+    def ask(self, value):
+        return ''
+
+    def write(self, value):
+        pass
+
+
 class GpibDevice(Connection):
     """Wrapps a linux-gpib device.
 

@@ -29,11 +29,9 @@ import logging
 try:
     from logging import NullHandler
 except ImportError:
-    # Fall-back code for python < 2.7
-    class NullHandler(logging.Handler):
-        def emit(self, record):
-            pass
+    from slave.misc import NullHandler
 
+from slave.connection import SimulatedConnection
 import slave.misc
 
 
@@ -44,15 +42,6 @@ _Message = collections.namedtuple(
     '_Message',
     ['header', 'data_type', 'response_type']
 )
-
-
-class SimulatedConnection(object):
-    """A dummy connection, doing nothing."""
-    def ask(self, value):
-        return ''
-
-    def write(self, value):
-        pass
 
 
 def _to_instance(x):
@@ -184,7 +173,7 @@ class Command(object):
         phs = self.cfg['program header separator']
         pds = self.cfg['program data separator']
         program_data = [t.dump(v) for v, t in it.izip(datas, message.data_type)]
-        return php + message.header + phs + pds.join(program_data)
+        return ''.join((php, message.header, phs, pds.join(program_data)))
 
     def write(self, *datas):
         """Generates and sends a command message unit.

@@ -44,10 +44,10 @@ Simulating a connection
 -----------------------
 
 Slave has a rudimentary simulation mode. Just use the
-:class:`~slave.core.Simulating` instead of an actual connection.
+:class:`~slave.connection.SimulatedConnection` instead of an actual connection.
 An example is shown below::
 
-    from slave.core import SimulatedConnection
+    from slave.connection import SimulatedConnection
     from slave.sr830 import SR380
 
     lockin = SR830(SimulatedConnection())
