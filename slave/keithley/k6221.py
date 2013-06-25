@@ -94,7 +94,7 @@ class K6221(IEC60488, Trigger, ObjectIdentification):
         self.trace = Trace(self.connection, self._cfg)
         # The trigger command layer
         self.triggering = Trigger(self.connection, self._cfg)
-        self.units = Units(self.connectionn, self._cfg)
+        self.units = Units(self.connection, self._cfg)
 
 
     # TODO list method in trigger rubric
@@ -729,7 +729,7 @@ class SourceWaveArbitrary(InstrumentBase):
         # TODO
 
 
-class SourceWaveEtrigger(InstrumentBase):
+class SourceWaveETrigger(InstrumentBase):
     """The external trigger command subgroup of the SourceWave node.
 
     .. note:: These commands were introduced with firmware revision **A03**.
