@@ -1,6 +1,54 @@
 Slave:
 ======
 
+Slave is a micro framework designed to simplify instrument communication and 
+control and comes with a variety of ready to use device drivers.
+
+Overview
+--------
+
+Slave provides an intuitive way of creating instrument api's, inspired by
+object relational mappers.
+
+::
+
+    from slave.iec60488 import IEC60488, PowerOn
+    from slave.core import Command
+    from slave.types import Integer, Enum
+
+    class Device(IEC60488, PowerOn):
+        """An iec60488 conforming device api with additional commands."""
+        def __init__(self, connection):
+            super(Device, self).__init__(connection)
+            # A custom command
+            self.my_command = Command(
+                'QRY?', # query message header
+                'WRT',  # command message header
+                # response and command data type
+                [Integer, Enum('first', 'second')]
+            )
+
+Commands mimic instance attributes. Read access queries the device, parses and
+converts the response and finally returns it. Write access parses and converts
+the arguments and sends them to the device. This leads to very intuitive
+interfaces.
+
+Several device drivers are already implemented, and many more are under
+development. A short usage example is given below::
+
+    import time
+    import visa
+    from slave.sr830 import SR830
+
+    lockin = SR830(visa.instrument('GPIB::08'))
+    # configure the lockin amplifier
+    lockin.reserve = 'high'
+    lockin.time_constant = 3
+    # take 60 measurements and print the result
+    for i in range(60):
+        print lockin.x
+        time.sleep(1)
+
 The main goal of slave is to make it easier to communicate with scientific
 instruments. Slave tries to ease the implementation of new instruments and
 comes with a variety of ready-to-use implementations.
@@ -22,6 +70,9 @@ might look like::
     for i in range(60):
         print lockin.x
         time.sleep(1) # delay for 1s.
+
+.. _GPIB: http://de.wikipedia.org/wiki/IEC-625-Bus
+.. _pyvisa: http://pyvisa.sourceforge.net/
 
 Requirements
 ------------
@@ -60,5 +111,3 @@ You should have received a copy of the `GNU General Public License`_ along
 with Slave; see the file COPYING.
 
 .. _GNU General Public License: http://www.gnu.org/licenses/gpl.html
-.. _GPIB: http://de.wikipedia.org/wiki/IEC-625-Bus
-.. _pyvisa: http://pyvisa.sourceforge.net/
