@@ -37,7 +37,7 @@ setup(
     url='https://github.com/p3trus/slave',
     description=desc,
     long_description=open('README.rst').read(),
-    packages=['slave', 'slave.test'],
+    packages=['slave', 'slave.test', 'slave.keithley'],
     # make sure to add custom_fixers to the MANIFEST.in 
     include_package_data=True,
     **extra

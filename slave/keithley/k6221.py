@@ -8,7 +8,8 @@
 from slave.core import Command, InstrumentBase
 from slave.iec60488 import (IEC60488, Trigger, ObjectIdentification,
     StoredSetting)
-from slave.types import Boolean, Enum, Float, Integer, Mapping, String
+from slave.types import (Boolean, Enum, Float, Integer, Mapping, String,
+    Register)
 
 
 class K6221(IEC60488, Trigger, ObjectIdentification):
@@ -53,7 +54,7 @@ class K6221(IEC60488, Trigger, ObjectIdentification):
 
     .. rubric: The status command layer
 
-    :ivar status: The status command subgroup, an instance of
+    :ivar status_cmds: The status command subgroup, an instance of
         :class:`~.Status`.
 
     .. rubric: The system command layer
@@ -89,7 +90,7 @@ class K6221(IEC60488, Trigger, ObjectIdentification):
         self.output = Output(self.connection, self._cfg)
         self.sense = Sense(self.connection, self._cfg)
         self.source = Source(self.connection, self._cfg)
-        self.status = Status(self.connection, self._cfg)
+        self.status_cmds = Status(self.connection, self._cfg)
         self.system = System(self.connection, self._cfg)
         self.trace = Trace(self.connection, self._cfg)
         # The trigger command layer
@@ -264,7 +265,7 @@ class DisplayWindow(InstrumentBase):
     def __init__(self, id, connection, cfg):
         super(DisplayWindow, self).__init__(connection, cfg)
         self.id = int(id)
-        self.text = DisplayWindowText(self.id, self.connection, self.cfg)
+        self.text = DisplayWindowText(self.id, self.connection, self._cfg)
         self.blinking = Command(':DISP:ATTR?', ':DISP:ATTR', Boolean)
 
 
