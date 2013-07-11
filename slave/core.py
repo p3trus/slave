@@ -185,9 +185,9 @@ class Command(object):
             raise AttributeError('Command is not writeable')
         if isinstance(self.connection, SimulatedConnection):
             # If queriable and types match buffer datas, else do nothing.
-            resp_t = self._query.response_type
+            dtype = self._write.data_type
             sep = self.cfg['response data separator']
-            if self._query and resp_t == self._write.data_type:
+            if self._query and self._query.response_type == dtype:
                 self._simulated_resp = _make_response(datas, resp_t, sep)
         else:
             cmu = self._program_message_unit(self._write, *datas)
