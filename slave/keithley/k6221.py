@@ -94,6 +94,7 @@ class K6221(IEC60488, Trigger, ObjectIdentification):
         self.system = System(self.connection, self._cfg)
         self.trace = Trace(self.connection, self._cfg)
         # The trigger command layer
+        self.arm = Arm(self.connection, self._cfg)
         self.triggering = Trigger(self.connection, self._cfg)
         self.units = Units(self.connection, self._cfg)
 
