@@ -502,49 +502,49 @@ class SourceCurrent(InstrumentBase):
             Float(min=-105e-3, max=105e3)
         )
         self.range = Command(
-            ':SOUR:RANG?',
-            ':SOUR:RANG',
+            ':SOUR:CURR:RANG?',
+            ':SOUR:CURR:RANG',
             # TODO max should be included in range
             Float(min=-105e-3, max=105e3)
         )
         self.auto_range = Command(
-            ':SOUR:RANG:AUTO?',
-            ':SOUR:RANG:AUTO',
+            ':SOUR:CURR:RANG:AUTO?',
+            ':SOUR:CURR:RANG:AUTO',
             Boolean
         )
         self.compliance = Command(
-            ':SOUR:COMPL?',
-            ':SOUR:COMPL',
+            ':SOUR:CURR:COMPL?',
+            ':SOUR:CURR:COMPL',
             # TODO max should be included in range
             Float(min=0.1, max=105)
         )
         self.start = Command(
-            ':SOUR:STAR?',
-            ':SOUR:STAR',
+            ':SOUR:CURR:STAR?',
+            ':SOUR:CURR:STAR',
             # TODO max should be included in range
             Float(min=-105e-3, max=105e-3)
         )
         self.step = Command(
-            ':SOUR:STEP?',
-            ':SOUR:STEP',
+            ':SOUR:CURR:STEP?',
+            ':SOUR:CURR:STEP',
             # TODO max should be included in range
             Float(min=1e-13, max=105e-3)
         )
         self.stop = Command(
-            ':SOUR:STOP?',
-            ':SOUR:STOP',
+            ':SOUR:CURR:STOP?',
+            ':SOUR:CURR:STOP',
             # TODO max should be included in range
             Float(min=-105e-3, max=105e-3)
         )
         self.center = Command(
-            ':SOUR:CENT?',
-            ':SOUR:CENT',
+            ':SOUR:CURR:CENT?',
+            ':SOUR:CURR:CENT',
             # TODO max should be included in range
             Float(min=-105e-3, max=105e-3)
         )
         self.span = Command(
-            ':SOUR:SPAN?',
-            ':SOUR:SPAN',
+            ':SOUR:CURR:SPAN?',
+            ':SOUR:CURR:SPAN',
             # TODO max should be included in range
             Float(min=2e-13, max=210e-3)
         )
@@ -558,6 +558,15 @@ class SourceSweep(InstrumentBase):
     """
     def __init__(self, connection, cfg):
         super(SourceSweep, self).__init__(connection, cfg)
+        # TODO
+
+    def arm(self):
+        """Arms the sweep."""
+        self._write(':SOUR:SWE:ARM')
+
+    def abort(self):
+        """Aborts the sweep mode."""
+        self._write(':SOUR:SWE:ABOR')
 
 
 class SourceList(InstrumentBase):
