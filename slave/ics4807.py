@@ -102,8 +102,8 @@ class ICS4807(IEC60488):
         # temperature
         # TODO Use tuple instead of four instance vars.
         for i in range(1, 5):
-            cmd = Command(('MEAS:TEMP? {0}'.format(i)))
-			# TODO use command sequence.
+            cmd = Command(('MEAS:TEMP? {0}'.format(i), Float))
+            # TODO use command sequence.
             setattr(self, 'temperature{0}'.format(i), cmd)
 
     def abort(self):
