@@ -198,7 +198,7 @@ class Input(InstrumentBase, collections.Sequence):
 
     .. note::
 
-        In contrast to the LS37 internal commands the channel indexing is zero
+        In contrast to the LS370 internal commands the channel indexing is zero
         based.
 
     """
