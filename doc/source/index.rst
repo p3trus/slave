@@ -75,7 +75,17 @@ User Guide
    logging
    builtin_drivers
    custom_device_drivers
+   async
    examples
+
+What's New in slave
+===================
+
+slave 0.4
+---------
+
+ - A compatibility layer for the asyncronous communication framework `tornado`
+   was implemented. See :ref:`async_io` for more details.
 
 .. _api_reference:
 
