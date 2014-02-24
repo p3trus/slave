@@ -1,17 +1,17 @@
 .. _async_io:
 
-Asyncronous IO
-==============
+Asynchronous IO
+===============
 
-Slave has a builtin compatibility layer for the tornado framework. It is
+Slave has a built-in compatibility layer for the tornado framework. It is
 currently in an early state and only socket connections are supported.
-Nevertheless, it is already useable. The following examples will show how to
+Nevertheless, it is already usable. The following examples will show how to
 make use of it.
 
-A simple asyncronous poller
+A simple asynchronous poller
 ---------------------------
 
-In this example we will implement a simple, basically useless, asyncronous
+In this example we will implement a simple, basically useless, asynchronous
 poller to explain the concept. It simply prints out the polled value. We will
 extend this example to implement a monitor with a web interface.
 
@@ -21,11 +21,11 @@ extend this example to implement a monitor with a web interface.
     from tornado.gen import coroutine
 
     import slave.async
-    # Monkey patch slave to use the asyncronous implementation
+    # Monkey patch slave to use the asynchronous implementation
     slave.async.patch()
 
     # Due to the call to `patch()`, the driver and the connection automatically
-    # use the asyncronous implementation.
+    # use the asynchronous implementation.
     from slave.sr7230 import SR7230
     from slave.connection import TCPIPDevice
 

@@ -3,7 +3,8 @@
 # Slave, (c) 2012, see AUTHORS.  Licensed under the GNU GPL.
 
 """
-The sr830 module implements an interface for the Stanford Research SR830.
+The sr830 module implements an interface for the Stanford Research Systems
+SR830.
 
 The SR830 lock in amplifier is an IEEE Std. 488-2 1987 compliant device.
 

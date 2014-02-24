@@ -1,3 +1,5 @@
+.. _quickstart:
+
 Quickstart
 ==========
 
@@ -23,7 +25,7 @@ inject the `pyvisa`_ connection.
 
 ::
 
-    from slave.sr830 import SR830
+    from slave.srs import SR830
 
     lockin = SR830(connection)
 
@@ -50,20 +52,6 @@ print the result.
 Putting it all together, we get a small 13 line script, capable of performing a
 complete measurement.
 
-::
-
-    #!/usr/bin/env python
-    import time
-
-    import visa
-    from slave.sr830 import SR830
-
-    lockin = SR830(visa.instrument('GPIB::08'))
-    lockin.frequency = 22.08
-    lockin.amplitude = 5.0
-    lockin.reserve = 'high'
-    for i in xrange(60):
-        print lockin.x
-        time.sleep(1)
+.. literalinclude:: ../../examples/quickstart.py
 
 .. _pyvisa: http://pyvisa.sourceforge.net/

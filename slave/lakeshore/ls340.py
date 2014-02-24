@@ -11,7 +11,7 @@ temperature controller. Using it is simple::
 
     # We use pyvisa to connect to the controller.
     import visa
-    from slave.ls340 import LS340
+    from slave.lakeshore import LS340
 
     # We assume the LS340 is listening on GPIB channel.
     ls340 = LS340(visa.instrument('GPIB::08'))
@@ -26,7 +26,7 @@ supported as well. They extend the available input channels. To use them one
 simply passes the model name at construction, e.g.::
 
     import visa
-    from slave.ls340 import LS340
+    from slave.lakeshore import LS340
 
     # We assume the LS340 is equipped with the 3468 eight channel input option
     # card.
