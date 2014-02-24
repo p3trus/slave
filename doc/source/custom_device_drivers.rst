@@ -4,11 +4,11 @@ Implementing Custom Device Drivers
 Implementing custom device drivers is straight forward. The following sections
 will guide you through several use cases. We will implement a driver for an
 imaginary device, extending it's interface step-by-step, showing more and more
-functionallity and tricks.
+functionality and tricks.
 
 .. note::
 
-   When developing new device drivers, it is usefull to enable logging. See
+   When developing new device drivers, it is useful to enable logging. See
    :ref:`logging` for more information.
 
 First Steps
@@ -46,7 +46,7 @@ following line::
     >>> type(device.__dict__['enabled'])
     <class 'slave.core.Command'>
 
-The assignement did not overwrite the Command attribute. Instead, the
+The assignment did not overwrite the Command attribute. Instead, the
 :class:`~slave.core.InstrumentBase` base class forwarded the `False` to the
 :meth:`~slave.core.Command.write` method of the :class:`~slave.core.Command`. The 
 :meth:`~slave.core.Command.write` method then created the command message
@@ -63,7 +63,7 @@ instrumentation. It is used by devices connected via the IEEE 488.1 bus,
 commonly known as GPIB. It is an adoption of the *IEEE std. 488.2-1992*
 standard.
 
-The `IEC 60488-2`_ requires the existance of several commands which are
+The `IEC 60488-2`_ requires the existence of several commands which are
 logically grouped.
 
 Reporting Commands
@@ -80,7 +80,7 @@ Internal operation commands
  * `*RST` -  Perform a device reset [#]_ .
  * `*TST?` - Perform internal self-test [#]_ .
 
-Synchronisation commands
+Synchronization commands
  * `*OPC` - Set operation complete flag high [#]_ .
  * `*OPC?` -  Query operation complete flag [#]_ .
  * `*WAI` - Wait to continue [#]_ .
@@ -158,7 +158,7 @@ System configuration commands
 Passing control command
  * `*PCB` - Pass control back [#]_ .
 
-The optional command groups are implemented as Mixin classes. A device
+The optional command groups are implemented as Mix-in classes. A device
 supporting required `IEC 60488-2`_ commands as well as the optional Power-on
 commands is implemented as follows::
 

@@ -33,9 +33,9 @@ These are
 =======================================  =======================================================  ===========
 Class                                    Description                                              Notes
 =======================================  =======================================================  ===========
-:class:`~slave.connection.GpibDevice`    A connection object wrapping the linux-gpib driver.      linux only
+:class:`~slave.connection.GpibDevice`    A connection object wrapping the Linux-gpib driver.      Linux only
 :class:`~slave.connection.TCPIPDevice`   A tiny wrapper around a socket connection.
-:class:`~slave.connection.UsbTmcDevice`  A connection object, wrapping a usbtmc file descriptor.  linux only
+:class:`~slave.connection.UsbTmcDevice`  A connection object, wrapping a usbtmc file descriptor.  Linux only
 =======================================  =======================================================  ===========
 
 .. _simulated_connection:
@@ -48,7 +48,7 @@ Slave has a rudimentary simulation mode. Just use the
 An example is shown below::
 
     from slave.connection import SimulatedConnection
-    from slave.sr830 import SR380
+    from slave.srs import SR380
 
     lockin = SR830(SimulatedConnection())
     print lockin.x  # prints a random float
@@ -56,7 +56,7 @@ An example is shown below::
 A simple algorithm is used to create the responses.
 
 For read-only commands, the response is randomly created with each query, since
-these typically represent measured values. For read and writeable commands, the
+these typically represent measured values. For read and writable commands, the
 response is created just once and cached afterwards. Repeated queries will
 return the same result unless a write was issued.
 

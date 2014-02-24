@@ -44,20 +44,9 @@ the arguments and sends them to the device. This leads to very intuitive
 interfaces.
 
 Several device drivers are already implemented, and many more are under
-development. A short usage example is given below::
+development. A short usage example is given below
 
-    import time
-    import visa
-    from slave.sr830 import SR830
-
-    lockin = SR830(visa.instrument('GPIB::08'))
-    # configure the lockin amplifier
-    lockin.reserve = 'high'
-    lockin.time_constant = 3
-    # take 60 measurements and print the result
-    for i in range(60):
-        print lockin.x
-        time.sleep(1)
+.. literalinclude:: ../../examples/quickstart.py
 
 For a complete list of built-in device drivers, see :ref:`builtin_drivers`.
 
@@ -80,6 +69,13 @@ User Guide
 
 What's New in slave
 ===================
+
+slave 0.5
+---------
+
+ - restructuring of the package layout. Device drivers are now in a sub-package,
+   named after the manufacturer. E.g. instead of `slave.ls340` it's now
+   `slave.lakeshore.ls340`.
 
 slave 0.4
 ---------
