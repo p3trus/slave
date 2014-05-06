@@ -144,10 +144,8 @@ class Curve(InstrumentBase):
         item = slave.misc.index(item, len(self))
         response_t = [Float, Float]
         data_t = [Integer(min=1), Integer(min=1, max=200)]
-        cmd = Command(('CRVPT?', response_t, data_t),
-                      transport=self.transport)
         # Since indices in LS304 start at 1, it must be added.
-        return cmd.query((self.idx, item + 1))
+        return self._query(('CRVPT?', response_t, data_t), self.idx, item + 1)
 
     def __setitem__(self, item, value):
         if not self._writeable:
@@ -160,10 +158,8 @@ class Curve(InstrumentBase):
             item = slave.misc.index(item, len(self))
             unit, temp = value
             data_t = [Integer(min=1), Integer(min=1, max=200), Float, Float]
-            cmd = Command(write=('CRVPT', data_t),
-                          transport=self.transport)
             # Since indices in LS304 start at 1, it must be added.
-            cmd.write((self.idx, item + 1, unit, temp))
+            self._write(('CRVPT', data_t), self.idx, item + 1, unit, temp)
 
     def delete(self):
         """Deletes the current curve.
