@@ -574,7 +574,7 @@ class LS370(IEC60488):
             'CSET?',
             'CSET',
             [Integer(min=0, max=16), Enum('unfiltered', 'filtered'),
-             Enum('kelvin', 'ohm'), Integer(min=0, max=255), 
+             Enum('kelvin', 'ohm', start=1), Integer(min=0, max=255),
              Enum('current', 'power', start=1), Enum(*Heater.RANGE),
              Float(min=1., max=100000.)]
         )
