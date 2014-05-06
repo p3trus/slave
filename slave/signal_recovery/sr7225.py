@@ -424,10 +424,10 @@ class SR7225(InstrumentBase):
 
         # Signal Channel Output Amplifiers
         # ================================
-        self.x_offset = Command('XOF', 'XOF', Boolean,
-                                Integer(min=-30000, max=30000))
-        self.y_offset = Command('YOF', 'YOF', Boolean,
-                                Integer(min=-30000, max=30000))
+        self.x_offset = Command('XOF', 'XOF', [Boolean,
+                                Integer(min=-30000, max=30000)])
+        self.y_offset = Command('YOF', 'YOF', [Boolean,
+                                Integer(min=-30000, max=30000)])
         self.expand = Command('EX', 'EX',
                               Enum('off', 'x', 'y', 'both'))
         self.channel1_output = Command('CH 1', 'CH 1 ',
