@@ -24,7 +24,7 @@ class Float(slave.types.Float):
 class SR7225(InstrumentBase):
     """Represents a Signal Recovery SR7225 lock-in amplifier.
 
-    :param connection: A connection object.
+    :param transport: A transport object.
 
     .. rubric:: Signal Channel
 
@@ -288,7 +288,7 @@ class SR7225(InstrumentBase):
     :ivar identification: The identification, it responds with `'7225'`.
     :ivar revision: The firmware revision. A multiline string.
 
-        .. warning:: Not every connection can handle multiline responses.
+        .. warning:: Not every transport can handle multiline responses.
 
     :ivar version: The firmware version.
 
@@ -356,11 +356,11 @@ class SR7225(InstrumentBase):
         4: 'promt',
     }
 
-    def __init__(self, connection):
+    def __init__(self, transport):
         cfg = {
              'program data separator': ',',
         }
-        super(SR7225, self).__init__(connection, cfg=cfg)
+        super(SR7225, self).__init__(transport, cfg=cfg)
         # Signal channel
         # ==============
         self.current_mode = Command('IMODE', 'IMODE',
@@ -541,23 +541,23 @@ class SR7225(InstrumentBase):
         sensitivity so that the signal magnitude lies in between 30% and 90%
         of the full scale sensitivity.
         """
-        self.connection.write('AS')
+        self.transport.write('AS')
 
     def auto_measure(self):
         """Triggers the auto measure mode."""
-        self.connection.write('ASM')
+        self.transport.write('ASM')
 
     def auto_phase(self):
         """Triggers the auto phase mode."""
-        self.connection.write('AQN')
+        self.transport.write('AQN')
 
     def auto_offset(self):
         """Triggers the auto offset mode."""
-        self.connection.write('AXO')
+        self.transport.write('AXO')
 
     def halt(self):
         """Halts the data acquisition."""
-        self.connection.write('HC')
+        self.transport.write('HC')
 
     def init_curves(self):
         """Initializes the curve storage memory and its status variables.
@@ -565,13 +565,13 @@ class SR7225(InstrumentBase):
         .. warning:: All records of previously taken curves is removed.
 
         """
-        self.connection.write('NC')
+        self.transport.write('NC')
 
     def lock(self):
         """Updates all frequency-dependent gain and phase correction
         parameters.
         """
-        self.connection.write('LOCK')
+        self.transport.write('LOCK')
 
     def reset(self, complete=False):
         """Resets the lock-in to factory defaults.
@@ -581,7 +581,7 @@ class SR7225(InstrumentBase):
            exception of communication and LCD contrast settings.
 
         """
-        self.connection.write('ADF {0:d}'.format(complete))
+        self.transport.write('ADF {0:d}'.format(complete))
 
     @property
     def sensitivity(self):
@@ -617,11 +617,11 @@ class SR7225(InstrumentBase):
             self.amplitude_stop = stop
         if step:
             self.amplitude_step = step
-        self.connection.write('SWEEP 2')
+        self.transport.write('SWEEP 2')
 
     def start_afsweep(self):
         """Starts a frequency and amplitude sweep."""
-        self.connection.write('SWEEP 3')
+        self.transport.write('SWEEP 3')
 
     def start_fsweep(self, start=None, stop=None, step=None):
         """Starts a frequency sweep.
@@ -637,11 +637,11 @@ class SR7225(InstrumentBase):
             self.frequency_stop = stop
         if step:
             self.frequency_step = step
-        self.connection.write('SWEEP 1')
+        self.transport.write('SWEEP 1')
 
     def stop(self):
         """Stops/Pauses the current sweep."""
-        self.connection.write('SWEEP 0')
+        self.transport.write('SWEEP 0')
 
     def take_data(self, continuously=False):
         """Starts data acquisition.
@@ -653,9 +653,9 @@ class SR7225(InstrumentBase):
 
         """
         if continuously:
-            self.connection.write('TDC')
+            self.transport.write('TDC')
         else:
-            self.connection.write('TD')
+            self.transport.write('TD')
 
     def take_data_triggered(self, mode):
         """Starts triggered data acquisition.
@@ -666,8 +666,8 @@ class SR7225(InstrumentBase):
 
         """
         if mode == 'curve':
-            self.connection.write('TDT 0')
+            self.transport.write('TDT 0')
         elif mode == 'point':
-            self.connection.write('TDT 1')
+            self.transport.write('TDT 1')
         else:
             raise ValueError('mode must be either "curve" or "point"')

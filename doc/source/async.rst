@@ -4,7 +4,7 @@ Asynchronous IO
 ===============
 
 Slave has a built-in compatibility layer for the tornado framework. It is
-currently in an early state and only socket connections are supported.
+currently in an early state and only socket transports are supported.
 Nevertheless, it is already usable. The following examples will show how to
 make use of it.
 
@@ -24,10 +24,10 @@ extend this example to implement a monitor with a web interface.
     # Monkey patch slave to use the asynchronous implementation
     slave.async.patch()
 
-    # Due to the call to `patch()`, the driver and the connection automatically
+    # Due to the call to `patch()`, the driver and the transport automatically
     # use the asynchronous implementation.
     from slave.sr7230 import SR7230
-    from slave.connection import TCPIPDevice
+    from slave.transport import TCPIPDevice
 
     lockin1 = SR7230(TCPIPDevice('192.168.178.11:80000'))
 

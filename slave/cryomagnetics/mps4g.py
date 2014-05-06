@@ -27,14 +27,14 @@ class UnitFloat(Float):
 class Range(InstrumentBase):
     """Represents a MPS4G current range.
 
-    :param connection: A connection object.
+    :param transport: A transport object.
     :param idx: The current range index. Valid values are 0, 1, 2, 3, 4.
     :ivar limit: The upper limit of the current range.
     :ivar rate: The sweep rate of this current range.
 
     """
-    def __init__(self, connection, cfg, idx):
-        super(Range, self).__init__(connection, cfg)
+    def __init__(self, transport, cfg, idx):
+        super(Range, self).__init__(transport, cfg)
         self.idx = idx = int(idx)
         if not idx in range(0, 5):
             raise ValueError('Invalid range index.'
@@ -50,7 +50,7 @@ class Range(InstrumentBase):
 class Shim(InstrumentBase):
     """Represents a Shim option of the 4GMPS.
 
-    :param connection: A connection object.
+    :param transport: A transport object.
     :param shim: The identifier of the shim.
 
     :ivar limit: The current limit of the shim.
@@ -61,8 +61,8 @@ class Shim(InstrumentBase):
         must be supplied in the configured units (ampere, kilo gauss).
 
     """
-    def __init__(self, connection, cfg, shim):
-        super(Shim, self).__init__(connection, cfg)
+    def __init__(self, transport, cfg, shim):
+        super(Shim, self).__init__(transport, cfg)
         if not shim in SHIMS:
             raise ValueError('Invalid shim identifier, '
                              'must be one of {0}'.format(SHIMS))
@@ -88,7 +88,7 @@ class Shim(InstrumentBase):
 class MPS4G(IEC60488):
     """Represents the Cryomagnetics, inc. 4G Magnet Power Supply.
 
-    :param connection: A connection object.
+    :param transport: A transport object.
     :param channel: This parameter is used to set the MPS4G in single channel
         mode. Valid entries are `None`, `1` and `2`.
 
@@ -139,7 +139,7 @@ class MPS4G(IEC60488):
         *5* on the front panel at startup.
 
     """
-    def __init__(self, connection, shims=None, channel=None):
+    def __init__(self, transport, shims=None, channel=None):
         stb = {
             0: 'sweep mode active',
             1: 'standby mode active',
@@ -155,12 +155,12 @@ class MPS4G(IEC60488):
             cfg = {'program header prefix': 'CHAN {0};'.format(channel)}
         else:
             cfg = {}
-        super(MPS4G, self).__init__(connection, stb=stb, cfg=cfg)
+        super(MPS4G, self).__init__(transport, stb=stb, cfg=cfg)
         if shims:
             if isinstance(shims, basestring):
                 shims = [shims]
             for shim in list(shims):
-                setattr(self, str(shim), Shim(connection, self._cfg, shim))
+                setattr(self, str(shim), Shim(transport, self._cfg, shim))
 
         if channel:
             # Channel is read only if channel is fixed
@@ -178,7 +178,7 @@ class MPS4G(IEC60488):
         self.switch_heater = Command('PSHTR?', 'PSHTR',
                                      Mapping({True: 'ON', False: 'OFF'}))
         for idx in range(0, 5):
-            rng = Range(connection, self._cfg, idx)
+            rng = Range(transport, self._cfg, idx)
             setattr(self, 'range{0}'.format(idx), rng)
         # Custom format string to fix bug in firmware. The `;` must be appended
         self.upper_limit = Command('ULIM?', 'ULIM', UnitFloat(fmt='{0:.4f};'))

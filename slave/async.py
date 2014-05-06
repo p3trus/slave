@@ -11,7 +11,7 @@ from tornado.iostream import IOStream
 from tornado.gen import coroutine, Return, Task
 
 from slave.core import Command
-from slave.connection import SimulatedConnection
+from slave.transport import SimulatedTransport
 
 try:
     from logging import NullHandler
@@ -24,9 +24,9 @@ _logger.addHandler(NullHandler())
 
 
 class TCPIPDevice(object):
-    """An asyncronous TCP/IP connection.
+    """An asyncronous TCP/IP transport.
 
-   It provides a similar API like :class:`slave.connection.TCPIPDevice`, but
+   It provides a similar API like :class:`slave.transport.TCPIPDevice`, but
    uses tornados asyncronous features.
 
     """
@@ -60,7 +60,7 @@ class TCPIPDevice(object):
         self.close()
 
     def close(self):
-        """Closes the socket connection.
+        """Closes the socket transport.
 
         .. note::
 
@@ -81,13 +81,13 @@ class AsyncCommand(Command):
         """
         if not self._query:
             raise AttributeError('Command is not queryable')
-        if isinstance(self.connection, SimulatedConnection):
+        if isinstance(self.transport, SimulatedTransport):
             response = self._simulate()
         else:
             qmu = self._program_message_unit(self._query, *datas)
             _logger.info('query message unit: "{0}"'.format(qmu))
             print 'ASKING'
-            response = yield self.connection.ask(qmu)
+            response = yield self.transport.ask(qmu)
             print 'handling response', response
         _logger.info('response:"{0}"'.format(response))
         header, parsed_data = self._parse_response(response)
@@ -108,7 +108,7 @@ class AsyncCommand(Command):
         """
         if not self._write:
             raise AttributeError('Command is not writeable')
-        if isinstance(self.connection, SimulatedConnection):
+        if isinstance(self.transport, SimulatedTransport):
             # If queriable and types match buffer datas, else do nothing.
             resp_t = self._query.response_type
             sep = self.cfg['response data separator']
@@ -117,15 +117,15 @@ class AsyncCommand(Command):
         else:
             cmu = self._program_message_unit(self._write, *datas)
             _logger.info('command message unit: "{0}"'.format(cmu))
-            yield self.connection.write(cmu)
+            yield self.transport.write(cmu)
 
 
 def patch():
-    """Monkey patches `slave.core.Command` and `slave.connection.TCPIPDevice` to
+    """Monkey patches `slave.core.Command` and `slave.transport.TCPIPDevice` to
     use the async versions.
     """
     import slave.core
     slave.core.Command = AsyncCommand
-    import slave.connection
-    slave.connection.TCPIPDevice = TCPIPDevice
+    import slave.transport
+    slave.transport.TCPIPDevice = TCPIPDevice
 
