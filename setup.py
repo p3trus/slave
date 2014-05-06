@@ -9,13 +9,6 @@ from setuptools import setup
 
 desc = ('A lightweight python package to simplify the communication with '
         'several scientific instruments.')
-# if we are running on python 3, enable 2to3.
-extra = {}
-if sys.version_info >= (3, 0):
-    extra.update(
-        use_2to3=True,
-    )
-
 
 setup(
     name='slave',
@@ -40,5 +33,4 @@ setup(
     packages=['slave', 'slave.test'],
     # make sure to add custom_fixers to the MANIFEST.in 
     include_package_data=True,
-    **extra
 )
