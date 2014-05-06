@@ -88,9 +88,3 @@ def index(index, length):
     if 0 <= index < length:
         return index
     raise IndexError()
-
-
-class NullHandler(logging.Handler):
-    """A fallback code for python < 2.7"""
-    def emit(self, record):
-        pass

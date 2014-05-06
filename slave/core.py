@@ -26,17 +26,12 @@ import collections
 import itertools as it
 import logging
 
-try:
-    from logging import NullHandler
-except ImportError:
-    from slave.misc import NullHandler
-
 from slave.transport import SimulatedTransport
 import slave.misc
 
 
 _logger = logging.getLogger(__name__)
-_logger.addHandler(NullHandler())
+_logger.addHandler(logging.NullHandler())
 
 _Message = collections.namedtuple(
     '_Message',

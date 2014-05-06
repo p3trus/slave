@@ -13,14 +13,9 @@ from tornado.gen import coroutine, Return, Task
 from slave.core import Command
 from slave.transport import SimulatedTransport
 
-try:
-    from logging import NullHandler
-except ImportError:
-    from slave.misc import NullHandler
-
 
 _logger = logging.getLogger(__name__)
-_logger.addHandler(NullHandler())
+_logger.addHandler(logging.NullHandler())
 
 
 class TCPIPDevice(object):
