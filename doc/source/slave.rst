@@ -10,10 +10,10 @@ This part covers the complete api documentation of the slave library.
     :undoc-members:
     :show-inheritance:
 
-:mod:`connection` Module
+:mod:`transport` Module
 ------------------------
 
-.. automodule:: slave.connection
+.. automodule:: slave.transport
     :members:
     :undoc-members:
     :show-inheritance:

@@ -55,7 +55,7 @@ def _invert(dct):
 class Curve(InstrumentBase):
     """Represents a LS340 curve.
 
-    :param connection: A connection object.
+    :param transport: A transport object.
     :param idx: The curve index.
     :param writeable: Specifies if the represented curve is read-only or
         writeable as well. User curves are writeable in general.
@@ -117,8 +117,8 @@ class Curve(InstrumentBase):
         In contrast to the LS340 device, point indices start at 0 **not** 1.
 
     """
-    def __init__(self, connection, idx, writeable, length=None):
-        super(Curve, self).__init__(connection)
+    def __init__(self, transport, idx, writeable, length=None):
+        super(Curve, self).__init__(transport)
         self.idx = idx = int(idx)
         self.__length = length or 200
         # curves 1-20 are internal and not writeable.
@@ -145,7 +145,7 @@ class Curve(InstrumentBase):
         response_t = [Float, Float]
         data_t = [Integer(min=1), Integer(min=1, max=200)]
         cmd = Command(('CRVPT?', response_t, data_t),
-                      connection=self.connection)
+                      transport=self.transport)
         # Since indices in LS304 start at 1, it must be added.
         return cmd.query((self.idx, item + 1))
 
@@ -161,7 +161,7 @@ class Curve(InstrumentBase):
             unit, temp = value
             data_t = [Integer(min=1), Integer(min=1, max=200), Float, Float]
             cmd = Command(write=('CRVPT', data_t),
-                          connection=self.connection)
+                          transport=self.transport)
             # Since indices in LS304 start at 1, it must be added.
             cmd.write((self.idx, item + 1, unit, temp))
 
@@ -172,13 +172,13 @@ class Curve(InstrumentBase):
 
         """
         if self._writeable:
-            self.connection.write('CRVDEL {0}'.format(self.idx))
+            self.transport.write('CRVDEL {0}'.format(self.idx))
 
 
 class Heater(InstrumentBase):
     """Represents the LS340 heater.
 
-    :param connection: The connection object.
+    :param transport: The transport object.
 
     :ivar output: The heater output in percent.
     :ivar range: The heater range. An integer between 0 and 5, where 0
@@ -196,18 +196,18 @@ class Heater(InstrumentBase):
         'heater load less than 10 ohms',
     ]
 
-    def __init__(self, connection):
-        super(Heater, self).__init__(connection)
+    def __init__(self, transport):
+        super(Heater, self).__init__(transport)
         self.output = Command(('HTR?', Float))
         self.range = Command('RANGE?', 'RANGE', Integer(min=0, max=5))
         self.status = Command(('HTRST?', Enum(*self.ERROR_STATUS)))
 
 
 class Input(InstrumentBase, collections.Mapping):
-    def __init__(self, channels, connection, cfg):
-        super(Input, self).__init__(connection, cfg)
+    def __init__(self, channels, transport, cfg):
+        super(Input, self).__init__(transport, cfg)
         self._channels = dict(
-            (ch, InputChannel(ch, connection, cfg)) for ch in channels
+            (ch, InputChannel(ch, transport, cfg)) for ch in channels
         )
     def __getitem__(self, channel):
         return self._channels[channel]
@@ -223,7 +223,7 @@ class Input(InstrumentBase, collections.Mapping):
 class InputChannel(InstrumentBase):
     """Represents a LS340 input channel.
 
-    :param connection: A connection object.
+    :param transport: A transport object.
     :param name: A string value indicating the input in use.
 
     :ivar alarm: The alarm configuration, represented by the following tuple
@@ -294,8 +294,8 @@ class InputChannel(InstrumentBase):
                       7: 'units overrange',
     }
 
-    def __init__(self, name, connection, cfg):
-        super(InputChannel, self).__init__(connection, cfg)
+    def __init__(self, name, transport, cfg):
+        super(InputChannel, self).__init__(transport, cfg)
         self.name = name = str(name)
         # The reading status register, used in linear_status, reading_status
         # and minmax_status.
@@ -360,7 +360,7 @@ class InputChannel(InstrumentBase):
 class Output(InstrumentBase):
     """Represents a LS340 analog output.
 
-    :param connection: A connection object.
+    :param transport: A transport object.
     :param channel: The analog output channel. Valid are either 1 or 2.
 
     :ivar analog: The analog output parameters, represented by the tuple
@@ -381,8 +381,8 @@ class Output(InstrumentBase):
            mode.
 
     """
-    def __init__(self, connection, channel):
-        super(Output, self).__init__(connection)
+    def __init__(self, transport, channel):
+        super(Output, self).__init__(transport)
         if not channel in (1, 2):
             raise ValueError('Invalid Channel number. Valid are either 1 or 2')
         self.channel = channel
@@ -400,7 +400,7 @@ class Output(InstrumentBase):
 class Program(InstrumentBase):
     """Represents a LS340 program.
 
-    :param connection: A connection object.
+    :param transport: A transport object.
     :param idx: The program index.
 
     .. note::
@@ -409,8 +409,8 @@ class Program(InstrumentBase):
         written as strings according to the LS340 manual.
 
     """
-    def __init__(self, connection, idx):
-        super(Program, self).__init__(connection)
+    def __init__(self, transport, idx):
+        super(Program, self).__init__(transport)
         self.idx = idx = int(idx)
 
     def line(self, idx):
@@ -419,25 +419,25 @@ class Program(InstrumentBase):
         :param i: The i'th program line.
 
         """
-        return self.connection.ask('PGM? {0}, {1}'.format(self.idx, int(idx)))
+        return self.transport.ask('PGM? {0}, {1}'.format(self.idx, int(idx)))
 
     def append_line(self, new_line):
         """Appends the new_line to the LS340 program."""
-        self.connection.write('PGM {0},'.format(self.idx) + new_line)
+        self.transport.write('PGM {0},'.format(self.idx) + new_line)
 
     def run(self):
         """Runs this program."""
-        self.connection.write('PGMRUN {0}'.format(self.idx))
+        self.transport.write('PGMRUN {0}'.format(self.idx))
 
     def delete(self):
         """Deletes this program."""
-        self.connection.write('PGMDEL {0}'.format(self.idx))
+        self.transport.write('PGMDEL {0}'.format(self.idx))
 
 
 class Column(InstrumentBase):
     """Represents a column of records.
 
-    :param connection: A connection object
+    :param transport: A transport object
     :param idx: The column index.
 
     The LS340 stores data in table form. Each row is a record consisting of
@@ -457,21 +457,21 @@ class Column(InstrumentBase):
         Also slicing is not supported yet.
 
     """
-    def __init__(self, connection, idx):
-        super(Column, self).__init__(connection)
+    def __init__(self, transport, idx):
+        super(Column, self).__init__(transport)
         self.idx = idx = int(idx)
 
     @property
     def type(self):
-        return self.connection.ask('LOGPNT? {0}'.format(self.idx))
+        return self.transport.ask('LOGPNT? {0}'.format(self.idx))
 
     @type.setter
     def type(self, value):
-        self.connection.write('LOGPNT {0},'.format(self.idx) + value)
+        self.transport.write('LOGPNT {0},'.format(self.idx) + value)
 
     def __len__(self):
         """Returns the number of records stored."""
-        return int(self.connection.ask('LOGCNT?'))
+        return int(self.transport.ask('LOGCNT?'))
 
     def __getitem__(self, item):
         """Returns the stored record at the specified index as string.
@@ -479,13 +479,13 @@ class Column(InstrumentBase):
         :param item: A positive integer, describing the record index.
 
         """
-        return self.connection.ask('LOGVIEW? {0}, {1}'.format(int(item), self.idx))
+        return self.transport.ask('LOGVIEW? {0}, {1}'.format(int(item), self.idx))
 
 
 class Loop(InstrumentBase):
     """Represents a LS340 control loop.
 
-    :param connection: A connection object.
+    :param transport: A transport object.
     :param idx: The loop index.
 
     :ivar display_parameters: The display parameter of the loop.
@@ -543,8 +543,8 @@ class Loop(InstrumentBase):
         *(<top>, <p>, <i>, <d>, <mout>, <range>)*.
 
     """
-    def __init__(self, connection, idx):
-        super(Loop, self).__init__(connection)
+    def __init__(self, transport, idx):
+        super(Loop, self).__init__(transport)
         self.idx = idx = int(idx)
         self.filter = Command('CFILT? {0}'.format(idx),
                               'CFILT {0},'.format(idx),
@@ -610,7 +610,7 @@ class LS340(IEC60488):
     The LS340 class implements an interface to the Lakeshore model LS340
     temperature controller.
 
-    :param connection: An object, modeling the connection interface, used to
+    :param transport: An object, modeling the transport interface, used to
         communicate with the real instrument.
     :param scanner: A string representing the scanner in use. Valid entries are
 
@@ -755,16 +755,16 @@ class LS340(IEC60488):
         'The control channel setpoint is not in temperature',
     ]
 
-    def __init__(self, connection, scanner=None):
-        super(LS340, self).__init__(connection)
+    def __init__(self, transport, scanner=None):
+        super(LS340, self).__init__(transport)
         self.scanner = scanner
-        self.output1 = Output(connection, 1)
-        self.output2 = Output(connection, 2)
+        self.output1 = Output(transport, 1)
+        self.output2 = Output(transport, 2)
         # Control Commands
         # ================
-        self.loop1 = Loop(connection, 1)
-        self.loop2 = Loop(connection, 2)
-        self.heater = Heater(connection)
+        self.loop1 = Loop(transport, 1)
+        self.loop2 = Loop(transport, 2)
+        self.heater = Heater(transport)
         # System Commands
         # ===============
         self.beeper = Command('BEEP?', 'BEEP', Boolean)
@@ -830,10 +830,10 @@ class LS340(IEC60488):
         # Curve Commands
         # ==============
         self.std_curve = tuple(
-            Curve(connection, i, writeable=False) for i in range(1, 21)
+            Curve(transport, i, writeable=False) for i in range(1, 21)
         )
         self.user_curve = tuple(
-            Curve(connection, i, writeable=True) for i in range(21, 61)
+            Curve(transport, i, writeable=True) for i in range(21, 61)
         )
         # Data Logging Commands
         # =====================
@@ -854,25 +854,25 @@ class LS340(IEC60488):
                                       ('LOGSET', logset_write_t))
         self.program_status = Command(('PGMRUN?',
                                        [Integer, Enum(*self.PROGRAM_STATUS)]))
-        self.programs = tuple(Program(connection, i) for i in range(1, 11))
+        self.programs = tuple(Program(transport, i) for i in range(1, 11))
         for i in range(1, 5):
-            setattr(self, 'column{0}'.format(i), Column(connection, i))
+            setattr(self, 'column{0}'.format(i), Column(transport, i))
 
     def clear_alarm(self):
         """Clears the alarm status for all inputs."""
-        self.connection.write('ALMRST')
+        self.transport.write('ALMRST')
 
     def lines(self):
         """The number of program lines remaining."""
-        return int(self.connection.ask('PGMMEM?'))
+        return int(self.transport.ask('PGMMEM?'))
 
     def reset_minmax(self):
         """Resets Min/Max functions for all inputs."""
-        self.connection.write('MNMXRST')
+        self.transport.write('MNMXRST')
 
     def save_curves(self):
         """Updates the curve flash with the current user curves."""
-        self.connection.write('CRVSAV')
+        self.transport.write('CRVSAV')
 
     def softcal(self, std, dest, serial, T1, U1, T2, U2, T3=None, U3=None):
         """Generates a softcal curve.
@@ -903,11 +903,11 @@ class LS340(IEC60488):
         args = [std, dest, serial, T1, U1, T2, U2]
         if (T3 is not None) and (U3 is not None):
             args.extend([T3, U3])
-        self.connection.write('SCAL ' + ','.join(args))
+        self.transport.write('SCAL ' + ','.join(args))
 
     def stop_program(self):
         """Terminates the current program, if one is running."""
-        self.connection.write('PGMRUN 0')
+        self.transport.write('PGMRUN 0')
 
     def _factory_default(self, confirm=False):
         """Resets the device to factory defaults.
@@ -917,7 +917,7 @@ class LS340(IEC60488):
 
         """
         if confirm is True:
-            self.connection.write('DFLT 99')
+            self.transport.write('DFLT 99')
         else:
             raise ValueError('Reset to factory defaults was not confirmed.')
 
@@ -944,5 +944,5 @@ class LS340(IEC60488):
             '3465': ('A', 'B', 'C'),
             '3468': ('A', 'B', 'C1', 'C2', 'C3', 'C4', 'D1', 'D2', 'D3', 'D4')
         }
-        self.input = Input(channels[value], self.connection, self._cfg)
+        self.input = Input(channels[value], self.transport, self._cfg)
         self._scanner = value

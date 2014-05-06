@@ -1,0 +1,10 @@
+slave Changelog
+===============
+
+Here you can see the full list of changes between each slave release.
+
+Version 0.4.0
+-------------
+
+ - Changed the notation of a `connection` to `transport`. This name is more
+   widely used, see e.g. twisted, or asyncio.

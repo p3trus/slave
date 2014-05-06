@@ -7,27 +7,27 @@ Using slave is easy. The following example shows how device drivers are used.
 We are going to implement a short measurement script, which initializes a
 Stanford Research SR830 lock-in amplifier and performs a measurement.
 
-The first step is to initialize a connection to the lock-in amplifier. Here we
+The first step is to initialize a transport to the lock-in amplifier. Here we
 are using `pyvisa`_ to establish a :abbr:`GPIB (General Purpose Interface Bus)`
-connection with the device at primary address 8.
+transport with the device at primary address 8.
 
 ::
 
     import visa
-    connection = visa.instrument('GPIB::08')
+    transport = visa.instrument('GPIB::08')
 
 Slave does not communicate directly with the device. It uses an object referred
-to as :ref:`connection object<connection_object>` for the low level
-communication (see :ref:`connection_object` for a detailed explanation).
+to as :ref:`transport object<transport_object>` for the low level
+communication (see :ref:`transport_object` for a detailed explanation).
 
 In the next step, we construct a :class:`~.slave.sr830.SR830` instance and
-inject the `pyvisa`_ connection.
+inject the `pyvisa`_ transport.
 
 ::
 
     from slave.srs import SR830
 
-    lockin = SR830(connection)
+    lockin = SR830(transport)
 
 This creates a fully functional, high level interface to the lock-in amplifier.
 Before we start the actual measurement, we're going to configure the lock-in.

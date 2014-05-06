@@ -26,15 +26,15 @@ A possible implementation could look like this::
     from slave.types import Boolean
 
     class Device(InstrumentBase):
-        def __init__(self, connection):
-            super(Device, self).__init__(connection)
+        def __init__(self, transport):
+            super(Device, self).__init__(transport)
             self.enabled = Command('ENABLED?', 'ENABLED', Boolean())
 
-Now let's try it. We're using a :class:`~slave.core.SimulatedConnection` here (see
-:ref:`simulated_connection` for a detailed explanation)::
+Now let's try it. We're using a :class:`~slave.core.SimulatedTransport` here (see
+:ref:`simulated_transport` for a detailed explanation)::
 
-    >>> from slave.core import SimulatedConnection
-    >>> device = Device(SimulatedConnection())
+    >>> from slave.core import SimulatedTransport
+    >>> device = Device(SimulatedTransport())
     >>> device.enabled = False
     >>> device.enabled
     False
@@ -51,8 +51,8 @@ The assignment did not overwrite the Command attribute. Instead, the
 :meth:`~slave.core.Command.write` method of the :class:`~slave.core.Command`. The 
 :meth:`~slave.core.Command.write` method then created the command message
 **'ENABLED 0'**, using the :class:`~slave.types.Boolean` type to convert the
-False and passed it to the connection's
-:meth:`~slave.core.SimulatedConnection.write` method. Likewise the read call was
+False and passed it to the transport's
+:meth:`~slave.core.SimulatedTransport.write` method. Likewise the read call was
 forwarded to the :class:`~slave.core.Command`'s query method.
 
 The IEC60488-2 standard

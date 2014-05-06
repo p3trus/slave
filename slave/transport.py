@@ -3,9 +3,9 @@
 # Slave, (c) 2012, see AUTHORS.  Licensed under the GNU GPL.
 
 """
-The connection module provides a consistent device communication interface.
+The transport module provides a consistent device communication interface.
 
-To be consistent with slave, a device connection must implement a simple
+To be consistent with slave, a device transport must implement a simple
 interface. It must have two methods
 
  * :meth:`ask()` taking a string command, returning a string response.
@@ -22,7 +22,7 @@ this module.
 
 E.g::
 
-    from slave.connection import UsbtmcDevice
+    from slave.transport import UsbtmcDevice
 
     # connect to a tektronix tds2012C mountet at `/dev/usbtmc0` using it's
     # ContextManager interface.
@@ -55,14 +55,14 @@ class _LockDict(collections.defaultdict):
 _resource_locks = _LockDict()
 
 
-class Connection(object):
-    """An abstract base class defining the connection interface.
+class Transport(object):
+    """An abstract base class defining the transport interface.
 
     :param lock: A thread lock used to control access to the resource. This
         allows multiple sessions to use the same resource.
 
-    The :class:`Connection` base class defines an interface for all
-    connections. The following hooks are mandatory and must be implemented by
+    The :class:`Transport` base class defines an interface for all
+    transports. The following hooks are mandatory and must be implemented by
     a child class:
 
     Mandatory hooks:
@@ -108,10 +108,10 @@ class Connection(object):
         raise NotImplementedError()
 
 
-class SimulatedConnection(object):
-    """A dummy connection.
+class SimulatedTransport(object):
+    """A dummy transport.
 
-    The SimmulatedConnection is used as a dummy connection, telling a
+    The SimmulatedTransport is used as a dummy transport, telling a
     :class:`Command` to use it's simulation mode.
 
     """
@@ -122,7 +122,7 @@ class SimulatedConnection(object):
         pass
 
 
-class GpibDevice(Connection):
+class GpibDevice(Transport):
     """Wrapps a linux-gpib device.
 
     :param primary: The primary gpib address in the range of 0 to 30.
@@ -132,14 +132,14 @@ class GpibDevice(Connection):
 
     Usage::
 
-        from slave.connection import GpibDevice
+        from slave.transport import GpibDevice
 
 
         # Connecting to a gpib device at address 8, using the context manager
         # interface.
-        with GpibDevice(8) as connection:
+        with GpibDevice(8) as transport:
             # print the identification string of the device.
-            print connection.ask('*IDN?')
+            print transport.ask('*IDN?')
 
     """
     def __init__(self, primary=0, secondary=0, board=0, timeout=13, send_eoi=1,
@@ -170,7 +170,7 @@ class GpibDevice(Connection):
         self.close()
 
     def close(self):
-        """Closes the gpib connection.
+        """Closes the gpib transport.
 
         .. note::
 
@@ -198,22 +198,22 @@ class GpibDevice(Connection):
         self._lib.ibtrg(self._device)  # TODO check error conditions.
 
 
-class TCPIPDevice(Connection):
-    """A tiny wrapper for a socket connection.
+class TCPIPDevice(Transport):
+    """A tiny wrapper for a socket transport.
 
     :param address: The ip address as string.
     :param port: The port.
 
     Usage::
 
-        from slave.connection import TCPIPDevice
+        from slave.transport import TCPIPDevice
 
 
         # Connecting to a tcpip device at address 168.178.0.1:1337, using the
         # context manager interface.
-        with TCPIPDevice('168.178.0.1',1337) as connection:
+        with TCPIPDevice('168.178.0.1',1337) as transport:
             # print the identification string of the device.
-            print connection.ask('*IDN?')
+            print transport.ask('*IDN?')
 
     """
     def __init__(self, address, port):
@@ -232,7 +232,7 @@ class TCPIPDevice(Connection):
         self.close()
 
     def close(self):
-        """Closes the socket connection.
+        """Closes the socket transport.
 
         .. note::
 
@@ -249,8 +249,8 @@ class TCPIPDevice(Connection):
         self._device.send(value + self._term_chars)
 
 
-class UsbtmcDevice(Connection):
-    """A generic usbtmc device connection.
+class UsbtmcDevice(Transport):
+    """A generic usbtmc device transport.
 
     :param primary: The usbtmc primary address. A primary address of `0`
         corresponds to the '/dev/usbtmc0' device.
@@ -264,14 +264,14 @@ class UsbtmcDevice(Connection):
 
     Usage::
 
-        from slave.connection import UsbtmcDevice
+        from slave.transport import UsbtmcDevice
 
 
         # Connecting to a usbtmc device at '/dev/usbtmc0', using the
         # context manager interface.
-        with UsbtmcDevice(0) as connection:
+        with UsbtmcDevice(0) as transport:
             # print the identification string of the device.
-            print connection.ask('*IDN?')
+            print transport.ask('*IDN?')
 
     """
     def __init__(self, primary):
@@ -288,7 +288,7 @@ class UsbtmcDevice(Connection):
         self.close()
 
     def close(self):
-        """Closes the Usbtmc connection.
+        """Closes the Usbtmc transport.
 
         .. note::
 

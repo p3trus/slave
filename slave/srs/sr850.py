@@ -9,7 +9,7 @@ from slave.iec60488 import IEC60488, PowerOn
 class SR850(IEC60488, PowerOn):
     """A Stanford Research SR850 lock-in amplifier.
 
-    :param connection: A connection object.
+    :param transport: A transport object.
 
     .. rubric:: Reference and Phase Commands
 
@@ -331,7 +331,7 @@ class SR850(IEC60488, PowerOn):
 
 
     """
-    def __init__(self, connection):
+    def __init__(self, transport):
         stb = {
             0: 'SCN',
             1: 'IFC',
@@ -371,7 +371,7 @@ class SR850(IEC60488, PowerOn):
             6: 'triggered',
             7: 'plot',
         }
-        super(SR850, self).__init__(connection, stb=stb, esb=esb)
+        super(SR850, self).__init__(transport, stb=stb, esb=esb)
         # Status Reporting Commands
         def _invert(x):
             """Returns a dict, where keys and values are switched."""
@@ -478,7 +478,7 @@ class SR850(IEC60488, PowerOn):
         )
         # Trace and Scan Commands
         self.traces = [
-            Trace(i, self.connection, self._cfg) for i in range(1, 5)
+            Trace(i, self.transport, self._cfg) for i in range(1, 5)
         ]
         self.scan_sample_rate = Command(
             'SRAT?',
@@ -506,23 +506,23 @@ class SR850(IEC60488, PowerOn):
             'MNTR',
             Enum('settings', 'input/output')
         )
-        self.full_display = Display(0, self.connection, self._cfg)
-        self.top_display = Display(1, self.connection, self._cfg)
-        self.bottom_display = Display(2, self.connection, self._cfg)
+        self.full_display = Display(0, self.transport, self._cfg)
+        self.top_display = Display(1, self.transport, self._cfg)
+        self.bottom_display = Display(2, self.transport, self._cfg)
         # Cursor Commands
-        self.cursor = Cursor(self.connection, self._cfg)
+        self.cursor = Cursor(self.transport, self._cfg)
         # Mark Commands
-        self.marks = MarkList(self.connection, self._cfg)
+        self.marks = MarkList(self.transport, self._cfg)
         # Aux Input and Output Comnmands
         def aux_in(i):
             """Helper function to create an aux input command."""
             return Command(query=('OAUX? {0}'.format(i), Float),
-                           connection=self.connection,
+                           transport=self.transport,
                            cfg=self._cfg)
 
         self.aux_input = CommandSequence(aux_in(i) for i in xrange(1, 5))
         self.aux_output = tuple(
-            Output(i, self.connection, self._cfg) for i in xrange(1, 5)
+            Output(i, self.transport, self._cfg) for i in xrange(1, 5)
         )
         self.start_on_trigger = Command('TSTR?', 'TSTR', Boolean)
         # Math Commands
@@ -548,8 +548,8 @@ class SR850(IEC60488, PowerOn):
             'FTYP',
             Enum('line', 'exp', 'gauss')
         )
-        self.fit_params = FitParameters(self.connection, self._cfg)
-        self.statistics = Statistics(self.connection, self._cfg)
+        self.fit_params = FitParameters(self.transport, self._cfg)
+        self.statistics = Statistics(self.transport, self._cfg)
         # Store and Recall File Commands
         # TODO The filename syntax is not validated yet.
         self.filename = Command('FNAM?', 'FNAM', String(max=12))
@@ -939,8 +939,8 @@ class Display(InstrumentBase):
         * *<vertical>* is the vertical position.
 
     """
-    def __init__(self, idx, connection, cfg):
-        super(Display, self).__init__(connection, cfg)
+    def __init__(self, idx, transport, cfg):
+        super(Display, self).__init__(transport, cfg)
         idx = int(idx)
         self.type = Command(
             'DTYP? {0}'.format(idx),
@@ -997,8 +997,8 @@ class Cursor(InstrumentBase):
         position. To get the actual cursor location, use :attr:`Display.cursor`.
 
     """
-    def __init__(self, connection, cfg):
-        super(Cursor, self).__init__(connection, cfg)
+    def __init__(self, transport, cfg):
+        super(Cursor, self).__init__(transport, cfg)
         self.seek_mode = Command('CSEK?', 'CSEK', Enum('max', 'min', 'mean'))
         self.width = Command(
             'CWID?',
@@ -1060,8 +1060,8 @@ class Output(InstrumentBase):
             lock-in internal error.
 
     """
-    def __init__(self, idx, connection, cfg):
-        super(Output, self).__init__(connection, cfg)
+    def __init__(self, idx, transport, cfg):
+        super(Output, self).__init__(transport, cfg)
         idx = int(idx)
         self.mode = Command(
             'AUXM? {0}'.format(idx),
@@ -1112,8 +1112,8 @@ class Trace(InstrumentBase):
         lock-in error is generated.
 
     """
-    def __init__(self, idx, connection, cfg):
-        super(Trace, self).__init__(connection, cfg)
+    def __init__(self, idx, transport, cfg):
+        super(Trace, self).__init__(transport, cfg)
         self.idx = idx = int(idx)
         self.value = Command(('OUTR? {0}'.format(idx), Float))
 
@@ -1154,8 +1154,8 @@ class Mark(InstrumentBase):
     :ivar idx: The index of the mark.
 
     """
-    def __init__(self, idx, connection, cfg):
-        super(Mark, self).__init__(connection, cfg)
+    def __init__(self, idx, transport, cfg):
+        super(Mark, self).__init__(transport, cfg)
         self.idx = idx = int(idx)
 
     @property
@@ -1195,14 +1195,14 @@ class Mark(InstrumentBase):
 
 class MarkList(InstrumentBase):
     """A sequence like structure holding the eight SR850 marks."""
-    def __init__(self, connection, cfg):
-        super(MarkList, self).__init__(connection, cfg)
-        self._marks = [Mark(i, self.connection, self._cfg) for i in xrange(8)]
+    def __init__(self, transport, cfg):
+        super(MarkList, self).__init__(transport, cfg)
+        self._marks = [Mark(i, self.transport, self._cfg) for i in xrange(8)]
 
     def active(self):
         """The indices of the active marks."""
-        # TODO avoid direct usage of connection object.
-        marks = tuple(int(x) for x in self.connection.ask('MACT').split(','))
+        # TODO avoid direct usage of transport object.
+        marks = tuple(int(x) for x in self.transport.ask('MACT').split(','))
         return marks[1:]
 
     def __getitem__(self, item):
@@ -1265,8 +1265,8 @@ class FitParameters(InstrumentBase):
         ========  =============================
 
     """
-    def __init__(self, connection, cfg):
-        super(FitParameters, self).__init__(connection, cfg)
+    def __init__(self, transport, cfg):
+        super(FitParameters, self).__init__(transport, cfg)
         self.a = Command(('PARS? 0', Float))
         self.b = Command(('PARS? 1', Float))
         self.c = Command(('PARS? 2', Float))
@@ -1282,8 +1282,8 @@ class Statistics(InstrumentBase):
     :ivar time_delta: The time delta of the range.
 
     """
-    def __init__(self, connection, cfg):
-        super(Statistics, self).__init__(connection, cfg)
+    def __init__(self, transport, cfg):
+        super(Statistics, self).__init__(transport, cfg)
         self.mean = Command(('SPAR? 0', Float))
         self.standard_deviation = Command(('SPAR? 1', Float))
         self.total_data = Command(('SPAR? 2', Float))

@@ -43,31 +43,31 @@ class ForwardSequence(collections.Sequence):
         return self._set(item, value)
 
 
-class LockedConnection(object):
-    """Helper class wrapping a connection object and to add thread locking.
+class LockedTransport(object):
+    """Helper class wrapping a transport object and to add thread locking.
 
-    :param connection: The wrapped connection object.
+    :param transport: The wrapped transport object.
     :param lock: Can be used to inject a custom thread lock, default: `None`.
 
-    The LockedConnection wrapps a normal connection object and forwards the
-    calls to :meth:`.ask` and :meth:`.write` member functions to the connection
+    The LockedTransport wrapps a normal transport object and forwards the
+    calls to :meth:`.ask` and :meth:`.write` member functions to the transport
     object. A thread lock is acquired before, and released after the call to
-    the internal connection object.
+    the internal transport object.
 
     """
     lock = threading.Lock()
 
-    def __init__(self, connection, lock=None):
-        self._connection = connection
-        self._lock = lock or LockedConnection.lock
+    def __init__(self, transport, lock=None):
+        self._transport = transport
+        self._lock = lock or LockedTransport.lock
 
     def ask(self, value):
         with self._lock:
-            return self._connection.ask(value)
+            return self._transport.ask(value)
 
     def write(self, value):
         with self._lock:
-            self._connection.write(value)
+            self._transport.write(value)
 
 
 def index(index, length):

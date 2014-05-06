@@ -11,7 +11,7 @@ from slave.core import Command, InstrumentBase, _Message, _to_instance
 from slave.types import Boolean, String, Float, Integer, Mapping
 
 
-class MockConnection(object):
+class MockTransport(object):
     def __init__(self):
         self._state = {
             'STRING': '1337',
@@ -39,7 +39,7 @@ class MockConnection(object):
 
 class MockInstrument(InstrumentBase):
     def __init__(self):
-        super(MockInstrument, self).__init__(MockConnection())
+        super(MockInstrument, self).__init__(MockTransport())
         self.string = Command('STRING?', 'STRING', String)
         self.integer = Command('INTEGER?', 'INTEGER', Integer)
         self.float = Command('FLOAT?', 'FLOAT', Float)
@@ -50,11 +50,11 @@ class MockInstrument(InstrumentBase):
         self.list = Command('LIST?', 'LIST', [Integer, Integer])
 
     def write_fn(self):
-        cmd = Command(write='FN', connection=self.connection)
+        cmd = Command(write='FN', transport=self.transport)
         cmd.write()
 
     def ask_fn(self):
-        cmd = Command(('FN?', Boolean), connection=self.connection)
+        cmd = Command(('FN?', Boolean), transport=self.transport)
         return cmd.query()
 
 
@@ -106,7 +106,7 @@ class TestCommand(unittest.TestCase):
                 self.assertEqual(write, cmd._write)
 
     def test_query_and_write(self):
-        state = self.instrument.connection._state
+        state = self.instrument.transport._state
         self.assertEqual(state['STRING'], self.instrument.string)
         self.assertEqual(state['INTEGER'], self.instrument.integer)
         self.assertEqual(state['FLOAT'], self.instrument.float)

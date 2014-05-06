@@ -18,8 +18,8 @@ object relational mappers.
 
     class Device(IEC60488, PowerOn):
         """An iec60488 conforming device api with additional commands."""
-        def __init__(self, connection):
-            super(Device, self).__init__(connection)
+        def __init__(self, transport):
+            super(Device, self).__init__(transport)
             # A custom command
             self.my_command = Command(
                 'QRY?', # query message header

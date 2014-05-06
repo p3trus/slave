@@ -12,8 +12,8 @@ implementation might look like::
 
 
     class MyInstrument(InstrumentBase):
-        def __init__(self, connection):
-            super(MyInstrument, self).__init__(connection)
+        def __init__(self, transport):
+            super(MyInstrument, self).__init__(transport)
             # A simple query and writeable command, which takes and writes an
             # Integer.
             self.my_cmd = Command('QRY?', 'WRT', Integer)
@@ -31,7 +31,7 @@ try:
 except ImportError:
     from slave.misc import NullHandler
 
-from slave.connection import SimulatedConnection
+from slave.transport import SimulatedTransport
 import slave.misc
 
 
@@ -74,17 +74,17 @@ class Command(object):
 
     The Command class handles the communication with the instrument. It
     converts the user input into the appropriate command string and sends it to
-    the instrument via the connection object.
+    the instrument via the transport object.
     For example::
 
         # a read and writeable command
         cmd1 = Command('STRING?', 'STRING', String, c)
 
         # a readonly command returning a tuple of two strings
-        cmd2 = Command(('STRING?', [String, String]), connection=c)
+        cmd2 = Command(('STRING?', [String, String]), transport=c)
 
         # a writeonly command
-        cmd3 = Command(write=('STRING', String), connection=c)
+        cmd3 = Command(write=('STRING', String), transport=c)
 
     :param query: A string representing the *query program header*, e.g.
         `'*IDN?'`. To allow customisation of the queriing a 2-tuple or 3-tuple
@@ -101,7 +101,7 @@ class Command(object):
         * (<command header>, <response data type>)
 
         The types have the same requirements as the type parameter.
-    :param connection: A connection object, used for the communication.
+    :param transport: A transport object, used for the communication.
     :param cfg: The configuration dictionary is used to customize the
         configuration.
 
@@ -116,7 +116,7 @@ class Command(object):
     }
 
     def __init__(self, query=None, write=None,
-                 type_=None, connection=None, cfg=None):
+                 type_=None, transport=None, cfg=None):
         default = _typelist(type_)
         def write_message(header, data_type=default):
             return _Message(str(header), _typelist(data_type), None)
@@ -134,7 +134,7 @@ class Command(object):
             self.cfg = dict(it.chain(Command.CFG.iteritems(), cfg.iteritems()))
         else:
             self.cfg = dict(Command.CFG)
-        self.connection = connection
+        self.transport = transport
         self._query = assign(query, query_message)
         self._write = assign(write, write_message)
         self._simulated_resp = None  # Used as a buffer in the simulation mode
@@ -183,7 +183,7 @@ class Command(object):
         """
         if not self._write:
             raise AttributeError('Command is not writeable')
-        if isinstance(self.connection, SimulatedConnection):
+        if isinstance(self.transport, SimulatedTransport):
             # If queriable and types match buffer datas, else do nothing.
             resp_t = self._query.response_type
             sep = self.cfg['response data separator']
@@ -192,7 +192,7 @@ class Command(object):
         else:
             cmu = self._program_message_unit(self._write, *datas)
             _logger.info('command message unit: "{0}"'.format(cmu))
-            self.connection.write(cmu)
+            self.transport.write(cmu)
 
     def query(self, *datas):
         """Generates and sends a query message unit.
@@ -202,12 +202,12 @@ class Command(object):
         """
         if not self._query:
             raise AttributeError('Command is not queryable')
-        if isinstance(self.connection, SimulatedConnection):
+        if isinstance(self.transport, SimulatedTransport):
             response = self._simulate()
         else:
             qmu = self._program_message_unit(self._query, *datas)
             _logger.info('query message unit: "{0}"'.format(qmu))
-            response = self.connection.ask(qmu)
+            response = self.transport.ask(qmu)
         _logger.info('response:"{0}"'.format(response))
         header, parsed_data = self._parse_response(response)
         # TODO handle the response header
@@ -251,7 +251,7 @@ class Command(object):
     def __repr__(self):
         """The commands representation."""
         return '<Command({0},{1},{2},{3})>'.format(self._query, self._write,
-                                                   self.connection, self.cfg)
+                                                   self.transport, self.cfg)
 
 
 class InstrumentBase(object):
@@ -263,27 +263,27 @@ class InstrumentBase(object):
     member function.
 
     When a Command is added to a subclass of :class:`~.InstrumentBase`, the
-    connection is automatically injected into the object unless the connection
+    transport is automatically injected into the object unless the transport
     of the Command is already set. If all Commands of a Instrument need a non
     standard configuration, it is more convenient to inject it as well. This is
     done via the cfg parameter.
 
     """
-    def __init__(self, connection, cfg=None, *args, **kw):
-        self.connection = connection
+    def __init__(self, transport, cfg=None, *args, **kw):
+        self.transport = transport
         self._cfg = cfg
         # super must be the last call, otherwise mixin classes relying on the
-        # existance of _cfg and connection will fail.
+        # existance of _cfg and transport will fail.
         super(InstrumentBase, self).__init__(*args, **kw)
 
     def _write(self, cmd, *datas):
         """Helper function to simplify writing."""
-        cmd = Command(write=cmd, connection=self.connection, cfg=self._cfg)
+        cmd = Command(write=cmd, transport=self.transport, cfg=self._cfg)
         cmd.write(*datas)
 
     def _query(self, cmd, *datas):
         """Helper function to allow method queries."""
-        cmd = Command(query=cmd, connection=self.connection, cfg=self._cfg)
+        cmd = Command(query=cmd, transport=self.transport, cfg=self._cfg)
         return cmd.query(*datas)
 
     def __getattribute__(self, name):
@@ -297,7 +297,7 @@ class InstrumentBase(object):
 
     def __setattr__(self, name, value):
         """Redirects write access of command attributes to the
-        :class:`~Command.write` function and injects connection, and command
+        :class:`~Command.write` function and injects transport, and command
         config into commands.
         """
         try:
@@ -305,10 +305,10 @@ class InstrumentBase(object):
         except AttributeError:
             # Attribute is missing
             if isinstance(value, Command):
-                # If value is a Command instance, inject connection and custom
+                # If value is a Command instance, inject transport and custom
                 # config, if available.
-                if value.connection is None:
-                    value.connection = self.connection
+                if value.transport is None:
+                    value.transport = self.transport
                 if self._cfg and (value.cfg == Command.CFG):
                     value.cfg.update(self._cfg)
             object.__setattr__(self, name, value)
