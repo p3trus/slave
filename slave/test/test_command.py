@@ -1,7 +1,6 @@
 #  -*- coding: utf-8 -*-
 #
 # Slave, (c) 2012, see AUTHORS.  Licensed under the GNU GPL.
-
 import unittest
 import re
 import collections
@@ -50,12 +49,10 @@ class MockInstrument(InstrumentBase):
         self.list = Command('LIST?', 'LIST', [Integer, Integer])
 
     def write_fn(self):
-        cmd = Command(write='FN', transport=self.transport)
-        cmd.write()
+        self._write('FN')
 
     def ask_fn(self):
-        cmd = Command(('FN?', Boolean), transport=self.transport)
-        return cmd.query()
+        return self._query(('FN?', Boolean))
 
 
 class TestCommand(unittest.TestCase):

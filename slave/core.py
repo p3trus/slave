@@ -96,8 +96,7 @@ class Command(object):
         * (<command header>, <response data type>)
 
         The types have the same requirements as the type parameter.
-    :param transport: A transport object, used for the communication.
-    :param cfg: The configuration dictionary is used to customize the
+    :param protocol: The configuration dictionary is used to customize the
         configuration.
 
     """
@@ -111,7 +110,7 @@ class Command(object):
     }
 
     def __init__(self, query=None, write=None,
-                 type_=None, transport=None, cfg=None):
+                 type_=None, protocol=None):
         default = _typelist(type_)
         def write_message(header, data_type=default):
             return _Message(str(header), _typelist(data_type), None)
@@ -125,17 +124,13 @@ class Command(object):
         def assign(x, fn):
             return x and (fn(x) if isinstance(x, basestring) else fn(*x))
 
-        if cfg:
-            self.cfg = dict(it.chain(Command.CFG.iteritems(), cfg.iteritems()))
-        else:
-            self.cfg = dict(Command.CFG)
-        self.transport = transport
+        self.protocol = protocol
         self._query = assign(query, query_message)
         self._write = assign(write, write_message)
         self._simulated_resp = None  # Used as a buffer in the simulation mode
         _logger.debug('Command: "{0}"'.format(self))
 
-    def _program_message_unit(self, message, *datas):
+    def _program_message_unit(self, protocol, message, *datas):
         """Constructs a program message unit.
 
         :param header: The program header, can either be a command program
@@ -156,7 +151,7 @@ class Command(object):
                                                           +-----------+
 
         """
-        php = self.cfg['program header prefix']
+        php = protocol['program header prefix']
         if not message.data_type:
             # Short cut if data_type is None
             # XXX Should we check if datas are available?
@@ -165,55 +160,74 @@ class Command(object):
         if len(datas) != len(message.data_type):
             raise ValueError('Number of datas must match the number of types.')
 
-        phs = self.cfg['program header separator']
-        pds = self.cfg['program data separator']
+        phs = protocol['program header separator']
+        pds = protocol['program data separator']
         program_data = [t.dump(v) for v, t in it.izip(datas, message.data_type)]
         return ''.join((php, message.header, phs, pds.join(program_data)))
 
-    def write(self, *datas):
+    def write(self, transport, protocol, *data):
         """Generates and sends a command message unit.
 
-        :param datas: The program data or an iterable of program datas.
+        :param transport: An object implementing the `.Transport` interface.
+            It is used by the protocol to send the message.
+        :param protocol: An object implementing the `.Protocol` interface.
+        :param data: The program data.
 
         """
+        if self.protocol:
+            # Merge dict with default values.
+            # TODO: In the future, this will be a protocol class instead of a
+            #       dict and the protocol argument should be ignored.
+            protocol = dict(it.chain(protocol.items(), self.protocol.items()))
+
         if not self._write:
             raise AttributeError('Command is not writeable')
-        if isinstance(self.transport, SimulatedTransport):
+        if isinstance(transport, SimulatedTransport):
             # If queriable and types match buffer datas, else do nothing.
             resp_t = self._query.response_type
-            sep = self.cfg['response data separator']
+            sep = protocol['response data separator']
             if self._query and resp_t == self._write.data_type:
                 self._simulated_resp = _make_response(datas, resp_t, sep)
         else:
-            cmu = self._program_message_unit(self._write, *datas)
+            cmu = self._program_message_unit(protocol, self._write, *data)
             _logger.info('command message unit: "{0}"'.format(cmu))
-            self.transport.write(cmu)
+            transport.write(cmu)
 
-    def query(self, *datas):
+    def query(self, transport, protocol, *data):
         """Generates and sends a query message unit.
 
-        :param datas: The program data or an iterable of program datas.
+        :param transport: An object implementing the `.Transport` interface.
+            It is used by the protocol to send the message and receive the
+            response.
+        :param protocol: An object implementing the `.Protocol` interface.
+        :param datas: The program data.
 
         """
         if not self._query:
             raise AttributeError('Command is not queryable')
-        if isinstance(self.transport, SimulatedTransport):
-            response = self._simulate()
+        if self.protocol:
+            # Merge dict with default values.
+            # TODO: In the future, this will be a protocol class instead of a
+            #       dict and the protocol argument should be ignored.
+            protocol = dict(it.chain(protocol.items(), self.protocol.items()))
+
+        if isinstance(transport, SimulatedTransport):
+            response = self._simulate(protocol)
         else:
-            qmu = self._program_message_unit(self._query, *datas)
+            qmu = self._program_message_unit(protocol, self._query, *data)
             _logger.info('query message unit: "{0}"'.format(qmu))
-            response = self.transport.ask(qmu)
+            response = transport.ask(qmu)
         _logger.info('response:"{0}"'.format(response))
-        header, parsed_data = self._parse_response(response)
+        header, parsed_data = self._parse_response(protocol, response)
         # TODO handle the response header
 
         # Return single value if parsed_data is 1-tuple.
         return parsed_data[0] if len(parsed_data) == 1 else parsed_data
 
-    def _parse_response(self, response):
+    def _parse_response(self, protocol, response):
         """Parses the response."""
-        rhs = self.cfg['response header separator']
-        rds = self.cfg['response data separator']
+        rhs = protocol['response header separator']
+        rds = protocol['response data separator']
         resp_t = self._query.response_type
 
         if rhs:
@@ -228,16 +242,16 @@ class Command(object):
             parsed_data.append(t.load(v) if t else v)
         return header, tuple(parsed_data)
 
-    def _simulate(self):
+    def _simulate(self, protocol):
         response = self._simulated_resp
         if not response:
             response = _make_response(
                 (t.simulate() for t in self._query.response_type),
                 self._query.response_type,
-                self.cfg['response data separator']
+                protocol['response data separator']
             )
             # This simulates a response without a response header.
-            assert(self.cfg['response header separator'] is None)
+            assert(protocol['response header separator'] is None)
             # store response if writeable
             if self._write:
                 self._simulated_resp = response
@@ -245,8 +259,8 @@ class Command(object):
 
     def __repr__(self):
         """The commands representation."""
-        return '<Command({0},{1},{2},{3})>'.format(self._query, self._write,
-                                                   self.transport, self.cfg)
+        return '<Command({0},{1},{2})>'.format(self._query, self._write,
+                                                   self.protocol)
 
 
 class InstrumentBase(object):
@@ -266,20 +280,25 @@ class InstrumentBase(object):
     """
     def __init__(self, transport, cfg=None, *args, **kw):
         self.transport = transport
-        self._cfg = cfg
+        # Merge dict with default values.
+        # TODO: In the future, this will be a protocol class instead of a dict.
+        if cfg:
+            self._cfg = dict(it.chain(Command.CFG.items(), cfg.items()))
+        else:
+            self._cfg = dict(Command.CFG)
         # super must be the last call, otherwise mixin classes relying on the
         # existance of _cfg and transport will fail.
         super(InstrumentBase, self).__init__(*args, **kw)
 
     def _write(self, cmd, *datas):
         """Helper function to simplify writing."""
-        cmd = Command(write=cmd, transport=self.transport, cfg=self._cfg)
-        cmd.write(*datas)
+        cmd = Command(write=cmd)
+        cmd.write(self.transport, self._cfg, *datas)
 
     def _query(self, cmd, *datas):
         """Helper function to allow method queries."""
-        cmd = Command(query=cmd, transport=self.transport, cfg=self._cfg)
-        return cmd.query(*datas)
+        cmd = Command(query=cmd)
+        return cmd.query(self.transport, self._cfg, *datas)
 
     def __getattribute__(self, name):
         """Redirects read access of command attributes to
@@ -287,7 +306,7 @@ class InstrumentBase(object):
         """
         attr = object.__getattribute__(self, name)
         if isinstance(attr, Command):
-            return attr.query()
+            return attr.query(self.transport, self._cfg)
         return attr
 
     def __setattr__(self, name, value):
@@ -298,23 +317,16 @@ class InstrumentBase(object):
         try:
             attr = object.__getattribute__(self, name)
         except AttributeError:
-            # Attribute is missing
-            if isinstance(value, Command):
-                # If value is a Command instance, inject transport and custom
-                # config, if available.
-                if value.transport is None:
-                    value.transport = self.transport
-                if self._cfg and (value.cfg == Command.CFG):
-                    value.cfg.update(self._cfg)
+            # Attribute does not exist.
             object.__setattr__(self, name, value)
         else:
             if isinstance(attr, Command):
                 # Redirect write access
                 if (isinstance(value, collections.Iterable) and
                     not isinstance(value, basestring)):
-                    attr.write(*value)
+                    attr.write(self.transport, self._cfg, *value)
                 else:
-                    attr.write(value)
+                    attr.write(self.transport, self._cfg, value)
             else:
                 object.__setattr__(self, name, value)
 
