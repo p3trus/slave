@@ -164,11 +164,13 @@ class Curve(InstrumentBase):
     def delete(self):
         """Deletes the current curve.
 
-        .. note:: Only writeable curves are deleteable.
+        :raises RuntimeError: Raises when` when one tries to delete a read-only
+            curve.
 
         """
         if self._writeable:
-            self.transport.write('CRVDEL {0}'.format(self.idx))
+            self._write(('CRVDEL', Integer), self.idx)
+        raise RuntimeError('Can not delete read-only curves.')
 
 
 class Heater(InstrumentBase):
@@ -407,7 +409,7 @@ class Program(InstrumentBase):
     """
     def __init__(self, transport, idx):
         super(Program, self).__init__(transport)
-        self.idx = idx = int(idx)
+        self.idx = int(idx)
 
     def line(self, idx):
         """Return the i'th program line.
@@ -415,19 +417,21 @@ class Program(InstrumentBase):
         :param i: The i'th program line.
 
         """
-        return self.transport.ask('PGM? {0}, {1}'.format(self.idx, int(idx)))
+        # TODO: We should parse the response properly.
+        return self._query(('PGM?', [Integer, Integer], String), self.idx, idx)
 
     def append_line(self, new_line):
         """Appends the new_line to the LS340 program."""
-        self.transport.write('PGM {0},'.format(self.idx) + new_line)
+        # TODO: The user still has to write the raw line, this is error prone.
+        self._write(('PGM', [Integer, String]), self.idx, new_line)
 
     def run(self):
         """Runs this program."""
-        self.transport.write('PGMRUN {0}'.format(self.idx))
+        self._write(('PGMRUN', Integer), self.idx)
 
     def delete(self):
         """Deletes this program."""
-        self.transport.write('PGMDEL {0}'.format(self.idx))
+        self._write(('PGMDEL', Integer), self.idx)
 
 
 class Column(InstrumentBase):
@@ -459,15 +463,17 @@ class Column(InstrumentBase):
 
     @property
     def type(self):
-        return self.transport.ask('LOGPNT? {0}'.format(self.idx))
+        # TODO: Return type should be parsed correctly.
+        return self._query(('LOGPNT?', String, Integer), self.idx)
 
     @type.setter
     def type(self, value):
-        self.transport.write('LOGPNT {0},'.format(self.idx) + value)
+        # TODO: This does not cover optional arguments.
+        self._write(('LOGPNT', Integer, String), self.idx, value)
 
     def __len__(self):
         """Returns the number of records stored."""
-        return int(self.transport.ask('LOGCNT?'))
+        return self._query(('LOGCNT?', Integer))
 
     def __getitem__(self, item):
         """Returns the stored record at the specified index as string.
@@ -475,7 +481,11 @@ class Column(InstrumentBase):
         :param item: A positive integer, describing the record index.
 
         """
-        return self.transport.ask('LOGVIEW? {0}, {1}'.format(int(item), self.idx))
+        return self._query(
+            ('LOGVIEW?', [Integer, Integer], String),
+            item,
+            self.idx
+        )
 
 
 class Loop(InstrumentBase):
@@ -856,19 +866,19 @@ class LS340(IEC60488):
 
     def clear_alarm(self):
         """Clears the alarm status for all inputs."""
-        self.transport.write('ALMRST')
+        self._write('ALMRST')
 
     def lines(self):
         """The number of program lines remaining."""
-        return int(self.transport.ask('PGMMEM?'))
+        return self._query(('PGMMEM?', Integer))
 
     def reset_minmax(self):
         """Resets Min/Max functions for all inputs."""
-        self.transport.write('MNMXRST')
+        self._write('MNMXRST')
 
     def save_curves(self):
         """Updates the curve flash with the current user curves."""
-        self.transport.write('CRVSAV')
+        self._write('CRVSAV')
 
     def softcal(self, std, dest, serial, T1, U1, T2, U2, T3=None, U3=None):
         """Generates a softcal curve.
@@ -887,35 +897,20 @@ class LS340(IEC60488):
         :param U3: The third sensor units point. Default: `None`.
 
         """
-        std = int(std)
-        if not (0 <= std <= 20):
-            raise ValueError('Standard curve index out of range.')
-        dest = int(dest)
-        if not (20 < std <= 60):
-            raise ValueError('User curve index out of range.')
-        serial = str(serial)
-        if len(serial) > 10:
-            raise ValueError('Serial number too large.')
         args = [std, dest, serial, T1, U1, T2, U2]
+        dtype = [Integer(min=1, max=21), Integer(min=21, max=61), String(max=11), Float, Float, Float, Float]
         if (T3 is not None) and (U3 is not None):
             args.extend([T3, U3])
-        self.transport.write('SCAL ' + ','.join(args))
+            dtype.extend([Float, Float])
+        self._write(('SCAL', dtype), *args)
 
     def stop_program(self):
         """Terminates the current program, if one is running."""
-        self.transport.write('PGMRUN 0')
+        self._write(('PGMRUN', Integer), 0)
 
-    def _factory_default(self, confirm=False):
-        """Resets the device to factory defaults.
-
-        :param confirm: This function should not normally be used, to prevent
-            accidental resets, a confirm value of `True` must be used.
-
-        """
-        if confirm is True:
-            self.transport.write('DFLT 99')
-        else:
-            raise ValueError('Reset to factory defaults was not confirmed.')
+    def _factory_default(self):
+        """Resets the device to factory defaults."""
+        self._write(('DFLT', Integer), 99)
 
     @property
     def scanner(self):

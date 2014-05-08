@@ -108,7 +108,7 @@ class Curve(InstrumentBase):
 
     def delete(self):
         """Deletes this curve."""
-        self.transport.write('CRVDEL {0}'.format(self.idx))
+        self._write(('CRVDEL', Integer), self.idx)
 
 
 class Display(InstrumentBase):
@@ -645,7 +645,7 @@ class LS370(IEC60488):
 
     def clear_alarm(self):
         """Clears the alarm status for all inputs."""
-        self.transport.write('ALMRST')
+        self._write('ALMRST')
 
     def _factory_default(self, confirm=False):
         """Resets the device to factory defaults.
@@ -655,13 +655,13 @@ class LS370(IEC60488):
 
         """
         if confirm is True:
-            self.transport.write('DFLT 99')
+            self._write(('DFLT', Integer), 99)
         else:
             raise ValueError('Reset to factory defaults was not confirmed.')
 
     def reset_minmax(self):
         """Resets Min/Max functions for all inputs."""
-        self.transport.write('MNMXRST')
+        self._write('MNMXRST')
 
     @property
     def scanner(self):

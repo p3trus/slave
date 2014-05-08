@@ -357,15 +357,15 @@ class SR830(InstrumentBase):
 
     def auto_gain(self):
         """Executes the auto gain command."""
-        self.transport.write('AGAN')
+        self._write('AGAN')
 
     def auto_reserve(self):
         """Executes the auto reserve command."""
-        self.transport.write('ARSV')
+        self._write('ARSV')
 
     def auto_phase(self):
         """Executes the auto phase command."""
-        self.transport.write('APHS')
+        self._write('APHS')
 
     def auto_offset(self, signal):
         """Executes the auto offset command for the selected signal.
@@ -373,40 +373,35 @@ class SR830(InstrumentBase):
         :param i: Can either be 'X', 'Y' or 'R'.
 
         """
-        signals = {'X': 1, 'Y': 2, 'R': 3}
-        self.transport.ask('AOFF {0}'.format(signals[signal]))
+        self._write(('AOFF', Enum('X', 'Y', 'R', start=1)), signal)
 
     def trigger(self):
         """Emits a trigger event."""
-        self.transport.write('TRIG')
+        self._write('TRIG')
 
     def start(self):
         """Starts or resumes data storage."""
-        self.transport.write('STRT')
+        self._write('STRT')
 
     def delayed_start(self):
         """Starts data storage after a delay of 0.5 sec."""
-        self.transport.write('STRD')
+        self._write('STRD')
 
     def pause(self):
         """Pauses data storage."""
-        self.transport.write('PAUS')
+        self._write('PAUS')
 
     def reset_buffer(self):
         """Resets internal data buffers."""
-        self.transport.write('REST')
+        self._write('REST')
 
     def reset_configuration(self):
         """Resets the SR830 to it's default configuration."""
-        self.transport.write('*RST')
+        self._write('*RST')
 
     def save_setup(self, id):
         """Saves the lock-in setup in the setup buffer."""
-        id = int(id)
-        if 0 < id < 10:
-            self.transport.write('SSET {0}'.format(id))
-        else:
-            raise ValueError('Buffer id out of range.')
+        self._write(('SSET', Integer(min=0, max=10)), id)
 
     def recall_setup(self, id):
         """Recalls the lock-in setup from the setup buffer.
@@ -415,9 +410,7 @@ class SR830(InstrumentBase):
           lock-in setup is stored under this id, recalling results in
           an error in the hardware.
         """
-        id = int(id)
-        if 0 < id < 10:
-            self.transport.write('RSET {0}'.format(id))
+        self._write(('RSET', Integer(min=0, max=10)), id)
 
     def snap(self, *args):
         """Records up to 6 parameters at a time.
@@ -427,6 +420,7 @@ class SR830(InstrumentBase):
           and 'CH2'. If none are given 'X' and 'Y' are used.
 
         """
+        # TODO: Do not use transport directly.
         params = {'X': 1, 'Y': 2, 'R': 3, 'Theta': 4, 'AuxIn1': 5, 'AuxIn2': 6,
                   'AuxIn3': 7, 'AuxIn4': 8, 'Ref': 9, 'CH1': 10, 'CH2': 11}
         if not args:
@@ -439,7 +433,7 @@ class SR830(InstrumentBase):
 
     def clear(self):
         """Clears all status registers."""
-        self.transport.write('*CLS')
+        self._write('*CLS')
 
     def trace(self, buffer, start, length=1):
         """Reads the points stored in the channel buffer.
@@ -451,6 +445,7 @@ class SR830(InstrumentBase):
         .. todo::
            Use binary command TRCB to speed up data transmission.
         """
+        # TODO: Do not use transport directly.
         query = 'TRCA? {0}, {1}, {2}'.format(buffer, start, length)
         result = self.transport.ask(query)
         # Result format: "1.0e-004,1.2e-004,". Strip trailing comma then split.

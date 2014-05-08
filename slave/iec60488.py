@@ -122,21 +122,21 @@ class IEC60488(InstrumentBase):
 
     def clear(self):
         """Clears the status data structure."""
-        self.transport.write('*CLS')
+        self._write('*CLS')
 
     def complete_operation(self):
         """Sets the operation complete bit high of the event status byte."""
-        self.transport.write('*OPC')
+        self._write('*OPC')
 
     def reset(self):
         """Performs a device reset."""
-        self.transport.write('*RST')
+        self._write('*RST')
 
     def test(self):
         """Performs a internal self-test and returns an integer in the range
         -32767 to + 32767.
         """
-        return int(self.transport.ask('*TST?'))
+        return self._query(('*TST?', Integer))
 
     def wait_to_continue(self):
         """Prevents the device from executing any further commands or queries
@@ -148,7 +148,7 @@ class IEC60488(InstrumentBase):
            flag is always True.
 
         """
-        self.transport.write('*WAI')
+        self._write('*WAI')
 
 
 class PowerOn(object):
@@ -275,7 +275,7 @@ class Calibration(object):
             without errors.
 
         """
-        return int(self.transport.ask('*CAL?'))
+        return self._query(('*CAL?', Integer))
 
 
 class Trigger(object):
@@ -309,7 +309,7 @@ class Trigger(object):
         try:
             self.transport.trigger()
         except AttributeError:
-            self.transport.write('*TRG')
+            self._write('*TRG')
 
 
 class TriggerMacro(object):
@@ -364,15 +364,15 @@ class Macro(object):
             .. note:: The macro string is not validated.
 
         """
-        self.transport.write('*DMC {0}'.format(macro))
+        self._write(('*DMC', String), macro)
 
     def disable_macro_commands(self):
         """Disables all macro commands."""
-        self.transport.write('*EMC 0')
+        self._write(('*EMC', Integer), 0)
 
     def enable_macro_commands(self):
         """Enables all macro commands."""
-        self.transport.write('*EMC 1')
+        self._write(('*EMC', Integer), 1)
 
     def get_macro(self, label):
         """Returns the macro.
@@ -380,15 +380,15 @@ class Macro(object):
         :param label: The label of the requested macro.
 
         """
-        return str(self.transport.write('*GMC? {0}'.format(label)))
+        return self._query(('*GMC?', String, String), label)
 
     def macro_labels(self):
         """Returns the currently defined macro labels."""
-        return str(self.transport.ask('*LMC?'))
+        return self._query(('*LMC?', String))
 
     def purge_macros(self):
         """Deletes all previously defined macros."""
-        self.transport.write('*PMC')
+        self._write('*PMC')
 
 
 class ObjectIdentification(object):
@@ -423,8 +423,6 @@ class StoredSetting(object):
     """
     def __init__(self, *args, **kw):
         super(StoredSetting, self).__init__(*args, **kw)
-        self.__recall = Command(write=('*RCL', Integer(min=0)))
-        self.__save = Command(write=('*SAV', Integer(min=0)))
 
     def recall(self, idx):
         """Restores the current settings from a copy stored in local memory.
@@ -432,7 +430,7 @@ class StoredSetting(object):
         :param idx: Specifies the memory slot.
 
         """
-        self.__recall = idx
+        self._write(('*RCL', Integer(min=0)), idx)
 
     def save(self, idx):
         """Stores the current settings of a device in local memory.
@@ -440,7 +438,7 @@ class StoredSetting(object):
         :param idx: Specifies the memory slot.
 
         """
-        self.__save = idx
+        self._write(('*SAV', Integer(min=0)), idx)
 
 
 class Learn(object):
@@ -464,7 +462,7 @@ class Learn(object):
             of the device at the time this command was executed.
 
         """
-        return str(self.transport.ask('*LRN?'))
+        return self._query(('*LRN?', String))
 
 
 class SystemConfiguration(object):
@@ -484,11 +482,11 @@ class SystemConfiguration(object):
 
     def accept_address(self):
         """Executes the accept address command."""
-        self.transport.write('*AAD')
+        self._write('*AAD')
 
     def disable_listener(self):
         """Executes the disable listener command."""
-        self.transport.write('*DLF')
+        self._write('*DLF')
 
 
 class PassingControl(object):
@@ -520,11 +518,10 @@ class PassingControl(object):
 
         """
         if secondary is None:
-            cmd = Command(write=('*PCB', Integer(min=0, max=30)),
-                          transport=self.transport)
-            cmd.write(primary)
+            self._write(('*PCB', Integer(min=0, max=30)), primary)
         else:
-            type_ = [Integer(min=0, max=30), Integer(min=0, max=30)]
-            cmd = Command(write=('*PCB', type_),
-                          transport=self.transport)
-            cmd.write((primary, secondary))
+            self._write(
+                ('*PCB', [Integer(min=0, max=30), Integer(min=0, max=30)]),
+                primary,
+                secondary
+            )

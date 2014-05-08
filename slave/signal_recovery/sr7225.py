@@ -541,23 +541,23 @@ class SR7225(InstrumentBase):
         sensitivity so that the signal magnitude lies in between 30% and 90%
         of the full scale sensitivity.
         """
-        self.transport.write('AS')
+        self._write('AS')
 
     def auto_measure(self):
         """Triggers the auto measure mode."""
-        self.transport.write('ASM')
+        self._write('ASM')
 
     def auto_phase(self):
         """Triggers the auto phase mode."""
-        self.transport.write('AQN')
+        self._write('AQN')
 
     def auto_offset(self):
         """Triggers the auto offset mode."""
-        self.transport.write('AXO')
+        self._write('AXO')
 
     def halt(self):
         """Halts the data acquisition."""
-        self.transport.write('HC')
+        self._write('HC')
 
     def init_curves(self):
         """Initializes the curve storage memory and its status variables.
@@ -565,13 +565,13 @@ class SR7225(InstrumentBase):
         .. warning:: All records of previously taken curves is removed.
 
         """
-        self.transport.write('NC')
+        self._write('NC')
 
     def lock(self):
         """Updates all frequency-dependent gain and phase correction
         parameters.
         """
-        self.transport.write('LOCK')
+        self._write('LOCK')
 
     def reset(self, complete=False):
         """Resets the lock-in to factory defaults.
@@ -581,7 +581,7 @@ class SR7225(InstrumentBase):
            exception of communication and LCD contrast settings.
 
         """
-        self.transport.write('ADF {0:d}'.format(complete))
+        self._write(('ADF', Boolean), complete)
 
     @property
     def sensitivity(self):
@@ -617,11 +617,11 @@ class SR7225(InstrumentBase):
             self.amplitude_stop = stop
         if step:
             self.amplitude_step = step
-        self.transport.write('SWEEP 2')
+        self._write(('SWEEP', Integer), 2)
 
     def start_afsweep(self):
         """Starts a frequency and amplitude sweep."""
-        self.transport.write('SWEEP 3')
+        self._write(('SWEEP', Integer), 3)
 
     def start_fsweep(self, start=None, stop=None, step=None):
         """Starts a frequency sweep.
@@ -637,11 +637,11 @@ class SR7225(InstrumentBase):
             self.frequency_stop = stop
         if step:
             self.frequency_step = step
-        self.transport.write('SWEEP 1')
+        self._write(('SWEEP', Integer), 1)
 
     def stop(self):
         """Stops/Pauses the current sweep."""
-        self.transport.write('SWEEP 0')
+        self._write(('SWEEP', Integer), 0)
 
     def take_data(self, continuously=False):
         """Starts data acquisition.
@@ -653,9 +653,9 @@ class SR7225(InstrumentBase):
 
         """
         if continuously:
-            self.transport.write('TDC')
+            self._write('TDC')
         else:
-            self.transport.write('TD')
+            self._write('TD')
 
     def take_data_triggered(self, mode):
         """Starts triggered data acquisition.
@@ -665,9 +665,4 @@ class SR7225(InstrumentBase):
            only a single data point is stored.
 
         """
-        if mode == 'curve':
-            self.transport.write('TDT 0')
-        elif mode == 'point':
-            self.transport.write('TDT 1')
-        else:
-            raise ValueError('mode must be either "curve" or "point"')
+        self._write(('TDT', Enum('curve', 'point')), mode)
