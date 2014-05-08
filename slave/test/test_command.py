@@ -103,7 +103,7 @@ class TestCommand(unittest.TestCase):
                 self.assertEqual(write, cmd._write)
 
     def test_query_and_write(self):
-        state = self.instrument.transport._state
+        state = self.instrument._transport._state
         self.assertEqual(state['STRING'], self.instrument.string)
         self.assertEqual(state['INTEGER'], self.instrument.integer)
         self.assertEqual(state['FLOAT'], self.instrument.float)

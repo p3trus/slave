@@ -279,7 +279,7 @@ class InstrumentBase(object):
 
     """
     def __init__(self, transport, cfg=None, *args, **kw):
-        self.transport = transport
+        self._transport = transport
         # Merge dict with default values.
         # TODO: In the future, this will be a protocol class instead of a dict.
         if cfg:
@@ -293,12 +293,12 @@ class InstrumentBase(object):
     def _write(self, cmd, *datas):
         """Helper function to simplify writing."""
         cmd = Command(write=cmd)
-        cmd.write(self.transport, self._cfg, *datas)
+        cmd.write(self._transport, self._cfg, *datas)
 
     def _query(self, cmd, *datas):
         """Helper function to allow method queries."""
         cmd = Command(query=cmd)
-        return cmd.query(self.transport, self._cfg, *datas)
+        return cmd.query(self._transport, self._cfg, *datas)
 
     def __getattribute__(self, name):
         """Redirects read access of command attributes to
@@ -306,7 +306,7 @@ class InstrumentBase(object):
         """
         attr = object.__getattribute__(self, name)
         if isinstance(attr, Command):
-            return attr.query(self.transport, self._cfg)
+            return attr.query(self._transport, self._cfg)
         return attr
 
     def __setattr__(self, name, value):
@@ -324,9 +324,9 @@ class InstrumentBase(object):
                 # Redirect write access
                 if (isinstance(value, collections.Iterable) and
                     not isinstance(value, basestring)):
-                    attr.write(self.transport, self._cfg, *value)
+                    attr.write(self._transport, self._cfg, *value)
                 else:
-                    attr.write(self.transport, self._cfg, value)
+                    attr.write(self._transport, self._cfg, value)
             else:
                 object.__setattr__(self, name, value)
 
