@@ -30,7 +30,13 @@ setup(
     url='https://github.com/p3trus/slave',
     description=desc,
     long_description=open('README.rst').read(),
-    packages=['slave', 'slave.test'],
-    # make sure to add custom_fixers to the MANIFEST.in 
+    packages=[
+        'slave',
+        'slave.cryomagnetics',
+        'slave.lakeshore',
+        'slave.signal_recovery',
+        'slave.srs',
+        'slave.test'
+    ],
     include_package_data=True,
 )
