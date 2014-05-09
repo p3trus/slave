@@ -20,6 +20,11 @@ Note: This release breaks backwards compatibility.
     * `slave.srsr.sr830.SR830.snap()`
     * `slave.srs.sr850.MarkList.active()`
 
+Changes to the `slave.core`module:
+ - The `InstrumentBase.transport`attribute was renamed to `_transport` to be
+   more consistent. This avoids shadowing of possible commands and show the
+   intent that in general the transport should not be used directly.
+
 Changes to the `slave.lakeshore.ls340`module:
 
  - The `slave.lakeshore.ls340.Curve.delete()` method now raises a
