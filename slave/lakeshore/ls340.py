@@ -118,7 +118,7 @@ class Curve(InstrumentBase):
         In contrast to the LS340 device, point indices start at 0 **not** 1.
 
     """
-    def __init__(self, transport, protocol, idx, writeable, length=None, e):
+    def __init__(self, transport, protocol, idx, writeable, length=None):
         super(Curve, self).__init__(transport, protocol)
         self.idx = idx = int(idx)
         self.__length = length or 200
