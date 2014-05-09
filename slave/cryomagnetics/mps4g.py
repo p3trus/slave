@@ -157,7 +157,7 @@ class MPS4G(IEC60488):
             protocol = {'program header prefix': 'CHAN {0};'.format(channel)}
         else:
             protocol = {}
-        super(MPS4G, self).__init__(transport, stb=stb, protocol=protocol)
+        super(MPS4G, self).__init__(transport, protocol, stb=stb)
         if shims:
             if isinstance(shims, basestring):
                 shims = [shims]

@@ -48,12 +48,12 @@ class Status(InstrumentBase):
 class ErrorStatus(Status):
     def __init__(self, transport, protocol):
         register = {
-            'backup error': 1,
-            'ram error': 2,
-            'rom error': 4,
-            'gpib error': 5,
-            'dsp error': 6,
-            'math error': 7,
+            1: 'backup error',
+            2: 'ram error',
+            4: 'rom error',
+            5: 'gpib error',
+            6: 'dsp error',
+            7: 'math error',
         }
         super(ErrorStatus, self).__init__(
             transport,
@@ -67,12 +67,12 @@ class ErrorStatus(Status):
 class ErrorEnable(Status):
     def __init__(self, transport, protocol):
         register = {
-            'backup error': 1,
-            'ram error': 2,
-            'rom error': 4,
-            'gpib error': 5,
-            'dsp error': 6,
-            'math error': 7,
+            1: 'backup error',
+            2: 'ram error',
+            4: 'rom error',
+            5: 'gpib error',
+            6: 'dsp error',
+            8: 'math error',
         }
         super(ErrorEnable, self).__init__(
             transport,
@@ -86,13 +86,13 @@ class ErrorEnable(Status):
 class LockInStatus(Status):
     def __init__(self, transport, protocol):
         register = {
-            'input overload': 0,
-            'TC filter overload': 1,
-            'output overload': 2,
-            'reference unlock': 3,
-            'frequency range switch': 4,
-            'indirect TC change': 5,
-            'triggered': 6,
+            0: 'input overload',
+            1: 'TC filter overload',
+            2: 'output overload',
+            3: 'reference unlock',
+            4: 'frequency range switch',
+            5: 'indirect TC change',
+            6: 'triggered',
         }
         super(LockInStatus, self).__init__(
             transport,
@@ -106,13 +106,13 @@ class LockInStatus(Status):
 class LockInEnable(Status):
     def __init__(self, transport, protocol):
         register = {
-            'input overload': 0,
-            'TC filter overload': 1,
-            'output overload': 2,
-            'reference unlock': 3,
-            'frequency range switch': 4,
-            'indirect TC change': 5,
-            'triggered': 6,
+            0: 'input overload',
+            1: 'TC filter overload',
+            2: 'output overload',
+            3: 'reference unlock',
+            4: 'frequency range switch',
+            5: 'indirect TC change',
+            6: 'triggered',
         }
         super(LockInEnable, self).__init__(
             transport,
@@ -127,13 +127,13 @@ class SerialPollStatus(Status):
     """Represents the serial poll status register."""
     def __init__(self, transport, protocol):
         register = {
-            'no scan': 0,
-            'no command': 1,
-            'error': 2,
-            'lockin': 3,
-            'output_buffer': 4,
-            'standard status ': 5,
-            'service request': 6,
+            0: 'no scan',
+            1: 'no command',
+            2: 'error',
+            3: 'lockin',
+            4: 'output_buffer',
+            5: 'standard status ',
+            6: 'service request',
         }
         super(SerialPollStatus, self).__init__(
             transport,
@@ -148,13 +148,13 @@ class SerialPollEnable(Status):
     """Represents the serial poll enable register."""
     def __init__(self, transport, protocol):
         register = {
-            'no scan': 0,
-            'no command': 1,
-            'error': 2,
-            'lockin': 3,
-            'output_buffer': 4,
-            'standard status ': 5,
-            'service request': 6,
+            0: 'no scan',
+            1: 'no command',
+            2: 'error',
+            3: 'lockin',
+            4: 'output_buffer',
+            5: 'standard status',
+            6: 'service request',
         }
         super(SerialPollEnable, self).__init__(
             transport,
@@ -175,12 +175,12 @@ class StandardEventStatus(Status):
     """
     def __init__(self, transport, protocol):
         register = {
-            'input queue overflow': 0,
-            'output queue overflow': 2,
-            'execution failed': 4,
-            'illegal command': 5,
-            'user interaction': 6,
-            'power on': 7,
+            0: 'input queue overflow',
+            2: 'output queue overflow',
+            4: 'execution failed',
+            5: 'illegal command',
+            6: 'user interaction',
+            7: 'power on',
         }
         super(StandardEventStatus, self).__init__(
             transport,
@@ -195,12 +195,12 @@ class StandardEventEnable(Status):
     """Represents the standard event enable register."""
     def __init__(self, transport, protocol):
         register = {
-            'input queue overflow': 0,
-            'output queue overflow': 2,
-            'execution failed': 4,
-            'illegal command': 5,
-            'user interaction': 6,
-            'power on': 7,
+            0: 'input queue overflow',
+            2: 'output queue overflow',
+            4: 'execution failed',
+            5: 'illegal command',
+            6: 'user interaction',
+            7: 'power on',
         }
         super(StandardEventEnable, self).__init__(
             transport,

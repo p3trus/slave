@@ -368,14 +368,14 @@ class InputChannel(InstrumentBase):
         self.reading_status = Command((
             'RDGST? {0}'.format(idx),
             Register({
-                'cs overload': 0,  # current source overload
-                'vcm overload': 1,  # voltage common mode overload
-                'vmix overload': 2,  # differential overload
-                'vdif overload': 3,  # mixer overload
-                'range over': 4,
-                'range under': 5,
-                'temp over': 6,
-                'temp under': 7,
+                0: 'cs overload',  # current source overload
+                1: 'vcm overload',  # voltage common mode overload
+                2: 'vmix overload',  # differential overload
+                3: 'vdif overload',  # mixer overload
+                4: 'range over',
+                5: 'range under',
+                6: 'temp over',
+                7: 'temp under',
             })
         ))
         self.resistance = Command(('RDGR?', Float))
@@ -594,7 +594,13 @@ class LS370(IEC60488):
         self.digital_output = Command(
             'DOUT?',
             'DOUT',
-            Register({'DO1': 0, 'DO2': 1, 'DO3': 2, 'DO4': 3, 'DO5': 4}),
+            Register({
+                0: 'DO1',
+                1: 'DO2',
+                2: 'DO3',
+                3: 'DO4',
+                4: 'DO5'
+            }),
         )
         self.displays = tuple(
             Display(transport, protocol, i) for i in range(1, 9)

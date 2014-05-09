@@ -355,6 +355,15 @@ class SR7225(InstrumentBase):
         3: 'echo',
         4: 'promt',
     }
+    #: The overload byte definition.
+    OVERLOAD_BYTE = {
+        1: 'ch1 output overload',
+        2: 'ch2 output overload',
+        3: 'y output overload',
+        4: 'x output overload',
+        6: 'input overload',
+        7: 'reference unlock',
+    }
 
     def __init__(self, transport):
         protocol = {
@@ -487,43 +496,32 @@ class SR7225(InstrumentBase):
                                   Integer(min=25, max=5000))
         # Output Data Curve Buffer
         # ========================
-        cb = Register(dict((v, k) for k, v in self.CURVE_BUFFER.iteritems()))
+        cb = Register(self.CURVE_BUFFER)
         self.curve_buffer_settings = Command('CBD', 'CBD', cb)
         self.curve_buffer_length = Command('LEN', 'LEN', Integer(min=0))
         self.storage_intervall = Command('STR', 'STR', Integer(min=0, max=1e9))
         self.event_marker = Command('EVENT', 'EVENT',
                                     Integer(min=0, max=32767))
-        status_byte = Register(
-            dict((v, k) for k, v in self.STATUS_BYTE.iteritems())
-        )
         self.measurement_status = Command(('M', [Enum('no activity',
                                                       'td running',
                                                       'tdc running',
                                                       'td halted',
                                                       'tdc halted'),
                                                  Integer,
-                                                 status_byte,
+                                                 Register(self.STATUS_BYTE),
                                                  Integer]))
         # Computer Interfaces
         # ===================
-        rs = Register(dict((v, k) for k, v in self.RS232.iteritems()))
+        rs = Register(self.RS232)
         self.rs232 = Command('RS', 'RS', [Enum(*self.BAUD_RATE), rs])
         self.gpib = Command('GP', 'GP',
                             [Integer(min=0, max=31),
                              Enum('CR', 'CR echo', 'CRLF', 'CRLF echo',
                                   'None', 'None echo')])
         self.delimiter = Command('DD', 'DD', Set(13, *range(31, 126)))
-        self.status = Command('ST', type_=status_byte)
-        overload_byte = {
-            'ch1 output overload': 1,
-            'ch2 output overload': 2,
-            'y output overload': 3,
-            'x output overload': 4,
-            'input overload': 6,
-            'reference unlock': 7,
-        }
-        self.overload_status = Command('N', type_=Register(overload_byte))
-        self.status_enable = Command('MSK', 'MSK', status_byte)
+        self.status = Command(('ST', Register(self.STATUS_BYTE)))
+        self.overload_status = Command(('N', Register(self.OVERLOAD_BYTE)))
+        self.status_enable = Command('MSK', 'MSK', Register(self.STATUS_BYTE))
         self.remote = Command('REMOTE', 'REMOTE', Boolean)
         # Instrument identification
         # =========================

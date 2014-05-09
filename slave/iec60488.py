@@ -57,8 +57,6 @@ def _construct_register(reg, default_reg):
         x = dict((k, reg.get(k, d)) for k, d in default_reg.iteritems())
     else:
         x = dict(default_reg)
-    # XXX invert dict because Register type uses inverted key, value pairs
-    x = dict((v, k) for k, v in x.iteritems())
     return x
 
 

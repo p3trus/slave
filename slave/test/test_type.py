@@ -78,8 +78,12 @@ class TestRegister(unittest.TestCase, TypeCheck):
         self._values = ({'first': True, 'second': False,
                        'third': False, 'fourth': True},)
         self._serialized = ('9',)
-        self._type = Register({'first': 0, 'second': 1,
-                               'third': 2, 'fourth': 3})
+        self._type = Register({
+            0: 'first',
+            1: 'second',
+            2: 'third',
+            3: 'fourth'
+        })
 
 if __name__ == '__main__':
     unittest.main()

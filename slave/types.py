@@ -293,10 +293,22 @@ class Enum(Mapping):
 
 
 class Register(SingleType):
-    """Represents a binary register, where bits are mapped with a name."""
+    """Represents a binary register, where bits are mapped to a key.
+
+    :param mapping: The mapping defines the mapping between bits and keys, e.g.
+        ::
+
+            mapping = {
+                0: 'First bit',
+                1: 'Second bit',
+            }
+            reg = Register(mapping)
+
+
+"""
     def __init__(self, mapping):
         super(Register, self).__init__()
-        self._map = dict((str(k), int(v)) for k, v in mapping.iteritems())
+        self._map = dict((str(key), int(bit)) for bit, key in mapping.iteritems())
 
     def __convert__(self, value):
         x = 0

@@ -47,11 +47,6 @@ from slave.types import Boolean, Enum, Float, Integer, Register, Set, String
 import slave.misc
 
 
-def _invert(dct):
-    """Returns an inverted dict, keys become values and vice versa."""
-    return dict((v, k) for k, v in dct.iteritems())
-
-
 class Curve(InstrumentBase):
     """Represents a LS340 curve.
 
@@ -301,7 +296,7 @@ class InputChannel(InstrumentBase):
         self.name = name = str(name)
         # The reading status register, used in linear_status, reading_status
         # and minmax_status.
-        rds = Register(dict((v, k) for k, v in self.READING_STATUS.items()))
+        rds = Register(self.READING_STATUS)
 
         self.alarm = Command('ALARM? {0}'.format(name),
                              'ALARM {0},'.format(name),
@@ -827,13 +822,19 @@ class LS340(IEC60488):
                              Integer(min=0, max=30)])
         dout = [
             Enum('off', 'alarms', 'scanner', 'manual'),
-            Register({'DO1': 0, 'DO2': 1, 'DO3': 2, 'DO4': 3, 'DO5': 4})
+            Register({
+                0: 'DO1',
+                1: 'DO2',
+                2: 'DO3',
+                3: 'DO4',
+                4: 'DO5'
+            })
         ]
         self.digital_output_param = Command('DOUT?', 'DOUT',
                                             dout)
         diost = [
-            Register({'DI1': 0, 'DI2': 1, 'DI3': 2, 'DI4': 3, 'DI5': 4}),
-            Register({'DO1': 0, 'DO2': 1, 'DO3': 2, 'DO4': 3, 'DO5': 4}),
+            Register({0: 'DI1', 1: 'DI2', 2: 'DI3', 3: 'DI4', 4: 'DI5'}),
+            Register({0: 'DO1', 1: 'DO2', 2: 'DO3', 3: 'DO4', 4: 'DO5'}),
         ]
         self.digital_io_status = Command(('DIOST?', diost))
         xscan = [

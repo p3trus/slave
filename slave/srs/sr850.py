@@ -331,6 +331,16 @@ class SR850(IEC60488, PowerOn):
 
 
     """
+    LIA_BYTE = {
+        0: 'input overload',
+        1: 'filter overload',
+        2: 'output overload',
+        3: 'reference unlock',
+        4: 'detection freq change',
+        5: 'time constant change',
+        6: 'triggered',
+        7: 'plot',
+    }
     def __init__(self, transport):
         stb = {
             0: 'SCN',
@@ -361,27 +371,13 @@ class SR850(IEC60488, PowerOn):
             5: 'gpib error',
             6: 'dsp error',
         }
-        lia = {
-            0: 'input overload',
-            1: 'filter overload',
-            2: 'output overload',
-            3: 'reference unlock',
-            4: 'detection freq change',
-            5: 'time constant change',
-            6: 'triggered',
-            7: 'plot',
-        }
         super(SR850, self).__init__(transport, stb=stb, esb=esb)
         # Status Reporting Commands
-        def _invert(x):
-            """Returns a dict, where keys and values are switched."""
-            return dict((v, k) for k, v in x.iteritems())
-
-        self.lia_status = Command(('LIAS?', Register(_invert(lia))))
+        self.lia_status = Command(('LIAS?', Register(self.LIA_BYTE)))
         self.lia_status_enable = Command(
             'LIAE?',
             'LIAE',
-            Register(_invert(lia))
+            Register(self.LIA_BYTE)
         )
         # Reference and Phase Commands
         self.phase = Command('PHAS?', 'PHAS', Float(min=-360., max=719.999)
