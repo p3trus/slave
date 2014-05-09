@@ -516,9 +516,9 @@ class SR850(IEC60488, PowerOn):
                            transport=transport,
                            protocol=self._protocol)
 
-        self.aux_input = CommandSequence(aux_in(i) for i in xrange(1, 5))
+        self.aux_input = CommandSequence(aux_in(i) for i in range(1, 5))
         self.aux_output = tuple(
-            Output(transport, self._protocol, i) for i in xrange(1, 5)
+            Output(transport, self._protocol, i) for i in range(1, 5)
         )
         self.start_on_trigger = Command('TSTR?', 'TSTR', Boolean)
         # Math Commands

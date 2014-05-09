@@ -668,7 +668,7 @@ class LS370(IEC60488):
             return Command('ZONE? {0}'.format(i), 'ZONE {0},'.format(i),
                            type_, transport=self.transport)
 
-        self.zones = CommandSequence(make_zone(i) for i in xrange(1, 11))
+        self.zones = CommandSequence(make_zone(i) for i in range(1, 11))
 
     def clear_alarm(self):
         """Clears the alarm status for all inputs."""
