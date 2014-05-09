@@ -357,10 +357,10 @@ class SR7225(InstrumentBase):
     }
 
     def __init__(self, transport):
-        cfg = {
+        protocol = {
              'program data separator': ',',
         }
-        super(SR7225, self).__init__(transport, cfg=cfg)
+        super(SR7225, self).__init__(transport, protocol=protocol)
         # Signal channel
         # ==============
         self.current_mode = Command('IMODE', 'IMODE',
