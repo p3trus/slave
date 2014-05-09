@@ -28,13 +28,14 @@ class Range(InstrumentBase):
     """Represents a MPS4G current range.
 
     :param transport: A transport object.
+    :param protocol: A protocol object.
     :param idx: The current range index. Valid values are 0, 1, 2, 3, 4.
     :ivar limit: The upper limit of the current range.
     :ivar rate: The sweep rate of this current range.
 
     """
-    def __init__(self, transport, cfg, idx):
-        super(Range, self).__init__(transport, cfg)
+    def __init__(self, transport, protocol, idx):
+        super(Range, self).__init__(transport, protocol)
         self.idx = idx = int(idx)
         if not idx in range(0, 5):
             raise ValueError('Invalid range index.'
@@ -51,6 +52,7 @@ class Shim(InstrumentBase):
     """Represents a Shim option of the 4GMPS.
 
     :param transport: A transport object.
+    :param protocol: A protocol object.
     :param shim: The identifier of the shim.
 
     :ivar limit: The current limit of the shim.
@@ -61,8 +63,8 @@ class Shim(InstrumentBase):
         must be supplied in the configured units (ampere, kilo gauss).
 
     """
-    def __init__(self, transport, cfg, shim):
-        super(Shim, self).__init__(transport, cfg)
+    def __init__(self, transport, protocol, shim):
+        super(Shim, self).__init__(transport, protocol)
         if not shim in SHIMS:
             raise ValueError('Invalid shim identifier, '
                              'must be one of {0}'.format(SHIMS))
@@ -152,15 +154,15 @@ class MPS4G(IEC60488):
         if channel:
             # if single channel mode is required, set the channel on every
             # command to avoid errors.
-            cfg = {'program header prefix': 'CHAN {0};'.format(channel)}
+            protocol = {'program header prefix': 'CHAN {0};'.format(channel)}
         else:
-            cfg = {}
-        super(MPS4G, self).__init__(transport, stb=stb, cfg=cfg)
+            protocol = {}
+        super(MPS4G, self).__init__(transport, stb=stb, protocol=protocol)
         if shims:
             if isinstance(shims, basestring):
                 shims = [shims]
             for shim in list(shims):
-                setattr(self, str(shim), Shim(transport, self._cfg, shim))
+                setattr(self, str(shim), Shim(transport, self._protocol, shim))
 
         if channel:
             # Channel is read only if channel is fixed
@@ -178,7 +180,7 @@ class MPS4G(IEC60488):
         self.switch_heater = Command('PSHTR?', 'PSHTR',
                                      Mapping({True: 'ON', False: 'OFF'}))
         for idx in range(0, 5):
-            rng = Range(transport, self._cfg, idx)
+            rng = Range(transport, self._protocol, idx)
             setattr(self, 'range{0}'.format(idx), rng)
         # Custom format string to fix bug in firmware. The `;` must be appended
         self.upper_limit = Command('ULIM?', 'ULIM', UnitFloat(fmt='{0:.4f};'))

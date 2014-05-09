@@ -271,34 +271,31 @@ class InstrumentBase(object):
     the :class:`Command.query`, write access to the :class:`Command.write`
     member function.
 
-    When a Command is added to a subclass of :class:`~.InstrumentBase`, the
-    transport is automatically injected into the object unless the transport
-    of the Command is already set. If all Commands of a Instrument need a non
-    standard configuration, it is more convenient to inject it as well. This is
-    done via the cfg parameter.
+    :param transport: The transport object.
+    :param protocol: The protocol object.
 
     """
-    def __init__(self, transport, cfg=None, *args, **kw):
+    def __init__(self, transport, protocol=None, *args, **kw):
         self._transport = transport
         # Merge dict with default values.
         # TODO: In the future, this will be a protocol class instead of a dict.
-        if cfg:
-            self._cfg = dict(it.chain(Command.CFG.items(), cfg.items()))
+        if protocol:
+            self._protocol = dict(it.chain(Command.CFG.items(), protocol.items()))
         else:
-            self._cfg = dict(Command.CFG)
+            self._protocol = dict(Command.CFG)
         # super must be the last call, otherwise mixin classes relying on the
-        # existance of _cfg and transport will fail.
+        # existance of `_protocol` and `_transport` will fail.
         super(InstrumentBase, self).__init__(*args, **kw)
 
     def _write(self, cmd, *datas):
         """Helper function to simplify writing."""
         cmd = Command(write=cmd)
-        cmd.write(self._transport, self._cfg, *datas)
+        cmd.write(self._transport, self._protocol, *datas)
 
     def _query(self, cmd, *datas):
         """Helper function to allow method queries."""
         cmd = Command(query=cmd)
-        return cmd.query(self._transport, self._cfg, *datas)
+        return cmd.query(self._transport, self._protocol, *datas)
 
     def __getattribute__(self, name):
         """Redirects read access of command attributes to
@@ -306,7 +303,7 @@ class InstrumentBase(object):
         """
         attr = object.__getattribute__(self, name)
         if isinstance(attr, Command):
-            return attr.query(self._transport, self._cfg)
+            return attr.query(self._transport, self._protocol)
         return attr
 
     def __setattr__(self, name, value):
@@ -324,9 +321,9 @@ class InstrumentBase(object):
                 # Redirect write access
                 if (isinstance(value, collections.Iterable) and
                     not isinstance(value, basestring)):
-                    attr.write(self._transport, self._cfg, *value)
+                    attr.write(self._transport, self._protocol, *value)
                 else:
-                    attr.write(self._transport, self._cfg, value)
+                    attr.write(self._transport, self._protocol, value)
             else:
                 object.__setattr__(self, name, value)
 
