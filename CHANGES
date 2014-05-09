@@ -20,15 +20,24 @@ Note: This release breaks backwards compatibility.
     * `slave.srsr.sr830.SR830.snap()`
     * `slave.srs.sr850.MarkList.active()`
 
+ - Renamed `slave.core.InstrumentBase._cfg` attribute to `_protocol` and in all
+   dependant cases.
+
 Changes to the `slave.core`module:
+
  - The `InstrumentBase.transport`attribute was renamed to `_transport` to be
    more consistent. This avoids shadowing of possible commands and show the
    intent that in general the transport should not be used directly.
 
-Changes to the `slave.lakeshore.ls340`module:
+Changes to the `slave.lakeshore.ls340` module:
 
  - The `slave.lakeshore.ls340.Curve.delete()` method now raises a
    `RuntimeError` when called on a read-only curve.
  - The `slave.lakeshore.ls340.LS340._factory_defaults()` method does not take
    the boolean `confirm` argument anymore. The trailing underscore should be
    warning enough that you know what you're doing.
+
+Changes to the `slave.lakeshore.ls370` module:
+
+ - Implemented the missing relay commands `LS370.low_relay` and
+   `LS370.high_relay`.
