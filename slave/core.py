@@ -1,6 +1,6 @@
 #  -*- coding: utf-8 -*-
 #
-# Slave, (c) 2012, see AUTHORS.  Licensed under the GNU GPL.
+# Slave, (c) 2012 - 2014 see AUTHORS.  Licensed under the GNU GPL.
 """
 The core module contains several helper classes to ease instrument control.
 
@@ -22,11 +22,16 @@ implementation might look like::
             self.my_cmd2 = Command('QRY2?', 'WRT2', Enum('first', 'second'))
 
 """
+from __future__ import (absolute_import, division,
+                        print_function, unicode_literals)
 import collections
 import itertools as it
 import logging
 
+from future.builtins import *
+
 from slave.transport import SimulatedTransport
+import slave.protocol
 import slave.misc
 
 
@@ -43,25 +48,31 @@ def _to_instance(x):
     """Converts x to an instance if its a class."""
     return x() if isinstance(x, type) else x
 
-
 def _typelist(x):
     """Helper function converting all items of x to instances."""
-    if isinstance(x, collections.Iterable):
-        return map(_to_instance, x)
+    if isinstance(x, collections.Sequence):
+        return list(map(_to_instance, x))
+    elif isinstance(x, collections.Iterable):
+        return x
     return None if x is None else [_to_instance(x)]
 
+def _apply(function, types, values):
+    try:
+        t_len, d_len = len(types), len(values)
+    except TypeError:
+        pass
+    else:
+        if t_len > d_len:
+            raise ValueError('Too few values.')
+        elif t_len < d_len:
+            raise ValueError('Too many values.')
+    return [function(t, v) for t, v in zip(types, values)]
 
-def _make_response(data, resp_t, sep):
-    """Helper function to generate a response string.
+def _dump(types, values):
+    return _apply(lambda t, v: t.dump(v), types, values)
 
-    :param data: An iterable of datas.
-    :param resp_t: An iterable of corresponding response types.
-    :param sep: A string representing the response data separator.
-
-    .. note:: No response header is used.
-
-    """
-    return sep.join(t.dump(v) for t, v in it.izip(resp_t, data))
+def _load(types, values):
+    return _apply(lambda t, v: t.load(v), types, values)
 
 
 class Command(object):
@@ -100,17 +111,7 @@ class Command(object):
         configuration.
 
     """
-    #: Default configuration
-    CFG = {
-        'program header prefix': '',
-        'program header separator': ' ',
-        'program data separator': ',',
-        'response header separator': None,
-        'response data separator': ',',
-    }
-
-    def __init__(self, query=None, write=None,
-                 type_=None, protocol=None):
+    def __init__(self, query=None, write=None, type_=None, protocol=None):
         default = _typelist(type_)
         def write_message(header, data_type=default):
             return _Message(str(header), _typelist(data_type), None)
@@ -127,43 +128,6 @@ class Command(object):
         self.protocol = protocol
         self._query = assign(query, query_message)
         self._write = assign(write, write_message)
-        self._simulated_resp = None  # Used as a buffer in the simulation mode
-        _logger.debug('Command: "{0}"'.format(self))
-
-    def _program_message_unit(self, protocol, message, *datas):
-        """Constructs a program message unit.
-
-        :param header: The program header, can either be a command program
-            header e.g. `'*CLS'` or a query program header e.g. `'*IDN?'`.
-        :param datas: The program data or an iterable of program datas.
-
-        The following algorithm is used to construct the program message unit::
-
-            +---------+    +---------+    +-----------+    +---------+
-            | Program |    | Program |    | Program   |    | Program |
-            | Header  |--->| Header  +--->| Header    +--->| Data    +-+->
-            | Prefix  |    +---------+    | Separator | ^  +---------+ |
-            +---------+                   +-----------+ |              |
-                                                        | +-----------+|
-                                                        | | Program   ||
-                                                        +-+ Data      <+
-                                                          | Separator |
-                                                          +-----------+
-
-        """
-        php = protocol['program header prefix']
-        if not message.data_type:
-            # Short cut if data_type is None
-            # XXX Should we check if datas are available?
-            return php + message.header
-
-        if len(datas) != len(message.data_type):
-            raise ValueError('Number of datas must match the number of types.')
-
-        phs = protocol['program header separator']
-        pds = protocol['program data separator']
-        program_data = [t.dump(v) for v, t in it.izip(datas, message.data_type)]
-        return ''.join((php, message.header, phs, pds.join(program_data)))
 
     def write(self, transport, protocol, *data):
         """Generates and sends a command message unit.
@@ -174,24 +138,12 @@ class Command(object):
         :param data: The program data.
 
         """
-        if self.protocol:
-            # Merge dict with default values.
-            # TODO: In the future, this will be a protocol class instead of a
-            #       dict and the protocol argument should be ignored.
-            protocol = dict(it.chain(protocol.items(), self.protocol.items()))
-
         if not self._write:
             raise AttributeError('Command is not writeable')
-        if isinstance(transport, SimulatedTransport):
-            # If queriable and types match buffer datas, else do nothing.
-            resp_t = self._query.response_type
-            sep = protocol['response data separator']
-            if self._query and resp_t == self._write.data_type:
-                self._simulated_resp = _make_response(datas, resp_t, sep)
-        else:
-            cmu = self._program_message_unit(protocol, self._write, *data)
-            _logger.info('command message unit: "{0}"'.format(cmu))
-            transport.write(cmu)
+        if self.protocol:
+            protocol = self.protocol
+        data = _dump(self._write.data_type, data)
+        protocol.write(transport, self._write.header, *data)
 
     def query(self, transport, protocol, *data):
         """Generates and sends a query message unit.
@@ -206,56 +158,16 @@ class Command(object):
         if not self._query:
             raise AttributeError('Command is not queryable')
         if self.protocol:
-            # Merge dict with default values.
-            # TODO: In the future, this will be a protocol class instead of a
-            #       dict and the protocol argument should be ignored.
-            protocol = dict(it.chain(protocol.items(), self.protocol.items()))
-
-        if isinstance(transport, SimulatedTransport):
-            response = self._simulate(protocol)
+            protocol = self.protocol
+        if self._query.data_type:
+            data = _dump(self._query.data_type, data)
         else:
-            qmu = self._program_message_unit(protocol, self._query, *data)
-            _logger.info('query message unit: "{0}"'.format(qmu))
-            response = transport.ask(qmu)
-        _logger.info('response:"{0}"'.format(response))
-        header, parsed_data = self._parse_response(protocol, response)
-        # TODO handle the response header
+            data = ()
+        response = protocol.query(transport, self._query.header, *data)
+        response = _load(self._query.response_type, response)
 
         # Return single value if parsed_data is 1-tuple.
-        return parsed_data[0] if len(parsed_data) == 1 else parsed_data
-
-    def _parse_response(self, protocol, response):
-        """Parses the response."""
-        rhs = protocol['response header separator']
-        rds = protocol['response data separator']
-        resp_t = self._query.response_type
-
-        if rhs:
-            # Strip of response header.
-            # XXX What if we wan't to split on any whitespace?
-            header, response = response.split(rhs, 1)
-        else:
-            header = None
-
-        parsed_data = []
-        for v, t in it.izip_longest(response.split(rds), resp_t):
-            parsed_data.append(t.load(v) if t else v)
-        return header, tuple(parsed_data)
-
-    def _simulate(self, protocol):
-        response = self._simulated_resp
-        if not response:
-            response = _make_response(
-                (t.simulate() for t in self._query.response_type),
-                self._query.response_type,
-                protocol['response data separator']
-            )
-            # This simulates a response without a response header.
-            assert(protocol['response header separator'] is None)
-            # store response if writeable
-            if self._write:
-                self._simulated_resp = response
-        return response
+        return response[0] if len(response) == 1 else response
 
     def __repr__(self):
         """The commands representation."""
@@ -277,12 +189,7 @@ class InstrumentBase(object):
     """
     def __init__(self, transport, protocol=None, *args, **kw):
         self._transport = transport
-        # Merge dict with default values.
-        # TODO: In the future, this will be a protocol class instead of a dict.
-        if protocol:
-            self._protocol = dict(it.chain(Command.CFG.items(), protocol.items()))
-        else:
-            self._protocol = dict(Command.CFG)
+        self._protocol = protocol or slave.protocol.IEC60488()
         # super must be the last call, otherwise mixin classes relying on the
         # existance of `_protocol` and `_transport` will fail.
         super(InstrumentBase, self).__init__(*args, **kw)
