@@ -460,7 +460,7 @@ class Relay(InstrumentBase):
             'RELAY {0},'.format(idx),
             [
                 Enum('off', 'on', 'alarm', 'zone'),
-                Enum('scan', range(1, 17)),
+                Enum('scan', *range(1, 17)),
                 Enum('low', 'high', 'both')
             ]
         )
@@ -666,7 +666,7 @@ class LS370(IEC60488):
                 Integer(min=-100, max=100),Integer(min=-100, max=100)
             ]
             return Command('ZONE? {0}'.format(i), 'ZONE {0},'.format(i),
-                           type_, transport=self.transport)
+                           type_, transport=self._transport)
 
         self.zones = CommandSequence(make_zone(i) for i in range(1, 11))
 
@@ -717,5 +717,5 @@ class LS370(IEC60488):
             '3716L': 16,
             '3708': 8,
         }
-        self.input = Input(self.transport, self._protocol, channels=channels[value])
+        self.input = Input(self._transport, self._protocol, channels=channels[value])
         self._scanner = value
