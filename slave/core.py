@@ -330,10 +330,11 @@ class InstrumentBase(object):
 
 class CommandSequence(slave.misc.ForwardSequence):
     """A sequence forwarding item access to the query and write methods."""
-    def __init__(self, iterable):
+    def __init__(self, iterable, transport):
+        self._transport = transport
         super(CommandSequence, self).__init__(
             iterable,
-            get=lambda i: i.query(),
-            set=lambda i, v: i.write(v)
+            get=lambda i: i.query(self._transport),
+            set=lambda i, v: i.write(self._transport, v)
         )
 
