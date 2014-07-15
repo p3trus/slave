@@ -665,10 +665,12 @@ class LS370(IEC60488):
                 Enum(*Heater.RANGE), Boolean, Boolean,
                 Integer(min=-100, max=100),Integer(min=-100, max=100)
             ]
-            return Command('ZONE? {0}'.format(i), 'ZONE {0},'.format(i),
-                           type_, transport=self._transport)
+            return Command('ZONE? {0}'.format(i), 'ZONE {0},'.format(i), type_)
 
-        self.zones = CommandSequence(make_zone(i) for i in range(1, 11))
+        self.zones = CommandSequence(
+            (make_zone(i) for i in range(1, 11)),
+            self._transport
+        )
 
     def clear_alarm(self):
         """Clears the alarm status for all inputs."""
