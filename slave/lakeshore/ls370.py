@@ -603,7 +603,7 @@ class LS370(IEC60488):
             }),
         )
         self.displays = tuple(
-            Display(transport, protocol, i) for i in range(1, 9)
+            Display(transport, self._protocol, i) for i in range(1, 9)
         )
         self.display_locations = Command(
             'DISPLAY?',
