@@ -202,7 +202,7 @@ class MPS4G(IEC60488):
 
     def quench_reset(self):
         """Resets the quench condition."""
-        self._write('QRESET')
+        self._write('QRESET;')
 
     def locked(self):
         """Sets the front panel in locked remote mode."""
