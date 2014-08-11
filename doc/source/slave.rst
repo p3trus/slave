@@ -18,6 +18,14 @@ This part covers the complete api documentation of the slave library.
     :undoc-members:
     :show-inheritance:
 
+:mod:`protocol` Module
+------------------------
+
+.. automodule:: slave.protocol
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 :mod:`core` Module
 ------------------
 
@@ -106,11 +114,3 @@ This part covers the complete api documentation of the slave library.
     :members:
     :undoc-members:
     :show-inheritance:
-
-Subpackages
------------
-
-.. toctree::
-
-    slave.test
-
