@@ -106,8 +106,8 @@ class IEC60488(InstrumentBase):
     * `*WAI` - See IEC 60488-2:2004(E) section 10.39
 
     """
-    def __init__(self, transport, esb=None, stb=None, *args, **kw):
-        super(IEC60488, self).__init__(transport, *args, **kw)
+    def __init__(self, transport, protocol=None, esb=None, stb=None, *args, **kw):
+        super(IEC60488, self).__init__(transport, protocol,*args, **kw)
         self._esb = esb = _construct_register(esb, EVENT_STATUS_BYTE)
         self._stb = stb = _construct_register(stb, STATUS_BYTE)
 

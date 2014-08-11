@@ -512,11 +512,13 @@ class SR850(IEC60488, PowerOn):
         # Aux Input and Output Comnmands
         def aux_in(i):
             """Helper function to create an aux input command."""
-            return Command(query=('OAUX? {0}'.format(i), Float),
-                           transport=transport,
-                           protocol=self._protocol)
+            return Command(query=('OAUX? {0}'.format(i), Float))
 
-        self.aux_input = CommandSequence(aux_in(i) for i in range(1, 5))
+        self.aux_input = CommandSequence(
+            self._transport,
+            self._protocol,
+            (aux_in(i) for i in range(1, 5))
+        )
         self.aux_output = tuple(
             Output(transport, self._protocol, i) for i in range(1, 5)
         )
@@ -1100,9 +1102,9 @@ class Trace(InstrumentBase):
 
     :ivar float value: The value of the trace (read only).
     :ivar traces: A sequence of four traces represented by the following tuple
-        *(<a>, <b>, <c>, <store>)* where 
+        *(<a>, <b>, <c>, <store>)* where
 
-        * *<a>, <b>, <c>* define the trace which is calculated as 
+        * *<a>, <b>, <c>* define the trace which is calculated as
           *<a> * <b> / <c>*. Each one of them is one of the following
           quantities '1', 'x', 'y', 'r', 'theta', 'xn', 'yn', 'rn', 'Al1',
           'Al2', 'Al3', 'Al4', 'F', 'x**2', 'y**2', 'r**2', 'theta**2',
@@ -1166,7 +1168,7 @@ class Mark(InstrumentBase):
     :param idx: The mark index.
 
     """
-    def __init__(self, transport, protocol):
+    def __init__(self, transport, protocol, idx):
         super(Mark, self).__init__(transport, protocol)
         self.idx = idx = int(idx)
 

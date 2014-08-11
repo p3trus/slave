@@ -134,7 +134,7 @@ class Display(InstrumentBase):
             'DISPLOC? {0}'.format(location),
             'DISPLOC {0},'.format(location),
             [
-                Integer(min=0, max=16), 
+                Integer(min=0, max=16),
                 Enum('kelvin', 'ohm', 'linear', 'min', 'max', start=1),
                 Integer(min=4, max=6)
             ]
@@ -460,7 +460,7 @@ class Relay(InstrumentBase):
             'RELAY {0},'.format(idx),
             [
                 Enum('off', 'on', 'alarm', 'zone'),
-                Enum('scan', range(1, 17)),
+                Enum('scan', *range(1, 17)),
                 Enum('low', 'high', 'both')
             ]
         )
@@ -603,7 +603,7 @@ class LS370(IEC60488):
             }),
         )
         self.displays = tuple(
-            Display(transport, protocol, i) for i in range(1, 9)
+            Display(transport, self._protocol, i) for i in range(1, 9)
         )
         self.display_locations = Command(
             'DISPLAY?',
@@ -626,7 +626,7 @@ class LS370(IEC60488):
                             Enum('local', 'remote', 'lockout', start=1))
         self.monitor = Command(
             'MONITOR?',
-            'MONITOR', 
+            'MONITOR',
             Enum('off', 'cs neg', 'cs pos', 'vad',
                  'vcm neg', 'vcm pos', 'vdif', 'vmix')
         )
@@ -665,10 +665,12 @@ class LS370(IEC60488):
                 Enum(*Heater.RANGE), Boolean, Boolean,
                 Integer(min=-100, max=100),Integer(min=-100, max=100)
             ]
-            return Command('ZONE? {0}'.format(i), 'ZONE {0},'.format(i),
-                           type_, transport=self.transport)
-
-        self.zones = CommandSequence(make_zone(i) for i in range(1, 11))
+            return Command('ZONE? {0}'.format(i), 'ZONE {0},'.format(i), type_)
+        self.zones = CommandSequence(
+            self._transport,
+            self._protocol,
+            (make_zone(i) for i in range(1, 11))
+        )
 
     def clear_alarm(self):
         """Clears the alarm status for all inputs."""
@@ -717,5 +719,5 @@ class LS370(IEC60488):
             '3716L': 16,
             '3708': 8,
         }
-        self.input = Input(self.transport, self._protocol, channels=channels[value])
+        self.input = Input(self._transport, self._protocol, channels=channels[value])
         self._scanner = value

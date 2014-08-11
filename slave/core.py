@@ -184,7 +184,8 @@ class InstrumentBase(object):
     member function.
 
     :param transport: The transport object.
-    :param protocol: The protocol object.
+    :param protocol: The protocol object. If no protocol is given, a
+        :class:`IEC60488` protocol is used as default.
 
     """
     def __init__(self, transport, protocol=None, *args, **kw):
@@ -237,10 +238,12 @@ class InstrumentBase(object):
 
 class CommandSequence(slave.misc.ForwardSequence):
     """A sequence forwarding item access to the query and write methods."""
-    def __init__(self, iterable):
+    def __init__(self, transport, protocol, iterable):
+        self._transport = transport
+        self._protocol = protocol
         super(CommandSequence, self).__init__(
             iterable,
-            get=lambda i: i.query(),
-            set=lambda i, v: i.write(v)
+            get=lambda i: i.query(self._transport, self._protocol),
+            set=lambda i, v: i.write(self._transport, self._protocol, v)
         )
 

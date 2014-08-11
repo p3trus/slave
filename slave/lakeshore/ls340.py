@@ -948,5 +948,5 @@ class LS340(IEC60488):
             '3465': ('A', 'B', 'C'),
             '3468': ('A', 'B', 'C1', 'C2', 'C3', 'C4', 'D1', 'D2', 'D3', 'D4')
         }
-        self.input = Input(self.transport, self._protocol, channels[value])
+        self.input = Input(self._transport, self._protocol, channels[value])
         self._scanner = value

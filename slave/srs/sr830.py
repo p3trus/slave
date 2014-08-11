@@ -34,9 +34,9 @@ class Status(InstrumentBase):
     def __init__(self, transport, protocol, query, write, register):
         super(Status, self).__init__(transport, protocol)
         for k, v in register.iteritems():
-            q = query + ' {0}'.format(int(v))
-            w = write + ' {0},'.format(int(v)) if write else None
-            name = k.replace(' ', '_')
+            q = query + ' {0}'.format(int(k))
+            w = write + ' {0},'.format(int(k)) if write else None
+            name = v.replace(' ', '_')
             setattr(self, name, Command(q, w, Boolean))
         self.value = Command(query, write, Register(register))
 
