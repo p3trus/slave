@@ -121,7 +121,7 @@ class Command(object):
                             _typelist(response_type))
 
         def assign(x, fn):
-            return x and (fn(x) if isinstance(x, basestring) else fn(*x))
+            return x and (fn(x) if isinstance(x, (str, bytes)) else fn(*x))
 
         self.protocol = protocol
         self._query = assign(query, query_message)
@@ -246,7 +246,7 @@ class InstrumentBase(object):
             if isinstance(attr, Command):
                 # Redirect write access
                 if (isinstance(value, collections.Iterable) and
-                    not isinstance(value, basestring)):
+                    not isinstance(value, (str, bytes))):
                     attr.write(self._transport, self._protocol, *value)
                 else:
                     attr.write(self._transport, self._protocol, value)

@@ -1,6 +1,10 @@
 #  -*- coding: utf-8 -*-
 #
 # E21, (c) 2012, see AUTHORS.  Licensed under the GNU GPL.
+from __future__ import (absolute_import, division,
+                        print_function, unicode_literals)
+from future.builtins import *
+
 import string
 
 from slave.core import Command, InstrumentBase
@@ -20,7 +24,7 @@ class UnitFloat(Float):
     """
     def __convert__(self, value):
         """Converts value to Float."""
-        if isinstance(value, basestring):
+        if isinstance(value, (str, bytes)):
             value = value.rstrip(string.ascii_letters)
         return float(value)
 
@@ -160,7 +164,7 @@ class MPS4G(slave.iec60488.IEC60488):
             protocol = slave.protocol.IEC60488()
         super(MPS4G, self).__init__(transport, protocol, stb=stb)
         if shims:
-            if isinstance(shims, basestring):
+            if isinstance(shims, (str, bytes)):
                 shims = [shims]
             for shim in list(shims):
                 setattr(self, str(shim), Shim(transport, self._protocol, shim))

@@ -1,6 +1,10 @@
 #  -*- coding: utf-8 -*-
 #
 # Slave, (c) 2012, see AUTHORS.  Licensed under the GNU GPL.
+from __future__ import (absolute_import, division,
+                        print_function, unicode_literals)
+from future.builtins import *
+
 from slave.core import Command, InstrumentBase, CommandSequence
 from slave.types import Boolean, Enum, Float, Integer, Register, String
 from slave.iec60488 import IEC60488, PowerOn

@@ -22,6 +22,10 @@ Usage::
             # Implement custom commands.
 
 """
+from __future__ import (absolute_import, division,
+                        print_function, unicode_literals)
+from future.builtins import *
+
 from slave.core import Command, InstrumentBase
 from slave.types import Boolean, Integer, Register, String
 
@@ -54,7 +58,7 @@ PARALLEL_POLL_REGISTER = dict((i, str(i)) for i in range(8, 16))
 def _construct_register(reg, default_reg):
     """Constructs a register dict."""
     if reg:
-        x = dict((k, reg.get(k, d)) for k, d in default_reg.iteritems())
+        x = dict((k, reg.get(k, d)) for k, d in default_reg.items())
     else:
         x = dict(default_reg)
     return x

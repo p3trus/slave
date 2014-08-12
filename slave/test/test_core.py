@@ -73,12 +73,12 @@ class Test_load(object):
     def test_dump_with_too_many_values(self):
         with pytest.raises(ValueError) as excinfo:
             _load([Integer(), Integer()], ["1", "2", "3"])
-        assert excinfo.value.message == 'Too many values.'
+        assert str(excinfo.value) == 'Too many values.'
 
     def test_dump_with_too_few_values(self):
         with pytest.raises(ValueError) as excinfo:
             _load([Integer(), Integer()], ["1"])
-        assert excinfo.value.message == 'Too few values.'
+        assert str(excinfo.value) == 'Too few values.'
 
 
 class Test_dump(object):
@@ -91,12 +91,12 @@ class Test_dump(object):
     def test_dump_with_too_many_values(self):
         with pytest.raises(ValueError) as excinfo:
             _dump([Integer(), Integer()], [1, 2, 3])
-        assert excinfo.value.message == 'Too many values.'
+        assert str(excinfo.value) == 'Too many values.'
 
     def test_dump_with_too_few_values(self):
         with pytest.raises(ValueError) as excinfo:
             _dump([Integer(), Integer()], [1])
-        assert excinfo.value.message == 'Too few values.'
+        assert str(excinfo.value) == 'Too few values.'
 
 
 class TestCommand(object):

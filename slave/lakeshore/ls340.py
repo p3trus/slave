@@ -39,6 +39,9 @@ simply passes the model name at construction, e.g.::
 ture-controllers/model-340/Pages/Overview.aspx
 
 """
+from __future__ import (absolute_import, division,
+                        print_function, unicode_literals)
+from future.builtins import *
 import collections
 
 from slave.core import Command, InstrumentBase

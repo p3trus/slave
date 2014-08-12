@@ -66,7 +66,7 @@ class TestIEC60488Protocol(object):
         protocol = IEC60488()
         with pytest.raises(ValueError) as excinfo:
             protocol.parse_response(b'DATA,DATA', 'HEADER')
-        assert excinfo.value.message == 'Response header mismatch'
+        assert str(excinfo.value) == 'Response header mismatch'
 
     def test_query(self):
         protocol = IEC60488()

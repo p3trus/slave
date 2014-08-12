@@ -1,6 +1,9 @@
 #  -*- coding: utf-8 -*-
 #
 # Slave, (c) 2012, see AUTHORS.  Licensed under the GNU GPL.
+from __future__ import (absolute_import, division,
+                        print_function, unicode_literals)
+from future.builtins import *
 
 from slave.core import Command, InstrumentBase
 from slave.types import Boolean, Enum, Integer, Register, Set, String
@@ -16,7 +19,7 @@ class Float(slave.types.Float):
 
     """
     def __convert__(self, value):
-        if isinstance(value, basestring):
+        if isinstance(value, (str, bytes)):
             value = value.strip('\x00')
         return super(Float, self).__convert__(value)
 

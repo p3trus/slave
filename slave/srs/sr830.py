@@ -9,6 +9,9 @@ SR830.
 The SR830 lock in amplifier is an IEEE Std. 488-2 1987 compliant device.
 
 """
+from __future__ import (absolute_import, division,
+                        print_function, unicode_literals)
+from future.builtins import *
 
 from slave.core import Command, InstrumentBase
 from slave.types import Boolean, Enum, Float, Integer, Register, Set, String
@@ -33,7 +36,7 @@ class Status(InstrumentBase):
     """Wraps a readable and writeable register."""
     def __init__(self, transport, protocol, query, write, register):
         super(Status, self).__init__(transport, protocol)
-        for k, v in register.iteritems():
+        for k, v in register.items():
             q = query + ' {0}'.format(int(k))
             w = write + ' {0},'.format(int(k)) if write else None
             name = v.replace(' ', '_')
