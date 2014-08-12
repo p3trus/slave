@@ -1,154 +1,124 @@
 #  -*- coding: utf-8 -*-
 #
-# Slave, (c) 2012, see AUTHORS.  Licensed under the GNU GPL.
-
-"""
-The transport module provides a consistent device communication interface.
-
-To be consistent with slave, a device transport must implement a simple
-interface. It must have two methods
-
- * :meth:`ask()` taking a string command, returning a string response.
- * :meth:`write()` taking a string command.
-
-Packages, such as pyvisa, already implement this and can be used out of the
-box. One huge disadvantage of visa, not pyvisa, is the lacking support for
-modern linux kernels (>2.6). Alternatives do exist, e.g. :mod:`pyserial` can be
-used to interface with serial devices, The :mod:`socket` module allows network
-communication, linux has native support for usbtmc devices and linux-gpib can
-be used to talk to gpib devices. But they all lack a consistent interface. To
-overcome this issue, a consistent interface to all of them is implemented in
-this module.
-
-E.g::
-
-    from slave.transport import UsbtmcDevice
-
-    # connect to a tektronix tds2012C mountet at `/dev/usbtmc0` using it's
-    # ContextManager interface.
-    with UsbtmcDevice(0) as TDS2012C:
-        # emit clear command.
-        tds.write('*CLS')
-        # query status byte.
-        print tds.ask('*STB?')
-
-"""
-import threading
-import collections
-import ctypes as ct
-import ctypes.util
-import os
+# Slave, (c) 2012-2014, see AUTHORS.  Licensed under the GNU GPL.
+from __future__ import (absolute_import, division,
+                        print_function, unicode_literals)
+from future.builtins import *
 import socket
-
-
-class _LockDict(collections.defaultdict):
-    def __init__(self):
-        super(_LockDict, self).__init__(threading.Lock)
-        self._lock = threading.Lock()
-
-    def __getitem__(self, key):
-        with self._lock:
-            return super(_LockDict, self).__getitem__(key)
-
-
-#: A dictionairy of resource locks.
-_resource_locks = _LockDict()
+import ctypes as ct
 
 
 class Transport(object):
-    """An abstract base class defining the transport interface.
+    """A utility class to write and read data.
 
-    :param lock: A thread lock used to control access to the resource. This
-        allows multiple sessions to use the same resource.
-
-    The :class:`Transport` base class defines an interface for all
-    transports. The following hooks are mandatory and must be implemented by
-    a child class:
-
-    Mandatory hooks:
-     * :meth:`__read__`
-     * :meth:`__write__`
-
-    Optional hooks:
-     * :meth:`__delay__`
+    The :class:`~.Transport`base class defines a common interface used by the
+    `slave` library. Subclasses must implement `__read__` and `__write__`.
 
     """
-    def __init__(self, lock):
-        self._lock = lock
+    def __init__(self):
+        self._buffer = bytearray()
+        self._max_bytes = 1024
 
-    def ask(self, value):
-        """Writes the `value`, reads the response."""
-        with self._lock:
-            self.__write__(value)
-            self.__delay__()
-            return self.__read__().strip()
+    def read_bytes(self, num_bytes):
+        """Reads at most `num_bytes`."""
+        buffer_size = len(self._buffer)
+        if buffer_size > num_bytes:
+            # The buffer is larger than the requested amount of bytes.
+            data, self._buffer = self._buffer[:num_bytes], self._buffer[num_bytes:]
+        elif 0 < buffer_size <= num_bytes:
+            # This might return less bytes than requested.
+            data, self._buffer = self._buffer, bytearray()
+        else:
+            # Buffer is empty. Try to read `num_bytes` and call `read_bytes()`
+            # again. This ensures that at most `num_bytes` are returned.
+            self._buffer += self.__read__(num_bytes)
+            return self.read_bytes(num_bytes)
+        return data
 
-    def read(self):
-        """Reads from the device."""
-        with self._lock:
-            return self.__read__().strip()
+    def read_until(self, delimiter):
+        """Reads until the delimiter is found."""
+        if delimiter in self._buffer:
+            data, delimiter, self._buffer = self._buffer.partition(delimiter)
+            return data
+        else:
+            self._buffer += self.__read__(self._max_bytes)
+            return self.read_until(delimiter)
 
-    def write(self, value):
-        """Writes the `value` to the device."""
-        with self._lock:
-            self.__write__(value)
+    def write(self, data):
+        self.__write__(data)
 
-    def __delay__(self):
-        """Overwrite this to add a delay between the read and write operations
-        in the ask() method.
-        """
-        pass
-
-    def __read__(self):
-        """The read hook should return a string response."""
+    def __read__(self, num_bytes):
         raise NotImplementedError()
 
-    def __write__(self, value):
-        """The write hook should send the string value to the device."""
+    def __write__(self, data):
         raise NotImplementedError()
 
 
 class SimulatedTransport(object):
-    """A dummy transport.
+    """The SimulatedTransport.
 
-    The SimmulatedTransport is used as a dummy transport, telling a
-    :class:`Command` to use it's simulation mode.
+    The SimulatedTransport does not have any functionallity. It servers as a
+    sentinel value for the Command class to enable the simulation mode.
+    """
+
+
+class Socket(Transport):
+    """A slave compatible adapter for pythons socket.socket class.
+
+    E.g.::
+
+        from slave.signal_recovery import SR7230
+        from slave.transport import Socket
+
+        lockin = SR7230(Socket(address=('192.168.178.1', 50000)))
 
     """
-    def ask(self, value):
-        return ''
+    def __init__(self, address, *args, **kw):
+        super(Socket, self).__init__()
+        self._socket = socket.socket(*args, **kw)
+        self._socket.connect(address)
 
-    def write(self, value):
-        pass
+    def __write__(self, data):
+        self._socket.sendall(data)
 
-
-class GpibDevice(Transport):
-    """Wrapps a linux-gpib device.
-
-    :param primary: The primary gpib address in the range of 0 to 30.
-    :param secondary: The secondary gpib address.
-    :param board: The gpib board index. Linux-gpib supports up to 16 boards.
-    :param timeout: The timeout in seconds.
-
-    Usage::
-
-        from slave.transport import GpibDevice
+    def __read__(self, num_bytes):
+        return self._socket.recv(num_bytes)
 
 
-        # Connecting to a gpib device at address 8, using the context manager
-        # interface.
-        with GpibDevice(8) as transport:
-            # print the identification string of the device.
-            print transport.ask('*IDN?')
+class Visa(Transport):
+    """A pyvisa adapter."""
+    def __init__(self, *args, **kw):
+        import visa
 
-    """
+        # TODO pyvisa versions after 1.5 should be handled differently.
+        self._visa = visa.instrument(*args, **kw)
+
+    def __read__(self, num_bytes):
+        self._visa.read_raw(num_bytes)
+
+    def __write__(self, data):
+        self._visa.write_raw(num_bytes)
+
+
+class Serial(Transport):
+    """A pyserial adapter."""
+    def __init__(self, *args, **kw):
+        # We import serial inside the class, because pyserial is only neccessary
+        # if the serial adapter is used.
+        import serial
+        self._serial = serial.Serial(*args, **kw)
+
+    def __write__(self, data):
+        self._serial.write(data)
+
+    def __read__(self, num_bytes):
+        return self._serial.read(num_bytes)
+
+
+class LinuxGpib(Transport):
+    """A linuxgpib adapter."""
     def __init__(self, primary=0, secondary=0, board=0, timeout=13, send_eoi=1,
                  eos=0):
-        # Use visa resource identifier as key in the resource lock dict.
-        super(GpibDevice, self).__init__(
-            lock=_resource_locks['GPIB{0}::{1}'.format(board, primary)]
-        )
-
         lib = ctypes.util.find_library('gpib')
         self._lib = ct.CDLL(lib)
         self._device = self._lib.ibdev(
@@ -159,32 +129,15 @@ class GpibDevice(Transport):
             ct.c_int(send_eoi),
             ct.c_int(eos)
         )
-        # TODO check device descriptor
-        # TODO allow customizable term char
-        self._term_chars = '\n'
-
-    def __enter__(self):
-        return self
-
-    def __exit__(self):
-        self.close()
 
     def close(self):
-        """Closes the gpib transport.
-
-        .. note::
-
-            Instead of directly calling `close()`, use it's ContextManager
-            interface.
-
-        """
+        """Closes the gpib transport."""
         self._lib.ibonl(self._device, ct.c_int(0))
 
-    def __write__(self, value):
-        value = value + self._term_chars
-        self._lib.ibwrt(self._device, ct.c_char_p(value), ct.c_long(len(value)))
+    def __write__(self, data):
+        self._lib.ibwrt(self._device, ct.c_char_p(data), ct.c_long(len(data)))
 
-    def __read__(self, bytes=1024):
+    def __read__(self, num_bytes):
         buffer = ct.create_string_buffer(bytes)
         self._lib.ibrd(self._device, ct.byref(buffer), ct.c_long(bytes))
         return buffer.value
@@ -196,111 +149,3 @@ class GpibDevice(Transport):
         the device.
         """
         self._lib.ibtrg(self._device)  # TODO check error conditions.
-
-
-class TCPIPDevice(Transport):
-    """A tiny wrapper for a socket transport.
-
-    :param address: The ip address as string.
-    :param port: The port.
-
-    Usage::
-
-        from slave.transport import TCPIPDevice
-
-
-        # Connecting to a tcpip device at address 168.178.0.1:1337, using the
-        # context manager interface.
-        with TCPIPDevice('168.178.0.1',1337) as transport:
-            # print the identification string of the device.
-            print transport.ask('*IDN?')
-
-    """
-    def __init__(self, address, port):
-        super(TCPIPDevice, self).__init__(
-            # TODO convert dns address to ip
-            lock=_resource_locks['TCPIP::{0}:{1}'.format(address, port)]
-        )
-        self._device = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self._device.connect((address, port))
-        self._term_chars = '\n'
-
-    def __enter__(self):
-        return self
-
-    def __exit__(self):
-        self.close()
-
-    def close(self):
-        """Closes the socket transport.
-
-        .. note::
-
-            Instead of directly calling `close()`, use it's ContextManager
-            interface.
-
-        """
-        self._device.close()
-
-    def __read__(self, bytes=1024):
-        return self._device.recv(bytes)
-
-    def __write__(self, value):
-        self._device.send(value + self._term_chars)
-
-
-class UsbtmcDevice(Transport):
-    """A generic usbtmc device transport.
-
-    :param primary: The usbtmc primary address. A primary address of `0`
-        corresponds to the '/dev/usbtmc0' device.
-
-    .. note::
-
-        * This class needs Linux kernel >= 2.6.28 to work properly.
-
-        * Read and write access to the device descriptors, e.g. '/dev/usbtmc0'
-          is required.
-
-    Usage::
-
-        from slave.transport import UsbtmcDevice
-
-
-        # Connecting to a usbtmc device at '/dev/usbtmc0', using the
-        # context manager interface.
-        with UsbtmcDevice(0) as transport:
-            # print the identification string of the device.
-            print transport.ask('*IDN?')
-
-    """
-    def __init__(self, primary):
-        super(UsbtmcDevice, self).__init__(
-            lock=_resource_locks['usbtmc{0}'.format(primary)]
-        )
-        self._device = os.open('/dev/usbtmc{0}'.format(primary), os.O_RDWR)
-        self._term_chars = '\n'
-
-    def __enter__(self):
-        return self
-
-    def __exit__(self):
-        self.close()
-
-    def close(self):
-        """Closes the Usbtmc transport.
-
-        .. note::
-
-            Instead of directly calling `close()`, use it's ContextManager
-            interface.
-
-        """
-        os.close(self._device)
-
-    def __read__(self, bytes=1024):
-        return os.read(self._device, bytes)
-
-    def __write__(self, value):
-        os.write(self._device, value + self._term_chars)
-

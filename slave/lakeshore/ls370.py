@@ -134,7 +134,7 @@ class Display(InstrumentBase):
             'DISPLOC? {0}'.format(location),
             'DISPLOC {0},'.format(location),
             [
-                Integer(min=0, max=16), 
+                Integer(min=0, max=16),
                 Enum('kelvin', 'ohm', 'linear', 'min', 'max', start=1),
                 Integer(min=4, max=6)
             ]
@@ -626,7 +626,7 @@ class LS370(IEC60488):
                             Enum('local', 'remote', 'lockout', start=1))
         self.monitor = Command(
             'MONITOR?',
-            'MONITOR', 
+            'MONITOR',
             Enum('off', 'cs neg', 'cs pos', 'vad',
                  'vcm neg', 'vcm pos', 'vdif', 'vmix')
         )
@@ -666,10 +666,10 @@ class LS370(IEC60488):
                 Integer(min=-100, max=100),Integer(min=-100, max=100)
             ]
             return Command('ZONE? {0}'.format(i), 'ZONE {0},'.format(i), type_)
-
         self.zones = CommandSequence(
-            (make_zone(i) for i in range(1, 11)),
-            self._transport
+            self._transport,
+            self._protocol,
+            (make_zone(i) for i in range(1, 11))
         )
 
     def clear_alarm(self):

@@ -4,7 +4,8 @@
 import string
 
 from slave.core import Command, InstrumentBase
-from slave.iec60488 import IEC60488
+import slave.protocol
+import slave.iec60488
 from slave.types import Boolean, Float, Mapping, Set, String
 
 
@@ -87,7 +88,7 @@ class Shim(InstrumentBase):
         self._write('SHIM {0}'.format(self._shim))
 
 
-class MPS4G(IEC60488):
+class MPS4G(slave.iec60488.IEC60488):
     """Represents the Cryomagnetics, inc. 4G Magnet Power Supply.
 
     :param transport: A transport object.
@@ -154,9 +155,9 @@ class MPS4G(IEC60488):
         if channel:
             # if single channel mode is required, set the channel on every
             # command to avoid errors.
-            protocol = {'program header prefix': 'CHAN {0};'.format(channel)}
+            protocol = slave.protocol.IEC60488(msg_prefix='CHAN {0};'.format(channel))
         else:
-            protocol = {}
+            protocol = slave.protocol.IEC60488()
         super(MPS4G, self).__init__(transport, protocol, stb=stb)
         if shims:
             if isinstance(shims, basestring):
