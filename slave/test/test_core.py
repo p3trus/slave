@@ -10,6 +10,7 @@ import pytest
 
 from slave.core import Command, _dump, _load, _to_instance, _typelist
 from slave.types import Integer
+from slave.transport import SimulatedTransport
 
 
 class MockProtocol(object):
@@ -127,3 +128,30 @@ class TestCommand(object):
         assert protocol.header == 'HEADER'
         assert protocol.data == ()
         assert response == [1, 2]
+
+    def test_simulation_with_query_and_writeable_cmd(self):
+        protocol = MockProtocol()
+        transport = SimulatedTransport()
+        cmd = Command('HEADER?', 'HEADER', Integer)
+        response = cmd.query(transport, protocol)
+        assert isinstance(response, int)
+        assert cmd._simulation_buffer == [Integer().dump(response)]
+
+    def test_simulation_with_query_only_cmd(self):
+        protocol = MockProtocol()
+        transport = SimulatedTransport()
+        cmd = Command(query=('HEADER', [Integer, Integer]))
+        response = cmd.query(transport, protocol)
+        assert len(response) == 2
+        for item in response:
+            assert isinstance(item, int)
+        # query only should not buffer simulated response
+        with pytest.raises(AttributeError):
+            cmd._simulation_buffer
+
+    def test_write_with_simulation(self):
+        protocol = MockProtocol()
+        transport = SimulatedTransport()
+        cmd = Command(write=('HEADER', [Integer, Integer]))
+        cmd.write(transport, protocol, 1, 2)
+        assert cmd._simulation_buffer == ['1', '2']

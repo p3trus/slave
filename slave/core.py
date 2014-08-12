@@ -26,7 +26,6 @@ from __future__ import (absolute_import, division,
                         print_function, unicode_literals)
 import collections
 import itertools as it
-import logging
 
 from future.builtins import *
 
@@ -34,9 +33,6 @@ from slave.transport import SimulatedTransport
 import slave.protocol
 import slave.misc
 
-
-_logger = logging.getLogger(__name__)
-_logger.addHandler(logging.NullHandler())
 
 _Message = collections.namedtuple(
     '_Message',
@@ -84,13 +80,13 @@ class Command(object):
     For example::
 
         # a read and writeable command
-        cmd1 = Command('STRING?', 'STRING', String, c)
+        cmd1 = Command('STRING?', 'STRING', String)
 
         # a readonly command returning a tuple of two strings
-        cmd2 = Command(('STRING?', [String, String]), transport=c)
+        cmd2 = Command(('STRING?', [String, String]))
 
         # a writeonly command
-        cmd3 = Command(write=('STRING', String), transport=c)
+        cmd3 = Command(write=('STRING', String))
 
     :param query: A string representing the *query program header*, e.g.
         `'*IDN?'`. To allow customisation of the queriing a 2-tuple or 3-tuple
@@ -107,8 +103,10 @@ class Command(object):
         * (<command header>, <response data type>)
 
         The types have the same requirements as the type parameter.
-    :param protocol: The configuration dictionary is used to customize the
-        configuration.
+    :param protocol: When a protocol (an object implementing the
+        :class:`slave.protocol.Protocol` interface) is given,
+        :meth:`~.Command.query` and :meth:`~.Command.write` methods ignore it's
+        protocol argument and use it instead.
 
     """
     def __init__(self, query=None, write=None, type_=None, protocol=None):
@@ -143,7 +141,10 @@ class Command(object):
         if self.protocol:
             protocol = self.protocol
         data = _dump(self._write.data_type, data)
-        protocol.write(transport, self._write.header, *data)
+        if isinstance(transport, SimulatedTransport):
+            self.simulate_write(data)
+        else:
+            protocol.write(transport, self._write.header, *data)
 
     def query(self, transport, protocol, *data):
         """Generates and sends a query message unit.
@@ -163,11 +164,28 @@ class Command(object):
             data = _dump(self._query.data_type, data)
         else:
             data = ()
-        response = protocol.query(transport, self._query.header, *data)
+        if isinstance(transport, SimulatedTransport):
+            response = self.simulate_query(data)
+        else:
+            response = protocol.query(transport, self._query.header, *data)
         response = _load(self._query.response_type, response)
 
         # Return single value if parsed_data is 1-tuple.
         return response[0] if len(response) == 1 else response
+
+    def simulate_write(self, data):
+        self._simulation_buffer = data
+
+    def simulate_query(self, data):
+        try:
+            return self._simulation_buffer
+        except AttributeError:
+            response = [t.simulate() for t in self._query.response_type]
+            # If the command is writeable it represents state. Therefore we
+            # store the simulated response.
+            if self._write:
+                self._simulation_buffer = _dump(self._write.data_type, response)
+            return response
 
     def __repr__(self):
         """The commands representation."""
