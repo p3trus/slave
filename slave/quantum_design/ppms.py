@@ -135,8 +135,8 @@ class PPMS(IEC60488):
     :ivar position: The current sample position.
 
     """
-    def __init__(self, connection):
-        super(PPMS, self).__init__(connection)
+    def __init__(self, transport):
+        super(PPMS, self).__init__(transport)
         self.advisory_number = Command(('ADVNUM?', Integer(min=0, max=999)))
         self.chamber = Command(
             'CHAMBER?',

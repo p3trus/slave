@@ -6,7 +6,7 @@ import datetime
 
 import visa
 
-from slave.ppms import PPMS
+from slave.quantum_design import PPMS
 from slave.sr830 import SR830
 from slave.misc import Measurement
 
@@ -21,7 +21,7 @@ try:
     lockin.reserve = 'low'
     lockin.time_constant = 3
 
-    # Set the ppms temperature to 10 K, cooling with a rate of 3 K per min.
+    # Set the ppms temperature to 10 K, cooling with a rate of 20 K per min.
     ppms.set_temperature(10, 20, wait_for_stability=True)
     # Now sweep slowly to avoid temperature instabilities.
     ppms.set_temperature(1.2, 0.5, wait_for_stability=True)
