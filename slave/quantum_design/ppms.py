@@ -134,6 +134,11 @@ class PPMS(IEC60488):
 
     :ivar position: The current sample position.
 
+    .. rubric:: Configuration
+
+    :ivar date: The configured date of the ppms computer represented by a python
+        `date` object.
+
     """
     def __init__(self, transport):
         super(PPMS, self).__init__(transport)
@@ -213,6 +218,17 @@ class PPMS(IEC60488):
         """
         cmd = 'BEEP', [Float(min=0.1, max=5.0), Integer(min=500, max=5000)]
         self._write(cmd, duration, frequency)
+
+    @property
+    def date(self):
+        month, day, year = self._query(('DATE?', [Integer, Integer, Integer]))
+        return datetime.date(2000 + year, month, day)
+
+    @date.setter
+    def date(self, date):
+        # The ppms only accepts the last two digits of the year.
+        month, date, year = date.month, date.day, date.year % 100
+        self._write(('DATE', [Integer, Integer, Integer]), month, date, year)
 
     def move(self, position, slowdown=0):
         """Move to the specified sample position.
