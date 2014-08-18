@@ -4,11 +4,11 @@
 import datetime
 import time
 
-from slave.core import Command
-from slave.types import Enum, Float, Integer
+from slave.core import Command, CommandSequence, InstrumentBase
+from slave.types import Enum, Float, Integer, Register
 from slave.iec60488 import IEC60488
 
-# Temperature controller status code.
+#: Temperature controller status code.
 STATUS_TEMPERATURE = {
     0x0: 'unknown',
     0x1: 'normal stability at target temperature',
@@ -59,9 +59,72 @@ STATUS_SAMPLE_POSITION = {
     0xf: 'failure',
 }
 
+#: Status of digital input lines.
+STATUS_DIGITAL_INPUT = {
+    0x1: 'Motor Port - Limit 1',
+    0x2: 'Motor Port - Limit 2',
+    0x3: 'Aux Port - Sense 1',
+    0x4: 'Aux Port - Sense 2',
+    0x5: 'Ext Port - Busy',
+    0x6: 'Ext Port - User',
+}
+
+#: Status of the digital output lines.
+STATUS_DIGITAL_OUTPUT = {
+    0x0: 'Drive Line 1',
+    0x1: 'Drive Line 2',
+    0x2: 'Drive Line 3',
+    0x3: 'Actuator Drive'
+}
+
+#: Status of the external select lines.
+STATUS_EXTERNAL_SELECT = {
+    0x0: 'Select 1',
+    0x1: 'Select 2',
+    0x2: 'Select 3',
+}
+
+#: The linking status.
+STATUS_LINK = {
+    0: None,
+    1: 'Temperature',
+    2: 'Tield',
+    3: 'Position',
+    4: 'User Bridge CH1 Ohm',
+    5: 'User Bridge CH1 A',
+    6: 'User Bridge CH2 Ohm',
+    7: 'User Bridge CH2 A',
+    8: 'User Bridge CH3 OHM',
+    9: 'User Bridge CH3 A',
+    10: 'User Bridge CH4 Ohm',
+    11: 'User Bridge CH4 A',
+    12: 'Signal Input CH1',
+    13: 'Signal Input CH2',
+    14: 'Digital Input Aux, Ext',
+    15: 'User Driver CH1 mA',
+    16: 'User Driver CH1 W',
+    17: 'User Driver CH2 mA',
+    18: 'User Driver CH2 W',
+    19: 'Sample Space Pressure',
+    20: 'User Mapped Item',
+    21: 'User Mapped Item',
+    22: 'User Mapped Item',
+    23: 'User Mapped Item',
+    24: 'User Mapped Item',
+    25: 'User Mapped Item',
+    26: 'User Mapped Item',
+    27: 'User Mapped Item',
+    28: 'User Mapped Item',
+    29: 'User Mapped Item',
+}
+
 
 class PPMS(IEC60488):
     """A Quantum Design Model 6000 PPMS.
+
+    :param transport: A transport object.
+    :param max_field: The maximum magnetic field allowed in Oersted. If `None`,
+        the default, it's read back from the ppms.
 
     .. note::
 
@@ -79,13 +142,103 @@ class PPMS(IEC60488):
         * 'pump' pumps the chamber continuously.
         * 'vent' ventilates the chamber continuously.
 
+    :ivar sample_space_pressure: The pressure of the sample space in user units.
+        (read only)
     :ivar system_status: The general system status.
+
+    .. rubric:: Configuration
+
+    :ivar bridges: A list of :class:`~.BridgeChannel` instances representing all
+        four user bridges.
+
+        .. note::
+
+            Python indexing starts at 0, so the first bridge has the index 0.
+
+
+    :ivar date: The configured date of the ppms computer represented by a python
+        `datetime.date` object.
+    :ivar time: The configured time of the ppms computer, represented by a python
+        `datetime.time` object.
+    :ivar analog_output: A tuple of :class:`~.AnalogOutput` instances
+        corresponding to the four analog outputs.
+    :ivar digital_input: The states of the digital input lines.
+        A dict with the following keys
+
+        ====================== ========
+        Keys                   Pinouts
+        ====================== ========
+        'Motor Port - Limit 1' P10-4,5
+        'Motor Port - Limit 2' P10-9,5
+        'Aux Port - Sense 1'   P8-18,19
+        'Aux Port - Sense 2'   P8-6,19
+        'Ext Port - Busy'      P11-9
+        'Ext Port - User'      P11-5
+        ====================== ========
+
+        A dict value of True means the line is asserted.
+
+        (read only)
+
+    :ivar digital_output: The state of the digital output lines. A dict with
+        the following keys
+
+        ================ ============== =======
+        Keys             Connector Port Pinouts
+        ================ ============== =======
+        'Drive Line 1'   Auxiliary Port P8-1,14
+        'Drive Line 2'   Auxiliary Port P8-2,15
+        'Drive Line 3'   Auxiliary Port P8-3,16
+        'Actuator Drive' Motor Port     P10-3,8
+        ================ ============== =======
+
+        A dict value of `True` means the line is set to -24 V output.
+        Setting it with a dict containing only some keys will only change these.
+        The other lines will be left unchanged.
+
+    :ivar driver_output: A :class:`CommandSequence` representing the driver
+        outputs of channel 1 and 2. Each channel is represented by a tuple of
+        the form *(<current>, <power limit>)*, where
+
+         * *<current>* is the current in mA, in the range 0 to 1000.
+         * *<power limit>* is the power limit in W, in the range 0 to 20.
+
+         .. note::
+
+            Python indexing starts with 0. Therefore channel 1 has the index 0.
+
+    :ivar external_select: The state of the external select lines. A dict with
+        the following keys
+
+        ====== =============== =======
+        Key    Connector Port  Pinouts
+        ====== =============== =======
+        Select 1 External Port P11-1,6
+        Select 2 External Port P11-2,7
+        Select 3 External Port P11-3,8
+        ====== =============== =======
+
+        A dict value of `True` means the line is asserted (switch closed).
+        Setting it with a dict containing only some keys will only change these.
+        The other lines will be left unchanged.
+
+    :ivar revision: The revision number. (read only)
+
+    .. rubric:: Helium Level Control
+
+    :ivar level: The helium level, represented by a tuple of the form
+        *(<level>, <age>)*, where
+
+        * *<level>* The helium level in percent.
+        * *<age>* is the age of the reading. Either '>1h', '<1h' or
+          'continuous'.
 
     .. rubric:: Magnet Control
 
     :ivar field: The current magnetic field in Oersted(read only).
-    :ivar target_field: The magnetic field configuration, represented by the following
-        tuple *(<field>, <rate>, <approach mode>, <magnet mode>)*, where
+    :ivar target_field: The magnetic field configuration, represented by the
+        following tuple *(<field>, <rate>, <approach mode>, <magnet mode>)*,
+        where
 
         * *<field>* is the magnetic field setpoint in Oersted with a
           resolution of 0.01 Oersted. The min and max fields depend on the
@@ -98,17 +251,20 @@ class PPMS(IEC60488):
         * *<magnet mode>* is the state of the magnet at the end of the
           charging process, either 'persistent' or 'driven'.
 
-    .. rubric:: Temperature Control
+    :ivar magnet_config: The magnet configuration represented by the following
+        tuple *(<max field>, <B/I ratio>, <inductance>, <low B charge volt>,*
+        *<high B charge volt>, <switch heat time>, <switch cool time>)*, where
 
-    :ivar temperature: The temperature at the sample position in Kelvin
-        (read only).
-    :ivar target_temperature: The temperature configuration, a tuple consisting of
-        *(<temperature>, <rate>, <approach mode>)*, where
-
-        * *<temperature>* The temperature setpoint in kelvin in the range 1.9
-          to 350.
-        * *<rate>* The sweep rate in kelvin per minute in the range 0 to 20.
-        * *<approach mode>* The approach mode, either 'fast' or 'no overshoot'.
+        * *<max field>* is the max field of the magnet in Oersted.
+        * *<B/I ratio>* is the field to current ratio in Oersted/A.
+        * *<inductance>* is the inductance in Henry.
+        * *<low B charge volt>* is the charging voltage at low B fields in volt.
+        * *<high B charge volt>* is the chargin voltage at high B fields in
+          volt.
+        * *<switch heat time>* is the time it takes to open the persistent
+          switch in seconds.
+        * *<switch cool time>* is the time it takes to close the persistent
+          switch in seconds.
 
     .. rubric:: Sample Position
 
@@ -134,13 +290,20 @@ class PPMS(IEC60488):
 
     :ivar position: The current sample position.
 
-    .. rubric:: Configuration
+    .. rubric:: Temperature Control
 
-    :ivar date: The configured date of the ppms computer represented by a python
-        `date` object.
+    :ivar temperature: The temperature at the sample position in Kelvin
+        (read only).
+    :ivar target_temperature: The temperature configuration, a tuple consisting of
+        *(<temperature>, <rate>, <approach mode>)*, where
+
+        * *<temperature>* The temperature setpoint in kelvin in the range 1.9
+          to 350.
+        * *<rate>* The sweep rate in kelvin per minute in the range 0 to 20.
+        * *<approach mode>* The approach mode, either 'fast' or 'no overshoot'.
 
     """
-    def __init__(self, transport):
+    def __init__(self, transport, max_field=None):
         super(PPMS, self).__init__(transport)
         self.advisory_number = Command(('ADVNUM?', Integer(min=0, max=999)))
         self.chamber = Command(
@@ -148,6 +311,7 @@ class PPMS(IEC60488):
             'CHAMBER',
             Enum('seal', 'purge seal', 'vent seal', 'pump', 'vent')
         )
+        self.sample_space_pressure = Command(('GETDAT? 524288', Float))
         self.move_config = Command(
             'MOVECFG?',
             'MOVECFG',
@@ -158,12 +322,19 @@ class PPMS(IEC60488):
             )
         )
         self.sample_position = Command(('GETDAT? 8', Float))
-        # TODO Allow for configuration of the ranges
+        self.magnet_config = Command(
+            'MAGCNF?',
+            'MAGCNF',
+            [Float] * 5 + [Integer, Integer]
+        )
+        if max_field is None:
+            max_field = self.magnet_config[0]
+
         self.target_field = Command(
             'FIELD?',
             'FIELD',
             (
-                Float(min=-9e4, max=9e4, fmt='{0:.2f}'),
+                Float(min=-max_field, max=max_field, fmt='{0:.2f}'),
                 Float(min=10.5, max=196., fmt='{0:.1f}'),
                 Enum('linear', 'no overshoot', 'oscillate'),
                 Enum('persistent', 'driven')
@@ -179,6 +350,51 @@ class PPMS(IEC60488):
                 Enum('fast', 'no overshoot')
             )
         )
+        self.digital_input = Command(('DIGIN?', Register(STATUS_DIGITAL_INPUT)))
+        cmds = [
+            Command(
+                'DRVOUT? {}'.format(i),
+                'DRVOUT {} '.format(i),
+                [Float(min=0, max=1000.), Float(min=0., max=20.)])
+            for i in range(1, 3)
+        ]
+        self.driver_output = CommandSequence(
+            self._transport,
+            self._protocol,
+            [
+                Command(
+                    'DRVOUT? {}'.format(i),
+                    'DRVOUT {} '.format(i),
+                    [Float(min=0, max=1000.), Float(min=0., max=20.)]
+                ) for i in range(1, 3)
+            ]
+        )
+        self.bridge = [
+            BridgeChannel(self._transport, self._protocol, i) for i in range(1, 5)
+        ]
+        self.level = Command((
+            'LEVEL?',
+            [Float, Enum('>1h', '<1h', 'continuous')]
+        ))
+        self.revision = Command(('REV?', String))
+
+    def levelmeter(self, rate):
+        """Changes the measuring rate of the levelmeter.
+
+        :param rate: Valid are 'on', 'off', 'continuous' and 'hourly'. 'on'
+            turns on the level meter, takes a reading and turns itself off.
+            In 'continuous' mode, the readings are constantly updated. If no
+            reading is requested within 60 seconds, the levelmeter will be
+            turned off. 'off' turns off hourly readings.
+
+        .. note::
+            It takes approximately 10 seconds until a measured level is
+            available.
+
+        """
+        # TODO: Check what 'off' actually does. Manual says it just deactivates
+        # hourly readings and opcode 0 should be used to deactivate.
+        self._write(('LEVELON', Enum('on', 'continuous', 'hourly', 'off')))
 
     @property
     def field(self):
@@ -220,6 +436,28 @@ class PPMS(IEC60488):
         self._write(cmd, duration, frequency)
 
     @property
+    def digital_output(self):
+        return self._query(('DIGSET', Register(STATUS_DIGITAL_OUTPUT)))
+
+    @digital_output.setter
+    def digital_output(self, value):
+        # Constructs a mask, where the values are False if the key is missing.
+        mask = {k: k not in value for k in STATUS_DIGITAL_OUTPUT.values()}
+        type = Register(STATUS_DIGITAL_OUTPUT)
+        self._write(('DIGSET', [type, type]), value, mask)
+
+    @property
+    def external_select(self):
+        return self._query(('EXTSET?', Register(STATUS_EXTERNAL_SELECT)))
+
+    @external_select.setter
+    def external_select(self, value):
+        # Constructs a mask, where the values are False if the key is missing.
+        mask = {k: k not in value for k in STATUS_EXTERNAL_SELECT.values()}
+        type = Register(STATUS_EXTERNAL_SELECT)
+        self._write(('DIGSET', [type, type]), value, mask)
+
+    @property
     def date(self):
         month, day, year = self._query(('DATE?', [Integer, Integer, Integer]))
         return datetime.date(2000 + year, month, day)
@@ -229,6 +467,18 @@ class PPMS(IEC60488):
         # The ppms only accepts the last two digits of the year.
         month, date, year = date.month, date.day, date.year % 100
         self._write(('DATE', [Integer, Integer, Integer]), month, date, year)
+
+    @property
+    def time(self):
+        hour, minutes, seconds = self._query(('TIME?', [Integer, Integer, Integer]))
+        return datetime.time(hour, minutes, seconds)
+
+    @time.setter
+    def time(self, time):
+        self._write(
+            ('TIME', [Integer, Integer, Integer]),
+            time.hour, time.minute, time.second
+        )
 
     def move(self, position, slowdown=0):
         """Move to the specified sample position.
@@ -263,6 +513,8 @@ class PPMS(IEC60488):
     def scan_temperature(self, measure, temperature, rate, delay=1):
         """Performs a temperature scan.
 
+        Measures until the target temperature is reached.
+
         :param measure: A callable called repeatedly until stability at target
             temperature is reached.
         :param temperature: The target temperature in kelvin.
@@ -276,6 +528,44 @@ class PPMS(IEC60488):
         self.set_temperature(temperature, rate, 'no overshoot', wait_for_stability=False)
         while True:
             if self.system_status['temperature'] == 'normal stability at target temperature':
+                break
+            measure()
+            time.sleep(delay)
+
+    def scan_field(self, measure, field, rate, mode='persistent', delay=1):
+        """Performs a field scan.
+
+        Measures until the target field is reached.
+
+        :param measure: A callable called repeatedly until stability at the
+            target field is reached.
+        :param field: The target field in Oersted.
+
+            .. note:: The conversion is 1 Oe = 0.1 mT.
+
+        :param rate: The field rate in Oersted per minute.
+        :param mode: The state of the magnet at the end of the charging
+            process, either 'persistent' or 'driven'.
+        :param delay: The time delay between each call to measure in seconds.
+
+        """
+        if not hasattr(measure, '__call__'):
+            raise TypeError('measure parameter not callable.')
+        self.set_field(field, rate, approach='linear', mode=mode, wait_for_stability=False)
+        if self.system_status['magnet'].startswith('persist'):
+            # The persistent switch takes some time to open. While it's opening,
+            # the status does not change.
+            switch_heat_time = self.magnet_config[5]
+            start = datetime.datetime.now()
+            while True:
+                now = datetime.datetime.now()
+                if now - start > switch_heat_time:
+                    break
+                measure()
+                time.sleep(delay)
+        while True:
+            status = self.system_status['magnet']
+            if status in ('persistent, stable', 'driven, stable'):
                 break
             measure()
             time.sleep(delay)
@@ -301,12 +591,13 @@ class PPMS(IEC60488):
 
         """
         self.target_field = field, rate, approach, mode
-        if wait_for_stability and (mode == 'persistent'):
-            # Wait a few seconds because the ppms does not update the field
-            # status fast enough.
-            time.sleep(10)
+        if wait_for_stability and self.system_status['magnet'].startswith('persist'):
+            # Wait until the persistent switch heats up.
+            time.sleep(self.magnet_conf[5])
+
         while wait_for_stability:
-            if self.system_status['magnet'] == 'persistent, stable':
+            status = self.system_status['magnet']
+            if status in ('persistent, stable', 'driven, stable'):
                 break
             time.sleep(delay)
 
@@ -337,3 +628,85 @@ class PPMS(IEC60488):
 
         """
         self._write('SHUTDOWN')
+
+
+class AnalogOutput(InstrumentBase):
+    """Represents an analog output.
+
+    :ivar id: The analog output id.
+    :ivar voltage: The voltage present at the analog output channel.
+
+        .. note:: Setting the voltage removes any linkage.
+
+    :ivar link: Links a parameter to this analog output. It has the form
+        *(<link>, <full>, <mid>)*, where
+
+        * *<link>* is the parameter to link. See :data:`~.STATUS_LINK` for
+          valid links.
+        * *<full>* the value of the parameter corresponding to full scale output
+          (10 V).
+        * *<mid>* the value of the parameter corresponding to mid sclae output
+          (0 V).
+
+    """
+    def __init__(self, transport, protocol, id):
+        super(AnalogOutput, self).__init__(transport, protocol)
+        self.id = id
+        self.voltage = Command(
+            'SIGOUT? {}'.format(self.id),
+            'SIGOUT {} '.format(self.id),
+            Float(min=-10., max=10.)
+        )
+
+    @property
+    def link(self):
+        link, full, mid = self._query((
+            'LINK? {}'.format(self.id),
+            [Register(STATUS_LINK), Float, Float]
+        ))
+        for kex, value in link.items():
+            if value is True:
+                return key, full, mid
+
+    @link.setter
+    def link(self, link, full, mid):
+        self._write(
+            ('LINK {} '.format(self.id), [Register(STATUS_LINK), Float, Float]),
+            {link: True},
+            full,
+            mid
+        )
+
+class BridgeChannel(InstrumentBase):
+    """Represents the user bridge configuration.
+
+    :ivar id: The user bridge channel id.
+    :ivar config: The bridge configuration, represented by a tuple of the form
+        *(<excitation>, <power limit>, <dc flag>, <mode>)*, where
+
+        * *<excitation>* The excitation current in microamps from 0.01 to 5000.
+        * *<power limit>* The maximum power to be applied in microwatts from
+            0.001 to 1000.
+        * *<dc flag>* Selects the excitation type. Either 'AC' or 'DC'. 'AC'
+            corresponds to a square wave excitation of 7.5 Hz.
+        * *<mode>* Configures how often the internal analog-to-digital converter
+            recalibrates itself. Valid are 'standart', 'fast' and 'high res'.
+
+    :ivar resistance: The resistance of the user channel in ohm.
+    :ivar current: The current of the user channel in microamps.
+
+    """
+    def __init__(self, transport, protocol, id):
+        super(Bridge, self).__init__(transport, protocol)
+        self.idx = id
+        self.config = Command(
+            'BRIDGE? {}'.format(id),
+            'BRIDGE {} '.format(id),
+            [
+                Float(min=0.01, max=5000.), Float(min=0.001, max=1000.),
+                Enum('AC', 'DC'), Enum('standart', 'fast', 'high res')
+            ]
+        )
+        bit = 2 * (id + 1)
+        self.current = Command(('GETDAT? {}'.format(2**bit), Float))
+        self.resistance = Command(('GETDAT? {}'.format(2**(bit + 1)), Float))
