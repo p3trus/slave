@@ -60,7 +60,7 @@ slave Package
 :mod:`ppms` Module
 ------------------
 
-.. automodule:: slave.ppms
+.. automodule:: slave.quantum_design.ppms
     :members:
     :undoc-members:
     :show-inheritance:
