@@ -13,8 +13,8 @@ transport with the device at primary address 8.
 
 ::
 
-    import visa
-    transport = visa.instrument('GPIB::08')
+    from slave.transport import Visa 
+    transport = Visa('GPIB::08')
 
 Slave does not communicate directly with the device. It uses an object referred
 to as :ref:`transport object<transport_object>` for the low level

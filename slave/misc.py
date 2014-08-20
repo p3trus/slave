@@ -1,7 +1,7 @@
 #  -*- coding: utf-8 -*-
 #
 # Slave, (c) 2012, see AUTHORS.  Licensed under the GNU GPL.
-
+import csv
 import collections
 import threading
 import logging
@@ -61,3 +61,39 @@ def index(index, length):
     if 0 <= index < length:
         return index
     raise IndexError()
+
+
+class Measurement(object):
+    """Small measurement helper class.
+
+    For each call to :meth:`.__call__` a comma separated row, representing the
+    return values for each callable item in measurables is written to the file
+    specified by path.
+
+    """
+    def __init__(self, path, measurables):
+        self._path = path
+        self._measurables = measurables
+        self._file = None
+        self._writer = None
+        self.open()
+
+    def open(self):
+        if not self._file:
+            self._file = open(self._path, 'w')
+            self._writer = csv.writer(self._file)
+
+    def close(self):
+        if self._file:
+            self._file.close()
+            self._file = None
+            self._writer = None
+
+    def __call__(self):
+        self._writer.writerow([str(x()) for x in self._measurables])
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, type, value, traceback):
+        self.close()

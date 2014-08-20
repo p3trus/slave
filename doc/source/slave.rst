@@ -11,7 +11,7 @@ This part covers the complete api documentation of the slave library.
     :show-inheritance:
 
 :mod:`transport` Module
-------------------------
+-----------------------
 
 .. automodule:: slave.transport
     :members:
@@ -19,7 +19,7 @@ This part covers the complete api documentation of the slave library.
     :show-inheritance:
 
 :mod:`protocol` Module
-------------------------
+----------------------
 
 .. automodule:: slave.protocol
     :members:
@@ -74,9 +74,22 @@ This part covers the complete api documentation of the slave library.
     :show-inheritance:
 
 :mod:`misc` Module
--------------------
+------------------
 
 .. automodule:: slave.misc
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+:mod:`quantum_design` Module
+----------------------------
+
+.. automodule:: slave.quantum_design
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+.. automodule:: slave.quantum_design.ppms
     :members:
     :undoc-members:
     :show-inheritance:
@@ -84,13 +97,18 @@ This part covers the complete api documentation of the slave library.
 :mod:`signal_recovery` Module
 -----------------------------
 
+.. automodule:: slave.signal_recovery
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 .. automodule:: slave.signal_recovery.sr7225
     :members:
     :undoc-members:
     :show-inheritance:
 
 :mod:`srs` Module
--------------------
+-----------------
 
 .. automodule:: slave.srs
     :members:

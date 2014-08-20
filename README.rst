@@ -37,10 +37,10 @@ Several device drivers are already implemented, and many more are under
 development. A short usage example is given below::
 
     import time
-    import visa
+    from slave.transport import Visa
     from slave.srs import SR830
 
-    lockin = SR830(visa.instrument('GPIB::08'))
+    lockin = SR830(Visa('GPIB::08'))
     # configure the lockin amplifier
     lockin.reserve = 'high'
     lockin.time_constant = 3
