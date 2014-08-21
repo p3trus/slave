@@ -68,24 +68,6 @@ User Guide
    async
    examples
 
-What's New in slave
-===================
-
-slave 0.5
----------
-
- - restructuring of the package layout. Device drivers are now in a sub-package,
-   named after the manufacturer. E.g. instead of `slave.ls340` it's now
-   `slave.lakeshore.ls340`.
-
-slave 0.4
----------
-
- - A compatibility layer for the asyncronous communication framework `tornado`
-   was implemented. See :ref:`async_io` for more details.
-
-.. _api_reference:
-
 API Reference
 =============
 
