@@ -1,0 +1,411 @@
+#  -*- coding: utf-8 -*-
+#
+# Slave, (c) 2014, see AUTHORS.  Licensed under the GNU GPL.
+from __future__ import (absolute_import, division,
+                        print_function, unicode_literals)
+from future.builtins import *
+
+from slave.core import Command, InstrumentBase
+from slave.types import Boolean, Enum, Integer, Register, Set, String
+import slave.types
+
+
+class SR7230(InstrumentBase):
+    """Represents a Signal Recovery SR7230 lock-in amplifier.
+
+    :param transport: A transport object.
+
+    .. rubric:: Signal Channel
+
+    :ivar current_mode: The current mode, either 'off', 'high bandwidth' or
+        'low noise'.
+    :ivar voltage_mode: The voltage mode, either 'test', 'A' , '-B' or 'A-B'.
+        The 'test' mode corresponds to both inputs grounded.
+
+        .. note:
+
+            The :attr:`~.current_mode` has a higher precedence.
+    :ivar demodulator_source: It sets the source of the signal for the second
+        stage demodulators in dual reference mode. Valid are 'main', 'adc1'
+        and 'tandem'.
+
+        ======== =======================================================
+        value    description
+        ======== =======================================================
+        'main'   The main signal channel adc is used.
+        'adc1'   The rear pannel auxiliary input adc1 is used as source.
+        'tandem' The demodulator 1 X-channel output is used as source.
+        ======== =======================================================
+
+    :ivar fet: The voltage mode input device control. Valid entries are
+        'bipolar' and 'fet', where
+
+        * 'bipolar' is a bipolar device with 10kOhm input impedance. It allows
+          for the lowest possible voltage noise.
+
+          .. note:: It is not possible to use bipolar and ac coupling together.
+
+        * 'fet' 10MOhm input impedance. It is the default setting.
+
+    :ivar grounding: The input connector shield grounding mode. Valid entries
+        are 'ground' and 'float'.
+    :ivar coupling: The input connector coupling, either 'ac' or 'dc'.
+    :ivar sensitivity: The full-scale sensitivity. The valid entries depend on
+        the current mode.
+
+        =========  ================  ===========
+        'off'      'high bandwidth'  'low noise'
+        =========  ================  ===========
+        '10 nV'    '10 fA'           ---
+        '20 nV'    '20 fA'           ---
+        '50 nV'    '50 fA'           ---
+        '100 nV'   '100 fA'          ---
+        '200 nV'   '200 fA'          '2 fA'
+        '500 nV'   '500 fA'          '5 fA'
+        '1 uV'     '1 pA'            '10 fA'
+        '2 uV'     '2 pA'            '20 fA'
+        '5 uV'     '5 pA'            '50 fA'
+        '10 uV'    '10 pA'           '100 fA'
+        '20 uV'    '20 pA'           '200 fA'
+        '50 uV'    '50 pA'           '500 fA'
+        '100 uV'   '100 pA'          '1 pA'
+        '200 uV'   '200 pA'           2 pA'
+        '500 uV'   '500 pA'          '5 pA'
+        '1 mV'     '1 nA'            '10 pA'
+        '2 mV'     '2 nA'            '20 pA'
+        '5 mV'     '5 nA'            '50 pA'
+        '10 mV'    '10 nA'           '100 pA'
+        '20 mV'    '20 nA'           '200 pA'
+        '50 mV'    '50 nA'           '500 pA'
+        '100 mV'   '100 nA'          '1 nA'
+        '200 mV'   '200 nA'          '2 nA'
+        '500 mV'   '500 nA'          '5 nA'
+        '1 V'      '1 uA'            '10 nA'
+        =========  ================  ===========
+
+    :ivar ac_gain: The gain of the signal channel amplifier. See :attr:`SR7230.AC_GAIN`
+        for valid values.
+    :ivar ac_gain_auto: A boolean corresponding to the ac gain automatic mode.
+        It is `False` if the ac_gain is under manual control, and `True`
+        otherwise.
+    :ivar line_filter: The line filter configuration.
+        *(<filter>, <frequency>)*, where
+
+        * *<filter>* Is the filter mode. Valid entries are `'off'`, `'notch'`,
+          `'double'` or `'both'`.
+        * *<frequency>* Is the notch filter center frequency, either `'60Hz'`
+          or `'50Hz'`.
+
+    .. rubric:: Reference channel
+
+    :ivar reference_mode: The instruments reference mode. Valid are 'single',
+        'dual harmonic' and 'dual reference'.
+    :ivar reference: The reference input mode, either 'internal', 'ttl' or
+        'analog'.
+    :ivar internal_reference_channel: In dual reference mode, selects the
+        reference channel, which is operated in internal reference mode. Valid
+        are 'ch1' or 'ch2'.
+    :ivar harmonic: The reference harmonic mode, an integer between 1 and 128
+        corresponding to the first to 127 harmonics.
+    :ivar trigger_output: Set's the rear pannel trigger output.
+
+        =========== ========================================================
+        Value       Description
+        =========== ========================================================
+        'curve'     A trigger signal is generated by curve buffer triggering
+        'reference' A ttl signal at the reference frequency
+        =========== ========================================================
+
+    :ivar reference_phase: The phase of the reference signal, a float ranging
+        from -360 to 360 corresponding to the angle in degrees with a resolution
+        of mili degree.
+
+    :ivar reference_frequency: A float corresponding to the reference frequency
+        in Hz. (read only)
+
+        .. note::
+
+            If :attr:`.reference` is not `'internal'` the reference frequency
+            value is zero if the reference channel is unlocked.
+
+    :ivar virtual_reference: A boolean enabling/disabling the virtual reference
+        mode.
+
+        .. note:
+
+            The :meth:`~.SR7230.seek` method should be used before enabling virtual reference mode.
+
+    .. rubric:: Signal Channel Output Filters
+
+    :ivar noise_measurement: A boolean representing the noise measurement mode.
+    :ivar noise_buffer_length: The length of the noise buffer in seconds. Valid
+        are 'off', '1 s', '2 s', '3 s' and '4 s'.
+    :ivar time_constant: The filter time constant. See :attr:`.TIME_CONSTANT`
+        for valid values.
+
+        .. note::
+
+            If :attr:`.noise_measurement` is enabled, only '500 us', '1 ms',
+            '2 ms', '5 ms' and '10 ms' are valid.
+
+    :ivar sync: A boolean value, representing the state of the synchronous time
+        constant mode.
+    :ivar slope: The output lowpass filter slope in dB/octave, either '6 dB',
+        '12 dB', '18 dB' or '24 dB'.
+
+        .. note::
+
+            If :attr:¸.noise_measurement` or :attr:`.fastmode` is enabled, only
+            '6 dB' and '12 dB' are valid.
+
+    .. rubric:: Signal Channel Output Amplifiers
+
+    :ivar x_offset: The x-channel output offset control.
+        *(<enabled>, <range>)*, where
+
+        * *<enabled>* A boolean enabling/disabling the output offset.
+        * *<range>* The range of the offset, an integer between -30000 and
+          30000 corresponding to +/- 300%.
+
+    :ivar y_offset: The y-channel output offset control.
+        *(<enabled>, <range>)*, where
+
+        * *<enabled>* A boolean enabling/disabling the output offset.
+        * *<range>* The range of the offset, an integer between -30000 and
+          30000 corresponding to +/- 300%.
+
+    :ivar expand: The expansion control, either 'off', 'x', 'y' or 'both'.
+    :ivar fastmode: Enables/disables the fastmode of the output filter. In
+        normal mode (`False`), the instruments analog outputs are derived from
+        the output processor. The update rate is 1 kHz.
+
+        In fastmode, the analog outputs are derived directly from the core FPGA
+        running the demodulator algorithms. This increases the update rate to
+        1 Mhz for time constants 10 us to 500 ms. It remains at 1 kHz for
+        longer time constants.
+
+    .. rubric:: Instrument outputs
+
+    :ivar x: A float representing the X-channel output in either volt or
+        ampere. (read only)
+    :ivar y: A float representing the Y-channel output in either volt or
+        ampere. (read only)
+    :ivar xy: X and Y-channel output with the following format *(<x>, <y>)*.
+        (read only)
+    :ivar r: The signal magnitude, as float. (read only)
+    :ivar theta: The signal phase, as float. (read only)
+    :ivar r_theta: The magnitude and the signal phase. *(<r>, <theta>)*.
+        (read only)
+    :ivar ratio: The ratio equivalent to X/ADC1. (read only)
+    :ivar log_ratio: The ratio equivalent to log(X/ADC1). (read only)
+    :ivar noise: The square root of the noise spectral density measured at the
+        Y channel output. (read only)
+    :ivar noise_bandwidth: The noise bandwidth. (read only)
+    :ivar noise_output: The noise output, the mean absolute value of the Y
+        channel. (read only)
+
+    """
+    SENSITIVITY_VOLTAGE = [
+        '10 nV', '20 nV', '50 nV', '100 nV', '200 nV', '500 nV', '1 uV',
+        '2 uV', '5 uV', '10 uV', '20 uV', '50 uV', '100 uV', '200 uV',
+        '500 uV', '1 mV', '2 mV', '5 mV', '10 mV', '20 mV', '50 mV', '100 mV',
+        '200 mV', '500 mV', '1 V'
+    ]
+    SENSITIVITY_CURRENT_HIGHBW = [
+        '10 fA', '20 fA', '50 fA', '100 fA', '200 fA', '500 fA', '1 pA',
+        '2 pA', '5 pA', '10 pA', '20 pA', '50 pA', '100 pA', '200 pA',
+        '500 pA', '1 nA', '2 nA', '5 nA', '10 nA', '20 nA', '50 nA', '100 nA',
+        '200 nA', '500 nA', '1 uA'
+    ]
+    SENSITIVITY_CURRENT_LOWNOISE = [
+        '2 fA', '5 fA', '10 fA', '20 fA', '50 fA', '100 fA', '200 fA',
+        '500 fA', '1 pA', '2 pA', '5 pA', '10 pA', '20 pA', '50 pA', '100 pA',
+        '200 pA', '500 pA', '1 nA', '2 nA', '5 nA', '10 nA'
+    ]
+    AC_GAIN = [
+        '0 dB', '6 dB', '12 dB', '18 dB', '24 dB', '30 dB', '36 dB', '42 dB',
+        '48 dB', '54 dB', '60 dB', '66 dB', '72 dB', '78 dB', '84 dB', '90 dB'
+    ]
+    TIME_CONSTANT = [
+        '10 us', '20 us', '50 us', '100 us', '200 us', '500 us', '1 ms', '2 ms',
+        '5 ms', '10 ms', '20 ms', '50 ms', '100 ms', '200 ms', '500 ms', '1 s',
+        '2 s', '5 s', '10 s', '20 s', '50 s', '100 s', '200 s', '500 s', '1 ks',
+        '2 ks', '5 ks', '10 ks', '20 ks', '50 ks', '100 ks'
+    ]
+
+    def __init__(self, transport):
+        protocol = slave.protocol.SignalRecovery()
+        super(SR7230, self).__init__(transport, protocol)
+        # Signal Channel
+        # ==============
+        self.current_mode = Command(
+            'IMODE',
+            'IMODE',
+            Enum('off', 'high bandwidth', 'low noise')
+        )
+        self.voltage_mode = Command(
+            'VMODE',
+            'VMODE',
+            Enum('test', 'A', '-B', 'A-B')
+        )
+        self.demodulator_source = Command(
+            'DEMOD2SRC',
+            'DEMOD2SRC',
+            Enum('main', 'adc1', 'tandem')
+        )
+        self.fet = Command('FET', 'FET', Enum('bipolar', 'fet'))
+        self.grounding = Command('FLOAT', 'FLOAT', Enum('ground', 'float'))
+        self.coupling = Command('DCCOUPLE', 'DCCOUPLE', Enum('ac', 'dc'))
+        self._voltage_sensitivity = Command(
+            'SEN',
+            'SEN',
+            Enum(*SR7230.SENSITIVITY_VOLTAGE, start=1)
+        )
+        self._highbandwidth_sensitivity = Command(
+            'SEN',
+            'SEN',
+            Enum(*SR7230.SENSITIVITY_CURRENT_HIGHBW, start=1)
+        )
+        self._lownoise_sensitivity = Command(
+            'SEN',
+            'SEN',
+            Enum(*SR7230.SENSITIVITY_CURRENT_LOWNOISE, start=7)
+        )
+        self.ac_gain = Command(
+            'ACGAIN',
+            'ACGAIN',
+            Enum(*SR7230.AC_GAIN)
+        )
+        self.auto_ac_gain = Command('AUTOMATIC', 'AUTOMATIC', Boolean)
+        self.line_filter = Command(
+            'LF',
+            'LF',
+            [Enum('off', 'notch', 'double', 'both'), Enum('60Hz', '50Hz')]
+        )
+        # Reference Channel
+        # =================
+        self.reference_mode = Command(
+            'REFMODE',
+            'REFMODE',
+            Enum('single', 'dual harmonic', 'dual reference')
+        )
+        self.internal_reference_channel = Command(
+            'INT',
+            'INT',
+            Enum('ch1', 'ch2', start=1)
+        )
+        self.harmonic = Command('REFN', 'REFN', Integer(min=1, max=128))
+        self.trigger_output = Command(
+            'REFMON',
+            'REFMON',
+            Enum('curve', 'reference')
+        )
+        self.reference_phase = Command(
+            'REFP.',
+            'REFP.',
+            Float(min=-360., max=360., fmt='{:.3f}')
+        )
+        self.reference_frequency = Command(('FRQ.', Float))
+        self.virtual_reference = Command(
+            'VRLOCK',
+            'VRLOCK',
+            Boolean
+        )
+        # Signal Channel Output Filters
+        # =============================
+        self.noise_measurement = Command(
+            'NOISEMODE',
+            'NOISEMODE',
+            Boolean
+        )
+        self.noise_buffer_length = Command(
+            'NNBUF',
+            'NNBUF',
+            Enum('off', '1s', '2s', '3s', '4s')
+        )
+        self.time_constant = Command('TC', 'TC', Enum(*SR7230.TIME_CONSTANT))
+        self.sync = Command('SYNC', 'SYNC', Boolean)
+        self.slope = Command(
+            'SLOPE',
+            'SLOPE',
+            Enum('6 dB', '12 dB', '18 dB', '24 dB')
+        )
+
+        # Signal Channel Output Amplifiers
+        # ================================
+        self.x_offset = Command(
+            'XOF',
+            'XOF',
+            [Boolean, Integer(min=-30000, max=30000)]
+        )
+        self.y_offset = Command(
+            'YOF',
+            'YOF',
+            [Boolean, Integer(min=-30000, max=30000)]
+        )
+        self.expand = Command(
+            'EX',
+            'EX',
+            Enum('off', 'x', 'y', 'both')
+        )
+        self.fastmode = Command('FASTMODE', 'FASTMODE', Boolean)
+
+        # Intrument Outputs
+        # =================
+        self.x = Command(('X.', Float))
+        self.y = Command(('Y.', Float))
+        self.xy = Command(('XY.', [Float, Float]))
+        self.r = Command(('MAG.', Float))
+        self.theta = Command(('PHA.', Float))
+        self.r_theta = Command(('MP.', [Float, Float]))
+        self.ratio = Command(('RT.', Float))
+        self.log_ratio = Command(('LR.', Float))
+        self.noise = Command(('NHZ.', Float))
+        self.noise_bandwidth = Command(('ENBW.', Float))
+        self.noise_output = Command(('NN.', Float))
+
+    @property
+    def sensitivity(self):
+        imode = self.current_mode
+        if imode == 'off':
+            return self._voltage_sensitivity
+        elif imode == 'high bandwidth':
+            return self._highbandwidth_sensitivity
+        else:
+            return self._lownoise_sensitivity
+
+    @sensitivity.setter
+    def sensitivity(self, value):
+        imode = self.current_mode
+        if imode == 'off':
+            self._voltage_sensitivity = value
+        elif imode == 'high bandwidth':
+            self._highbandwidth_sensitivity = value
+        else:
+            self._lownoise_sensitivity = value
+
+    def auto_sensitivity(self):
+        """Triggers the auto sensitivity mode.
+
+        When the auto sensitivity mode is triggered, the SR7225 adjustes the
+        sensitivity so that the signal magnitude lies in between 30% and 90%
+        of the full scale sensitivity.
+        """
+        self._write('AS')
+
+    def auto_measure(self):
+        """Triggers the auto measure mode."""
+        self._write('ASM')
+
+    def auto_phase(self):
+        """Triggers the auto phase mode."""
+        self._write('AQN')
+
+    def auto_offset(self):
+        """Triggers the auto offset mode."""
+        self._write('AXO')
+
+    def update_correction(self):
+        """Updates all frequency-dependant gain and phase correction
+        parameters."""
+        self._write('LOCK')
