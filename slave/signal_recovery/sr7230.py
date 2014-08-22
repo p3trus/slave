@@ -6,7 +6,7 @@ from __future__ import (absolute_import, division,
 from future.builtins import *
 
 from slave.core import Command, InstrumentBase
-from slave.types import Boolean, Enum, Integer, Register, Set, String
+from slave.types import Boolean, Enum, Float, Integer, Register, Set, String
 import slave.types
 
 

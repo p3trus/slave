@@ -104,14 +104,14 @@ class SR7225(InstrumentBase):
 
     .. rubric:: Reference channel
 
-    :ivar reference: The reference input mode, either `'internal'`, `'rear'` or
-        `'front'`.
+    :ivar reference: The reference input mode, either `'internal'`, `'ttl'` or
+        `'analog'`.
     :ivar harmonic: The reference harmonic mode, an integer between 1 and 32
         corresponding to the first to 32. harmonic.
     :ivar reference_phase: The phase of the reference signal, a float ranging
         from -360.00 to 360.00 corresponding to the angle in degrees.
     :ivar reference_frequency: A float corresponding to the reference frequency
-        in Hz.
+        in Hz. (read only)
 
         .. note::
 
@@ -120,8 +120,8 @@ class SR7225(InstrumentBase):
 
     .. rubric:: Signal channel output filters
 
-    :ivar slope: The output lowpass filter slope in dB/octave, either `'6dB'`,
-        `'12dB'`, `'18dB'` or `'24dB'`.
+    :ivar slope: The output lowpass filter slope in dB/octave, either `'6 dB'`,
+        `'12 dB'`, `'18 dB'` or `'24 dB'`.
     :ivar time_constant: A float representing the time constant in seconds. See
         :attr:`.TIME_CONSTANT` for the available values.
     :ivar sync: A boolean value, representing the state of the synchronous time
@@ -155,20 +155,22 @@ class SR7225(InstrumentBase):
     .. rubric:: Instrument outputs
 
     :ivar x: A float representing the X-channel output in either volt or
-        ampere.
+        ampere. (read only)
     :ivar y: A float representing the Y-channel output in either volt or
-        ampere.
+        ampere. (read only)
     :ivar xy: X and Y-channel output with the following format *(<x>, <y>)*.
-    :ivar r: The signal magnitude, as float.
-    :ivar theta: The signal phase, as float.
+        (read only)
+    :ivar r: The signal magnitude, as float. (read only)
+    :ivar theta: The signal phase, as float. (read only)
     :ivar r_theta: The magnitude and the signal phase. *(<r>, <theta>)*.
-    :ivar ratio: The ratio equivalent to X/ADC1.
-    :ivar log_ratio: The ratio equivalent to log(X/ADC1).
+        (read only)
+    :ivar ratio: The ratio equivalent to X/ADC1. (read only)
+    :ivar log_ratio: The ratio equivalent to log(X/ADC1). (read only)
     :ivar noise: The square root of the noise spectral density measured at the
-        Y channel output.
-    :ivar noise_bandwidth: The noise bandwidth.
+        Y channel output. (read only)
+    :ivar noise_bandwidth: The noise bandwidth. (read only)
     :ivar noise_output: The noise output, the mean absolute value of the Y
-        channel.
+        channel. (read only)
     :ivar star: The star mode configuration, one off `'x'`, `'y'`, `'r'`,
         `'theta'`, `'adc1'`, `'xy'`, `'rtheta'`, `'adc12'`
 
@@ -367,16 +369,37 @@ class SR7225(InstrumentBase):
         6: 'input overload',
         7: 'reference unlock',
     }
+    SENSITIVITY_VOLTAGE = [
+        '2 nV', '5 nV', '10 nV', '20 nV', '50 nV', '100 nV', '200 nV',
+        '500 nV', '1 uV', '2 uV', '5 uV', '10 uV', '20 uV', '50 uV',
+        '100 uV', '200 uV', '500 uV', '1 mV', '2 mV', '5 mV', '10 mV',
+        '20 mV', '50 mV', '100 mV', '200 mV', '500 mV', '1 V',
+    ]
+    SENSITIVITY_CURRENT_HIGHBW = [
+        '2 fA', '5 fA', '10 fA', '20 fA', '50 fA', '100 fA', '200 fA',
+        '500 fA', '1 pA', '2 pA', '5 pA', '10 pA', '20 pA', '50 pA',
+        '100 pA', '200 pA', '500 pA', '1 nA', '2 nA', '5 nA', '10 nA',
+        '20 nA', '50 nA', '100 nA', '200 nA', '500 nA', '1 uA',
+    ]
+    SENSITIVITY_CURRENT_LOWNOISE = [
+            '2 fA', '5 fA', '10 fA', '20 fA', '50 fA', '100 fA', '200 fA',
+            '500 fA', '1 pA', '2 pA', '5 pA', '10 pA', '20 pA', '50 pA',
+            '100 pA', '200 pA', '500 pA', '1 nA', '2 nA', '5 nA', '10 nA',
+    ]
+    AC_GAIN = [
+        '0 dB', '10 dB', '20 dB', '30 dB', '40 dB',
+        '50 dB', '60 dB', '70 db', '80 dB', '90 dB'
+    ]
 
     def __init__(self, transport):
-        protocol = {
-             'program data separator': ',',
-        }
-        super(SR7225, self).__init__(transport, protocol=protocol)
+        super(SR7225, self).__init__(transport)
         # Signal channel
         # ==============
-        self.current_mode = Command('IMODE', 'IMODE',
-                                    Enum('off', 'high bandwidth', 'low noise'))
+        self.current_mode = Command(
+            'IMODE',
+            'IMODE',
+            Enum('off', 'high bandwidth', 'low noise')
+        )
         self.voltage_mode = Command(
             'VMODE',
             'VMODE',
@@ -385,86 +408,103 @@ class SR7225(InstrumentBase):
         self.fet = Command('FET', 'FET', Enum('bipolar', 'fet'))
         self.grounding = Command('FLOAT', 'FLOAT', Enum('ground', 'float'))
         self.coupling = Command('CP', 'CP', Enum('ac', 'dc'))
-        volt_sens = Enum(
-            '2 nV', '5 nV', '10 nV', '20 nV', '50 nV', '100 nV', '200 nV',
-            '500 nV', '1 uV', '2 uV', '5 uV', '10 uV', '20 uV', '50 uV',
-            '100 uV', '200 uV', '500 uV', '1 mV', '2 mV', '5 mV', '10 mV',
-            '20 mV', '50 mV', '100 mV', '200 mV', '500 mV', '1 V',
-            start=1
+        self._voltage_sensitivity = Command(
+            'SEN',
+            'SEN',
+            Enum(*SR7225.SENSITIVITY_VOLTAGE, start=1)
         )
-        self._voltage_sensitivity = Command('SEN', 'SEN', volt_sens)
-        highbw_sens = Enum(
-            '2 fA', '5 fA', '10 fA', '20 fA', '50 fA', '100 fA', '200 fA',
-            '500 fA', '1 pA', '2 pA', '5 pA', '10 pA', '20 pA', '50 pA',
-            '100 pA', '200 pA', '500 pA', '1 nA', '2 nA', '5 nA', '10 nA',
-            '20 nA', '50 nA', '100 nA', '200 nA', '500 nA', '1 uA',
-            start=1
+        self._highbandwidth_sensitivity = Command(
+            'SEN',
+            'SEN',
+            Enum(*SR7225.SENSITIVITY_CURRENT_HIGHBW, start=1)
         )
-        self._highbandwidth_sensitivity = Command('SEN', 'SEN', highbw_sens)
-        lownoise_sens = Enum(
-            '2 fA', '5 fA', '10 fA', '20 fA', '50 fA', '100 fA', '200 fA',
-            '500 fA', '1 pA', '2 pA', '5 pA', '10 pA', '20 pA', '50 pA',
-            '100 pA', '200 pA', '500 pA', '1 nA', '2 nA', '5 nA', '10 nA',
-            start=7
+        self._lownoise_sensitivity = Command(
+            'SEN',
+            'SEN',
+            Enum(*SR7225.SENSITIVITY_CURRENT_LOWNOISE, start=7)
         )
-        self._lownoise_sensitivity = Command('SEN', 'SEN', lownoise_sens)
-        self.ac_gain = Command('ACGAIN', 'ACGAIN',
-                               Enum('0 dB', '10 dB', '20 dB', '30 dB', '40 dB',
-                                    '50 dB', '60 dB', '70 db', '80 dB', '90 dB'
-                                    ))
+        self.ac_gain = Command('ACGAIN', 'ACGAIN', Enum(*SR7225.AC_GAIN))
         self.auto_ac_gain = Command('AUTOMATIC', 'AUTOMATIC', Boolean)
-        self.line_filter = Command('LF', 'LF',
-                                   [Enum('off', 'notch', 'double', 'both'),
-                                    Enum('60Hz', '50Hz')])
-        self.sample_frequency = Command('SAMPLE', 'SAMPLE',
-                                        Integer(min=0, max=2))
+        self.line_filter = Command(
+            'LF',
+            'LF',
+            [Enum('off', 'notch', 'double', 'both'), Enum('60Hz', '50Hz')]
+        )
+        self.sample_frequency = Command(
+            'SAMPLE',
+            'SAMPLE',
+            Integer(min=0, max=2)
+        )
 
         # Reference Channel
         # =================
-        self.reference = Command('IE', 'IE', Enum('internal', 'rear', 'front'))
+        self.reference = Command('IE', 'IE', Enum('internal', 'ttl', 'analog'))
         self.harmonic = Command('REFN', 'REFN', Integer(min=1, max=32))
-        self.reference_phase = Command('REFP.', 'REFP.',
-                                       Float(min=-360., max=360.))
+        self.reference_phase = Command(
+            'REFP.',
+            'REFP.',
+            Float(min=-360., max=360.)
+        )
         self.reference_frequency = Command(('FRQ.', Float))
 
         # Signal channel output filters
         # =============================
-        self.slope = Command('SLOPE', 'SLOPE',
-                             Enum('6dB', '12dB', '18dB', '24dB'))
+        self.slope = Command(
+            'SLOPE',
+            'SLOPE',
+            Enum('6 dB', '12 dB', '18 dB', '24 dB')
+        )
         self.time_constant = Command('TC', 'TC', Enum(*self.TIME_CONSTANT))
         self.sync = Command('SYNC', 'SYNC', Boolean)
 
         # Signal Channel Output Amplifiers
         # ================================
-        self.x_offset = Command('XOF', 'XOF', [Boolean,
-                                Integer(min=-30000, max=30000)])
-        self.y_offset = Command('YOF', 'YOF', [Boolean,
-                                Integer(min=-30000, max=30000)])
-        self.expand = Command('EX', 'EX',
-                              Enum('off', 'x', 'y', 'both'))
-        self.channel1_output = Command('CH 1', 'CH 1 ',
-                                       Enum('x', 'y', 'r', 'phase1', 'phase2',
-                                            'noise', 'ratio', 'log ratio'))
-        self.channel2_output = Command('CH 2', 'CH 2 ',
-                                       Enum('x', 'y', 'r', 'phase1', 'phase2',
-                                            'noise', 'ratio', 'log ratio'))
+        self.x_offset = Command(
+            'XOF',
+            'XOF',
+            [Boolean, Integer(min=-30000, max=30000)]
+        )
+        self.y_offset = Command(
+            'YOF',
+            'YOF',
+            [Boolean, Integer(min=-30000, max=30000)]
+        )
+        self.expand = Command(
+            'EX',
+            'EX',
+            Enum('off', 'x', 'y', 'both')
+        )
+        self.channel1_output = Command(
+            'CH 1',
+            'CH 1 ',
+            Enum('x', 'y', 'r', 'phase1', 'phase2',
+                 'noise', 'ratio', 'log ratio')
+        )
+        self.channel2_output = Command(
+            'CH 2',
+            'CH 2 ',
+            Enum('x', 'y', 'r', 'phase1', 'phase2',
+                 'noise', 'ratio', 'log ratio')
+        )
 
         # Instrument Outputs
         # ==================
-        self.x = Command('X.', type_=Float)
-        self.y = Command('Y.', type_=Float)
-        self.xy = Command('XY.', type_=[Float, Float])
-        self.r = Command('MAG.', type_=Float)
-        self.theta = Command('PHA.', type_=Float)
-        self.r_theta = Command('MP.', type_=[Float, Float])
-        self.ratio = Command('RT.', type_=Float)
-        self.log_ratio = Command('LR.', type_=Float)
-        self.noise = Command('NHZ.', type_=Float)
-        self.noise_bandwidth = Command('ENBW.', type_=Float)
-        self.noise_output = Command('NN.', type_=Float)
-        self.star = Command('STAR', 'STAR',
-                            Enum('x', 'y', 'r', 'theta',
-                                 'adc1', 'xy', 'rtheta', 'adc12'))
+        self.x = Command(('X.', Float))
+        self.y = Command(('Y.', Float))
+        self.xy = Command(('XY.', [Float, Float]))
+        self.r = Command(('MAG.', Float))
+        self.theta = Command(('PHA.', Float))
+        self.r_theta = Command(('MP.', [Float, Float]))
+        self.ratio = Command(('RT.', Float))
+        self.log_ratio = Command(('LR.', Float))
+        self.noise = Command(('NHZ.', Float))
+        self.noise_bandwidth = Command(('ENBW.', Float))
+        self.noise_output = Command(('NN.', Float))
+        self.star = Command(
+            'STAR',
+            'STAR',
+            Enum('x', 'y', 'r', 'theta', 'adc1', 'xy', 'rtheta', 'adc12')
+        )
         # Internal oscillator
         # ===================
         self.amplitude = Command('OA.', 'OA.', Float(min=0., max=5.))
