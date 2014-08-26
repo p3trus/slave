@@ -80,7 +80,7 @@ class Measurement(object):
 
     def open(self):
         if not self._file:
-            self._file = open(self._path, 'w')
+            self._file = open(self._path, 'wb')
             self._writer = csv.writer(self._file)
 
     def close(self):
