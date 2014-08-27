@@ -1,17 +1,39 @@
 #  -*- coding: utf-8 -*-
 #
 # Slave, (c) 2012-2014, see AUTHORS.  Licensed under the GNU GPL.
+"""Several implementations of the transport api.
+
+The :mod:`slave.transport` module implements the lowest level abstraction layer
+in the slave library. The transport is responsible for sending and receiving
+raw bytes. It interfaces with the hardware, but has no knowledge of the meaning
+of the bytes transfered.
+
+The :class:`.Transport` class defines a common api used in higher abstraction
+layers. Subclasses of :class:`slave.Transport` must implement `__read__()` and
+`__write__()` methods.
+
+The following transports are already available:
+
+ * :class:`Serial` - A wrapper of the pyserial library
+ * :class:`Socket` - A wrapper around the standard socket library.
+ * :class:`LinuxGpib` - A wrapper of the linux-gpib library
+ * :func:`visa` - A wrapper of the pyvisa library. (Supports pyvisa 1.4 - 1.5).
+
+"""
+
 from __future__ import (absolute_import, division,
                         print_function, unicode_literals)
 from future.builtins import *
 import socket
 import ctypes as ct
+import pkg_resources
+from distutils.version import LooseVersion
 
 
 class Transport(object):
     """A utility class to write and read data.
 
-    The :class:`~.Transport`base class defines a common interface used by the
+    The :class:`~.Transport` base class defines a common interface used by the
     `slave` library. Subclasses must implement `__read__` and `__write__`.
 
     """
@@ -85,19 +107,42 @@ class Socket(Transport):
         return self._socket.recv(num_bytes)
 
 
-class Visa(Transport):
-    """A pyvisa adapter."""
-    def __init__(self, *args, **kw):
-        import visa
+def visa(*args, **kw):
+    """A pyvisa adapter factory function."""
+    version = pkg_resources.get_distribution('pyvisa').version
+    import visa
 
-        # TODO pyvisa versions after 1.5 should be handled differently.
-        self._visa = visa.instrument(*args, **kw)
+    if LooseVersion(version) < LooseVersion('1.5'):
+        return Visa_1_4(visa.instrument(*args, **kw))
+    else:
+        rm = visa.RessourceManager()
+        return Visa_1_5(rm.get_instrument(*args, **kw))
+
+
+class Visa_1_4(Transport):
+    """A pyvisa 1.4 adapter."""
+    def __init__(self, instrument):
+        super(Visa_1_4, self).__init__()
+        self._instrument = instrument
 
     def __read__(self, num_bytes):
-        self._visa.read_raw(num_bytes)
+        return self._instrument.read_raw()
 
     def __write__(self, data):
-        self._visa.write_raw(num_bytes)
+        self._instrument.write(data)
+
+
+class Visa_1_5(Transport):
+    """A pyvisa 1.5 adapter."""
+    def __init__(self, instrument):
+        super(Visa_1_5, self).__init__()
+        self._instrument = instrument
+
+    def __read__(self, num_bytes):
+        return self._instrument.read_raw(num_bytes)
+
+    def __write__(self, data):
+        self.instrument.write_raw(data)
 
 
 class Serial(Transport):
