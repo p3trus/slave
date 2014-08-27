@@ -79,24 +79,24 @@ class K6221(IEC60488, Trigger, ObjectIdentification):
         :class:`~.Units`.
 
     """
-    def __init__(self, connection):
-        super(K6221, self).__init__(connection)
+    def __init__(self, transport):
+        super(K6221, self).__init__(transport)
         # The command subgroups
-        self.math = Math(self.connection, self._cfg)
-        self.buffer_statistics = BufferStatistics(self.connection, self._cfg)
-        self.digital_io = DigitalIO(self.connection, self._cfg)
-        self.display = Display(self.connection, self._cfg)
-        self.format = Format(self.connection, self._cfg)
-        self.output = Output(self.connection, self._cfg)
-        self.sense = Sense(self.connection, self._cfg)
-        self.source = Source(self.connection, self._cfg)
-        self.status_cmds = Status(self.connection, self._cfg)
-        self.system = System(self.connection, self._cfg)
-        self.trace = Trace(self.connection, self._cfg)
+        self.math = Math(self._transport, self._protocol)
+        self.buffer_statistics = BufferStatistics(self._transport, self._protocol)
+        self.digital_io = DigitalIO(self._transport, self._protocol)
+        self.display = Display(self._transport, self._protocol)
+        self.format = Format(self._transport, self._protocol)
+        self.output = Output(self._transport, self._protocol)
+        self.sense = Sense(self._transport, self._protocol)
+        self.source = Source(self._transport, self._protocol)
+        self.status_cmds = Status(self._transport, self._protocol)
+        self.system = System(self._transport, self._protocol)
+        self.trace = Trace(self._transport, self._protocol)
         # The trigger command layer
-        self.arm = Arm(self.connection, self._cfg)
-        self.triggering = Trigger(self.connection, self._cfg)
-        self.units = Units(self.connection, self._cfg)
+        self.arm = Arm(self._transport, self._protocol)
+        self.triggering = Trigger(self._transport, self._protocol)
+        self.units = Units(self._transport, self._protocol)
 
 
     # TODO list method in trigger rubric
@@ -134,8 +134,8 @@ class Math(InstrumentBase):
         (read-only).
 
     """
-    def __init__(self, connection, cfg):
-        super(Math, self).__init__(connection, cfg)
+    def __init__(self, transport, protocol):
+        super(Math, self).__init__(transport, protocol)
         self.format = Command(
             ':CALC:FORM?',
             ':CALC:FORM',
@@ -154,8 +154,8 @@ class Math(InstrumentBase):
             Float(min=-9.99999e20, max=9.99999e20)
         )
         self.enabled = Command(':CALC:STAT?', ':CALC:STAT', Boolean)
-        self.latest = Command(query=(':CALC:DATA?', Float))
-        self.fresh = Command(query=(':CALC:DATA:FRESH', Float))
+        self.latest = Command((':CALC:DATA?', Float))
+        self.fresh = Command((':CALC:DATA:FRESH', Float))
 
 
 class BufferStatistics(InstrumentBase):
@@ -176,8 +176,8 @@ class BufferStatistics(InstrumentBase):
     :ivar float data: The calculated value.(read-only).
 
     """
-    def __init__(self, connection, cfg):
-        super(BufferStatistics, self).__init__(connection, cfg)
+    def __init__(self, transport, protocol):
+        super(BufferStatistics, self).__init__(transport, protocol)
         self.format = Command(
             ':CALC2:FORM?',
             ':CALC2:FORM',
@@ -187,7 +187,7 @@ class BufferStatistics(InstrumentBase):
             })
         )
         self.enabled = Command(':CALC2:STAT?', ':CALC2:STAT', Boolean)
-        self.data = Command(query=(':CALC2:DATA?', Float))
+        self.data = Command((':CALC2:DATA?', Float))
 
     def immediate(self):
         """Perform the calculation on the buffer content."""
@@ -215,11 +215,16 @@ class DigitalIO(InstrumentBase):
         same form as the limit_pattern.
 
     """
-    def __init__(self, connection, cfg):
-        super(DigitalIO, self).__init__(connection, cfg)
+    def __init__(self, transport, protocol):
+        super(DigitalIO, self).__init__(transport, protocol)
         self.force_output = Command(':CALC3:LIM?', ':CALC3:LIM', Boolean)
         self.test_limit = Command(':CALC3:LIM?', ':CALC3:LIM', Boolean)
-        pattern = Register({'out1': 0, 'out2': 1, 'out3': 2, 'out4': 3})
+        pattern = Register({
+            0: 'out1',
+            1: 'out2',
+            2: 'out3',
+            3: 'out4'
+        })
         self.limit_pattern = Command(
             ':CALC3:LIM:SOUR?',
             ':CALC3:LIM:SOUR',
@@ -248,11 +253,11 @@ class Display(InstrumentBase):
     :ivar bottom: The bottom line display. An instance of :class:`~.Window`.
 
     """
-    def __init__(self, connection, cfg):
-        super(Display, self).__init__(connection, cfg)
+    def __init__(self, transport, protocol):
+        super(Display, self).__init__(transport, protocol)
         self.enabled = Command(':DISP:ENAB?', ':DISP:ENAB', Boolean)
-        self.top = DisplayWindow(1, self.connection, self._cfg)
-        self.bottom = DisplayWindow(2, self.connection, self._cfg)
+        self.top = DisplayWindow(1, self._transport, self._protocol)
+        self.bottom = DisplayWindow(2, self._transport, self._protocol)
 
 
 class DisplayWindow(InstrumentBase):
@@ -263,10 +268,10 @@ class DisplayWindow(InstrumentBase):
         characters.
 
     """
-    def __init__(self, id, connection, cfg):
-        super(DisplayWindow, self).__init__(connection, cfg)
+    def __init__(self, id, transport, protocol):
+        super(DisplayWindow, self).__init__(transport, protocol)
         self.id = int(id)
-        self.text = DisplayWindowText(self.id, self.connection, self._cfg)
+        self.text = DisplayWindowText(self.id, self._transport, self._protocol)
         self.blinking = Command(':DISP:ATTR?', ':DISP:ATTR', Boolean)
 
 
@@ -277,8 +282,8 @@ class DisplayWindowText(InstrumentBase):
     :ivar bool enabled: The state of the text message.
 
     """
-    def __init__(self, id, connection, cfg):
-        super(DisplayWindowText, self).__init__(connection, cfg)
+    def __init__(self, id, transport, protocol):
+        super(DisplayWindowText, self).__init__(transport, protocol)
         # TODO check encoding.
         self.text = Command(
             ':DISP:WIND{0}:TEXT:DATA?'.format(id),
@@ -311,8 +316,8 @@ class Format(InstrumentBase):
         'ascii', 'octal', 'hex' and 'binary'.
 
     """
-    def __init__(self, connection, cfg):
-        super(Format, self).__init__(connection, cfg)
+    def __init__(self, transport, protocol):
+        super(Format, self).__init__(transport, protocol)
         # TODO write doc
         self.data = Command(
             ':FORM?',
@@ -345,8 +350,8 @@ class Output(InstrumentBase):
 
     :ivar enabled: A boolean representing the state of the output.
     :ivar low_to_earth: A boolean representing the state of the low to earth
-        ground connection.
-    :ivar inner_shield: The connection of the triax inner shield, either
+        ground transport.
+    :ivar inner_shield: The transport of the triax inner shield, either
         'output low' or 'guard'.
     :ivar response: The output response. Valid are 'fast' or 'slow'.
     :ivar interlock: A boolean representing the state of the interlock.
@@ -354,8 +359,8 @@ class Output(InstrumentBase):
         the interlock is closed.
 
     """
-    def __init__(self, connection, cfg):
-        super(Output, self).__init__(connection, cfg)
+    def __init__(self, transport, protocol):
+        super(Output, self).__init__(transport, protocol)
         self.enabled = Command(':OUTP?', ':OUTP', Boolean)
         self.low_to_earth = Command(':OUTP:LTE?', ':OUTP:LTE', Boolean)
         self.inner_shield = Command(
@@ -384,10 +389,10 @@ class Sense(InstrumentBase):
         :class:`~.SenseAverage`.
 
     """
-    def __init__(self, connection, cfg):
-        super(Sense, self).__init__(connection, cfg)
-        self.data = SenseData(self.connection, self._cfg)
-        self.average = SenseAverage(self.connection, self._cfg)
+    def __init__(self, transport, protocol):
+        super(Sense, self).__init__(transport, protocol)
+        self.data = SenseData(self._transport, self._protocol)
+        self.average = SenseAverage(self._transport, self._protocol)
 
 
 class SenseData(InstrumentBase):
@@ -398,8 +403,8 @@ class SenseData(InstrumentBase):
     :ivar latest: Represents the latest pre-math delta reading. (read-only)
 
     """
-    def __init__(self, connection, cfg):
-        super(SenseData, self).__init__(connection, cfg)
+    def __init__(self, transport, protocol):
+        super(SenseData, self).__init__(transport, protocol)
         self.fresh = Command(':SENS:DATA:FRES?', ':SENS:DATA:FRES', Float)
         self.latest = Command(':SENS:DATA?', ':SENS:DATA', Float)
 
@@ -414,8 +419,8 @@ class SenseAverage(InstrumentBase):
     :ivar enabled: The state of the averaging filter, either `True` or `False`.
 
     """
-    def __init__(self, connection, cfg):
-        super(SenseAverage, self).__init__(connection, cfg)
+    def __init__(self, transport, protocol):
+        super(SenseAverage, self).__init__(transport, protocol)
         self.tcontrol = Command(
             ':SENS:AVER:TCON?',
             ':SENS:AVER:TCON',
@@ -458,20 +463,20 @@ class Source(InstrumentBase):
         :class:`~.SourceWave`.
 
     """
-    def __init__(self, connection, cfg):
-        super(Source, self).__init__(connection, cfg)
-        self.current = SourceCurrent(self.connection, self._cfg)
+    def __init__(self, transport, protocol):
+        super(Source, self).__init__(transport, protocol)
+        self.current = SourceCurrent(self._transport, self._protocol)
         self.delay = Command(
             ':SOUR:DEL?',
             ':SOUR:DEL',
             Float(min=1e-3, max=1e6, fmt='{0:.3f}')
         )
-        self.sweep = SourceSweep(self.connection, self._cfg)
-        self.list = SourceList(self.connection, self._cfg)
-        self.delta = SourceDelta(self.connection, self._cfg)
-        self.pulse_delta = SourcePulseDelta(self.connection, self._cfg)
-        self.differential_conductance = SourceDifferentialConductance(self.connection, self._cfg)
-        self.wave = SourceWave(self.connection, self._cfg)
+        self.sweep = SourceSweep(self._transport, self._protocol)
+        self.list = SourceList(self._transport, self._protocol)
+        self.delta = SourceDelta(self._transport, self._protocol)
+        self.pulse_delta = SourcePulseDelta(self._transport, self._protocol)
+        self.differential_conductance = SourceDifferentialConductance(self._transport, self._protocol)
+        self.wave = SourceWave(self._transport, self._protocol)
 
     def clear(self):
         """Clears the current source."""
@@ -493,8 +498,8 @@ class SourceCurrent(InstrumentBase):
     :ivar float span: The span current. [2e-13, 210e-3].
 
     """
-    def __init__(self, connection, cfg):
-        super(SourceCurrent, self).__init__(connection, cfg)
+    def __init__(self, transport, protocol):
+        super(SourceCurrent, self).__init__(transport, protocol)
         self.amplitude = Command(
             ':SOUR:CURR?',
             ':SOUR:CURR',
@@ -556,8 +561,8 @@ class SourceSweep(InstrumentBase):
     :ivar :
 
     """
-    def __init__(self, connection, cfg):
-        super(SourceSweep, self).__init__(connection, cfg)
+    def __init__(self, transport, protocol):
+        super(SourceSweep, self).__init__(transport, protocol)
         # TODO
 
     def arm(self):
@@ -573,8 +578,8 @@ class SourceList(InstrumentBase):
     """The list command subsystem of the Source node.
 
     """
-    def __init__(self, connection, cfg):
-        super(SourceList, self).__init__(connection, cfg)
+    def __init__(self, transport, protocol):
+        super(SourceList, self).__init__(transport, protocol)
         # TODO
 
 
@@ -584,8 +589,8 @@ class SourceDelta(InstrumentBase):
     :ivar :
 
     """
-    def __init__(self, connection, cfg):
-        super(SourceDelta, self).__init__(connection, cfg)
+    def __init__(self, transport, protocol):
+        super(SourceDelta, self).__init__(transport, protocol)
         # TODO
 
 
@@ -595,8 +600,8 @@ class SourcePulseDelta(InstrumentBase):
     :ivar :
 
     """
-    def __init__(self, connection, cfg):
-        super(SourcePulseDelta, self).__init__(connection, cfg)
+    def __init__(self, transport, protocol):
+        super(SourcePulseDelta, self).__init__(transport, protocol)
         # TODO
 
 
@@ -606,8 +611,8 @@ class SourceDifferentialConductance(InstrumentBase):
     :ivar :
 
     """
-    def __init__(self, connection, cfg):
-        super(SourceDifferentialConductance, self).__init__(connection, cfg)
+    def __init__(self, transport, protocol):
+        super(SourceDifferentialConductance, self).__init__(transport, protocol)
         # TODO
 
 
@@ -630,8 +635,8 @@ class SourceWave(InstrumentBase):
     :ivar cycles: The waveform duration in cycles. Valid are floats in the
         range [1e-3, 99999999900] or `float('inf')`.
     """
-    def __init__(self, connection, cfg):
-        super(SourceWave, self).__init__(connection, cfg)
+    def __init__(self, transport, protocol):
+        super(SourceWave, self).__init__(transport, protocol)
         self.function = Command(
             ':SOUR:WAVE:FUNC?',
             ':SOUR:WAVE:FUNC',
@@ -669,8 +674,8 @@ class SourceWave(InstrumentBase):
             # TODO The max should be included in the range
             Float(min=-105e-3, max=105e-3)
         )
-        self.phase_marker = SourceWavePhaseMarker(self.connection, self._cfg)
-        self.arbitrary = SourceWaveArbitrary(self.connection, self._cfg)
+        self.phase_marker = SourceWavePhaseMarker(self._transport, self._protocol)
+        self.arbitrary = SourceWaveArbitrary(self._transport, self._protocol)
         self.ranging = Command(
             ':SOUR:WAVE:RANG?',
             ':SOUR:WAVE:RANG',
@@ -689,7 +694,7 @@ class SourceWave(InstrumentBase):
             # TODO check if lowercase 'inf' works.
             Float(min=1e-3)
         )
-        self.external_trigger = SourceWaveETrigger(self.connection, self._cfg)
+        self.external_trigger = SourceWaveETrigger(self._transport, self._protocol)
 
     def arm(self):
         """Arm waveform function."""
@@ -712,8 +717,8 @@ class SourceWavePhaseMarker(InstrumentBase):
     :ivar bool enabled: The state of the phase marker.
 
     """
-    def __init__(self, connection, cfg):
-        super(SourceWavePhaseMarker, self).__init__(connection, cfg)
+    def __init__(self, transport, protocol):
+        super(SourceWavePhaseMarker, self).__init__(transport, protocol)
         self.level = Command(
             ':SOUR:WAVE:PMAR?',
             ':SOUR:WAVE:PMAR',
@@ -735,8 +740,8 @@ class SourceWaveArbitrary(InstrumentBase):
     """The arbitrary waveform command subgroup of the SourceWave node.
 
     """
-    def __init__(self, connection, cfg):
-        super(SourceWaveArbitrary, self).__init__(connection, cfg)
+    def __init__(self, transport, protocol):
+        super(SourceWaveArbitrary, self).__init__(transport, protocol)
         # TODO
 
 
@@ -754,8 +759,8 @@ class SourceWaveETrigger(InstrumentBase):
     :ivar float inactive_value: The inactive value. [-1.00, 1.00].
 
     """
-    def __init__(self, connection, cfg):
-        super(SourceWaveETrigger, self).__init__(connection, cfg)
+    def __init__(self, transport, protocol):
+        super(SourceWaveETrigger, self).__init__(transport, protocol)
         self.enabled = Command(
             ':SOUR:WAVE:EXTR?',
             ':SOUR:WAVE:EXTR',
@@ -778,16 +783,16 @@ class SourceWaveETrigger(InstrumentBase):
 # Status Command Layer
 # -----------------------------------------------------------------------------
 class Status(InstrumentBase):
-    def __init__(self, connection, cfg):
-        super(Status, self).__init__(connection, cfg)
+    def __init__(self, transport, protocol):
+        super(Status, self).__init__(transport, protocol)
 
 
 # -----------------------------------------------------------------------------
 # System Command Layer
 # -----------------------------------------------------------------------------
 class System(InstrumentBase):
-    def __init__(self, connection, cfg):
-        super(System, self).__init__(connection, cfg)
+    def __init__(self, transport, protocol):
+        super(System, self).__init__(transport, protocol)
 
 
 # -----------------------------------------------------------------------------
@@ -804,14 +809,14 @@ class Trace(InstrumentBase):
     :ivar data: The trace data subsystem, an instance of :class:`~.TraceData`.
 
     """
-    def __init__(self, connection, cfg):
-        super(Trace, self).__init__(connection, cfg)
+    def __init__(self, transport, protocol):
+        super(Trace, self).__init__(transport, protocol)
         self.points = Command(
             ':TRAC:POIN?',
             ':TRAC:POIN',
             Integer(min=1, max=65536)
         )
-        self.actual_points = Command(query=(':TRAC:POIN:ACT?', Integer))
+        self.actual_points = Command((':TRAC:POIN:ACT?', Integer))
         self.notify = Command(
             ':TRAC:NOT?',
             ':TRAC:NOT',
@@ -868,8 +873,8 @@ class TraceData(InstrumentBase):
         'dcon', 'pulse'. (read-only).
 
     """
-    def __init__(self, connection, cfg):
-        super(TraceData, self).__init__(connection, cfg)
+    def __init__(self, transport, protocol):
+        super(TraceData, self).__init__(transport, protocol)
         self.type = Command(
             ':TRAC:DATA:TYPE?',
             ':TRAC:DATA:TYPE',
@@ -903,8 +908,8 @@ class Arm(InstrumentBase):
     :ivar output: The output trigger. Valid are 'tenter', 'texit' and `None`.
 
     """
-    def __init__(self, connection, cfg):
-        super(Arm, self).__init__(connection, cfg)
+    def __init__(self, transport, protocol):
+        super(Arm, self).__init__(transport, protocol)
         self.source = Command(
             ':ARM:SOUR?',
             ':ARM:SOUR',
@@ -956,8 +961,8 @@ class Trigger(InstrumentBase):
     :ivar output: The output trigger. Valid are 'source', 'delay' and `None`.
 
     """
-    def __init__(self, connection, cfg):
-        super(Trigger, self).__init__(connection, cfg)
+    def __init__(self, transport, protocol):
+        super(Trigger, self).__init__(transport, protocol)
         self.source = Command(
             ':TRIG:SOUR?',
             ':TRIG:SOUR',
@@ -999,10 +1004,10 @@ class Units(InstrumentBase):
     :ivar power: The units power subsystem, an instance of :class:`~.UnitPower`
 
     """
-    def __init__(self, connection, cfg):
-        super(Units, self).__init__(connection, cfg)
-        self.voltage = UnitVoltage(self.connection, self._cfg)
-        self.power = UnitPower(self.connection, self._cfg)
+    def __init__(self, transport, protocol):
+        super(Units, self).__init__(transport, protocol)
+        self.voltage = UnitVoltage(self._transport, self._protocol)
+        self.power = UnitPower(self._transport, self._protocol)
 
 
 class UnitVoltage(InstrumentBase):
@@ -1011,8 +1016,8 @@ class UnitVoltage(InstrumentBase):
     :ivar dc: The voltage reading units, valid are 'V', 'Ohm', 'W', 'Siemens'.
 
     """
-    def __init__(self, connection, cfg):
-        super(UnitVoltage, self).__init__(connection, cfg)
+    def __init__(self, transport, protocol):
+        super(UnitVoltage, self).__init__(transport, protocol)
         self.dc = Command(
             ':UNIT:VOLT?',
             ':UNIT:VOLT',
@@ -1027,8 +1032,8 @@ class UnitPower(InstrumentBase):
         'peak' and 'average'.
 
     """
-    def __init__(self, connection, cfg):
-        super(UnitPower, self).__init__(connection, cfg)
+    def __init__(self, transport, protocol):
+        super(UnitPower, self).__init__(transport, protocol)
         self.type = Command(
             ':UNIT:POW?',
             ':UNIT:POW',
