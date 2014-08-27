@@ -135,12 +135,18 @@ class Command(object):
         :param protocol: An object implementing the `.Protocol` interface.
         :param data: The program data.
 
+        :raises AttributeError: if the command is not writable.
+
         """
         if not self._write:
             raise AttributeError('Command is not writeable')
         if self.protocol:
             protocol = self.protocol
-        data = _dump(self._write.data_type, data)
+        if self._write.data_type:
+            data = _dump(self._write.data_type, data)
+        else:
+            # TODO We silently ignore possible data
+            data = ()
         if isinstance(transport, SimulatedTransport):
             self.simulate_write(data)
         else:
@@ -153,7 +159,9 @@ class Command(object):
             It is used by the protocol to send the message and receive the
             response.
         :param protocol: An object implementing the `.Protocol` interface.
-        :param datas: The program data.
+        :param data: The program data.
+
+        :raises AttributeError: if the command is not queryable.
 
         """
         if not self._query:
@@ -163,6 +171,7 @@ class Command(object):
         if self._query.data_type:
             data = _dump(self._query.data_type, data)
         else:
+            # TODO We silently ignore possible data
             data = ()
         if isinstance(transport, SimulatedTransport):
             response = self.simulate_query(data)

@@ -109,6 +109,12 @@ class TestCommand(object):
         assert protocol.header == 'HEADER'
         assert protocol.data == ('1', '2')
 
+    def test_write_without_data(self):
+        protocol = MockProtocol()
+        transport = MockTransport()
+        cmd = Command(write='HEADER')
+        cmd.write(transport, protocol)
+
     def test_query_without_message_data_and_single_data_response(self):
         protocol = MockProtocol(response=['1'])
         transport = MockTransport()
