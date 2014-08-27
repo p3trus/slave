@@ -561,6 +561,8 @@ class PPMS(IEC60488):
             process, either 'persistent' or 'driven'.
         :param delay: The time delay between each call to measure in seconds.
 
+        :raises TypeError: if measure parameter is not callable.
+
         """
         if not hasattr(measure, '__call__'):
             raise TypeError('measure parameter not callable.')
@@ -568,7 +570,7 @@ class PPMS(IEC60488):
         if self.system_status['magnet'].startswith('persist'):
             # The persistent switch takes some time to open. While it's opening,
             # the status does not change.
-            switch_heat_time = self.magnet_config[5]
+            switch_heat_time = datetime.timedelta(seconds=self.magnet_config[5])
             start = datetime.datetime.now()
             while True:
                 now = datetime.datetime.now()
@@ -606,7 +608,7 @@ class PPMS(IEC60488):
         self.target_field = field, rate, approach, mode
         if wait_for_stability and self.system_status['magnet'].startswith('persist'):
             # Wait until the persistent switch heats up.
-            time.sleep(self.magnet_conf[5])
+            time.sleep(self.magnet_config[5])
 
         while wait_for_stability:
             status = self.system_status['magnet']
