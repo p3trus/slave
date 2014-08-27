@@ -17,11 +17,15 @@ Usage::
         '''A custom instrument compliant with the IEC 60488-2:2004(E),
         supporting the optional PowerOn commands.
         '''
-        def __init__(self, connection):
-            super(CustomInstrument, self).__init__(connection)
+        def __init__(self, transport):
+            super(CustomInstrument, self).__init__(transport)
             # Implement custom commands.
 
 """
+from __future__ import (absolute_import, division,
+                        print_function, unicode_literals)
+from future.builtins import *
+
 from slave.core import Command, InstrumentBase
 from slave.types import Boolean, Integer, Register, String
 
@@ -54,11 +58,9 @@ PARALLEL_POLL_REGISTER = dict((i, str(i)) for i in range(8, 16))
 def _construct_register(reg, default_reg):
     """Constructs a register dict."""
     if reg:
-        x = dict((k, reg.get(k, d)) for k, d in default_reg.iteritems())
+        x = dict((k, reg.get(k, d)) for k, d in default_reg.items())
     else:
         x = dict(default_reg)
-    # XXX invert dict because Register type uses inverted key, value pairs
-    x = dict((v, k) for k, v in x.iteritems())
     return x
 
 
@@ -66,7 +68,7 @@ class IEC60488(InstrumentBase):
     """The IEC60488 class implements a IEC 60488-2:2004(E) compliant base
     class.
 
-    :param connection: A connection object.
+    :param transport: A transport object.
     :param esb: A dictionary mapping the 8 bit standard event status register.
         Integers in the range 0 to 7 are valid keys. If present they replace
         the default values.
@@ -108,8 +110,8 @@ class IEC60488(InstrumentBase):
     * `*WAI` - See IEC 60488-2:2004(E) section 10.39
 
     """
-    def __init__(self, connection, esb=None, stb=None, *args, **kw):
-        super(IEC60488, self).__init__(connection, *args, **kw)
+    def __init__(self, transport, protocol=None, esb=None, stb=None, *args, **kw):
+        super(IEC60488, self).__init__(transport, protocol,*args, **kw)
         self._esb = esb = _construct_register(esb, EVENT_STATUS_BYTE)
         self._stb = stb = _construct_register(stb, STATUS_BYTE)
 
@@ -122,21 +124,21 @@ class IEC60488(InstrumentBase):
 
     def clear(self):
         """Clears the status data structure."""
-        self.connection.write('*CLS')
+        self._write('*CLS')
 
     def complete_operation(self):
         """Sets the operation complete bit high of the event status byte."""
-        self.connection.write('*OPC')
+        self._write('*OPC')
 
     def reset(self):
         """Performs a device reset."""
-        self.connection.write('*RST')
+        self._write('*RST')
 
     def test(self):
         """Performs a internal self-test and returns an integer in the range
         -32767 to + 32767.
         """
-        return int(self.connection.ask('*TST?'))
+        return self._query(('*TST?', Integer))
 
     def wait_to_continue(self):
         """Prevents the device from executing any further commands or queries
@@ -148,7 +150,7 @@ class IEC60488(InstrumentBase):
            flag is always True.
 
         """
-        self.connection.write('*WAI')
+        self._write('*WAI')
 
 
 class PowerOn(object):
@@ -275,7 +277,7 @@ class Calibration(object):
             without errors.
 
         """
-        return int(self.connection.ask('*CAL?'))
+        return self._query(('*CAL?', Integer))
 
 
 class Trigger(object):
@@ -302,14 +304,14 @@ class Trigger(object):
 
         .. note::
 
-            It first tries to execute `connection.trigger()`. If this fails,
+            It first tries to execute `transport.trigger()`. If this fails,
             the `*TRG` is sent.
 
         """
         try:
-            self.connection.trigger()
+            self.transport.trigger()
         except AttributeError:
-            self.connection.write('*TRG')
+            self._write('*TRG')
 
 
 class TriggerMacro(object):
@@ -364,15 +366,15 @@ class Macro(object):
             .. note:: The macro string is not validated.
 
         """
-        self.connection.write('*DMC {0}'.format(macro))
+        self._write(('*DMC', String), macro)
 
     def disable_macro_commands(self):
         """Disables all macro commands."""
-        self.connection.write('*EMC 0')
+        self._write(('*EMC', Integer), 0)
 
     def enable_macro_commands(self):
         """Enables all macro commands."""
-        self.connection.write('*EMC 1')
+        self._write(('*EMC', Integer), 1)
 
     def get_macro(self, label):
         """Returns the macro.
@@ -380,15 +382,15 @@ class Macro(object):
         :param label: The label of the requested macro.
 
         """
-        return str(self.connection.write('*GMC? {0}'.format(label)))
+        return self._query(('*GMC?', String, String), label)
 
     def macro_labels(self):
         """Returns the currently defined macro labels."""
-        return str(self.connection.ask('*LMC?'))
+        return self._query(('*LMC?', String))
 
     def purge_macros(self):
         """Deletes all previously defined macros."""
-        self.connection.write('*PMC')
+        self._write('*PMC')
 
 
 class ObjectIdentification(object):
@@ -423,8 +425,6 @@ class StoredSetting(object):
     """
     def __init__(self, *args, **kw):
         super(StoredSetting, self).__init__(*args, **kw)
-        self.__recall = Command(write=('*RCL', Integer(min=0)))
-        self.__save = Command(write=('*SAV', Integer(min=0)))
 
     def recall(self, idx):
         """Restores the current settings from a copy stored in local memory.
@@ -432,7 +432,7 @@ class StoredSetting(object):
         :param idx: Specifies the memory slot.
 
         """
-        self.__recall = idx
+        self._write(('*RCL', Integer(min=0)), idx)
 
     def save(self, idx):
         """Stores the current settings of a device in local memory.
@@ -440,7 +440,7 @@ class StoredSetting(object):
         :param idx: Specifies the memory slot.
 
         """
-        self.__save = idx
+        self._write(('*SAV', Integer(min=0)), idx)
 
 
 class Learn(object):
@@ -464,7 +464,7 @@ class Learn(object):
             of the device at the time this command was executed.
 
         """
-        return str(self.connection.ask('*LRN?'))
+        return self._query(('*LRN?', String))
 
 
 class SystemConfiguration(object):
@@ -484,11 +484,11 @@ class SystemConfiguration(object):
 
     def accept_address(self):
         """Executes the accept address command."""
-        self.connection.write('*AAD')
+        self._write('*AAD')
 
     def disable_listener(self):
         """Executes the disable listener command."""
-        self.connection.write('*DLF')
+        self._write('*DLF')
 
 
 class PassingControl(object):
@@ -520,11 +520,10 @@ class PassingControl(object):
 
         """
         if secondary is None:
-            cmd = Command(write=('*PCB', Integer(min=0, max=30)),
-                          connection=self.connection)
-            cmd.write(primary)
+            self._write(('*PCB', Integer(min=0, max=30)), primary)
         else:
-            type_ = [Integer(min=0, max=30), Integer(min=0, max=30)]
-            cmd = Command(write=('*PCB', type_),
-                          connection=self.connection)
-            cmd.write((primary, secondary))
+            self._write(
+                ('*PCB', [Integer(min=0, max=30), Integer(min=0, max=30)]),
+                primary,
+                secondary
+            )

@@ -1,6 +1,10 @@
 #  -*- coding: utf-8 -*-
 #
-# Slave, (c) 2012, see AUTHORS.  Licensed under the GNU GPL.
+# Slave, (c) 2012-2014, see AUTHORS.  Licensed under the GNU GPL.
+from __future__ import (absolute_import, division,
+                        print_function, unicode_literals)
+from future.builtins import *
+
 from slave.core import Command, InstrumentBase, CommandSequence
 from slave.types import Boolean, Enum, Float, Integer, Register, String
 from slave.iec60488 import IEC60488, PowerOn
@@ -9,7 +13,7 @@ from slave.iec60488 import IEC60488, PowerOn
 class SR850(IEC60488, PowerOn):
     """A Stanford Research SR850 lock-in amplifier.
 
-    :param connection: A connection object.
+    :param transport: A transport object.
 
     .. rubric:: Reference and Phase Commands
 
@@ -331,7 +335,17 @@ class SR850(IEC60488, PowerOn):
 
 
     """
-    def __init__(self, connection):
+    LIA_BYTE = {
+        0: 'input overload',
+        1: 'filter overload',
+        2: 'output overload',
+        3: 'reference unlock',
+        4: 'detection freq change',
+        5: 'time constant change',
+        6: 'triggered',
+        7: 'plot',
+    }
+    def __init__(self, transport):
         stb = {
             0: 'SCN',
             1: 'IFC',
@@ -361,27 +375,13 @@ class SR850(IEC60488, PowerOn):
             5: 'gpib error',
             6: 'dsp error',
         }
-        lia = {
-            0: 'input overload',
-            1: 'filter overload',
-            2: 'output overload',
-            3: 'reference unlock',
-            4: 'detection freq change',
-            5: 'time constant change',
-            6: 'triggered',
-            7: 'plot',
-        }
-        super(SR850, self).__init__(connection, stb=stb, esb=esb)
+        super(SR850, self).__init__(transport, stb=stb, esb=esb)
         # Status Reporting Commands
-        def _invert(x):
-            """Returns a dict, where keys and values are switched."""
-            return dict((v, k) for k, v in x.iteritems())
-
-        self.lia_status = Command(('LIAS?', Register(_invert(lia))))
+        self.lia_status = Command(('LIAS?', Register(self.LIA_BYTE)))
         self.lia_status_enable = Command(
             'LIAE?',
             'LIAE',
-            Register(_invert(lia))
+            Register(self.LIA_BYTE)
         )
         # Reference and Phase Commands
         self.phase = Command('PHAS?', 'PHAS', Float(min=-360., max=719.999)
@@ -478,7 +478,7 @@ class SR850(IEC60488, PowerOn):
         )
         # Trace and Scan Commands
         self.traces = [
-            Trace(i, self.connection, self._cfg) for i in range(1, 5)
+            Trace(transport, self._protocol, i) for i in range(1, 5)
         ]
         self.scan_sample_rate = Command(
             'SRAT?',
@@ -506,23 +506,25 @@ class SR850(IEC60488, PowerOn):
             'MNTR',
             Enum('settings', 'input/output')
         )
-        self.full_display = Display(0, self.connection, self._cfg)
-        self.top_display = Display(1, self.connection, self._cfg)
-        self.bottom_display = Display(2, self.connection, self._cfg)
+        self.full_display = Display(transport, self._protocol, 0)
+        self.top_display = Display(transport, self._protocol, 1)
+        self.bottom_display = Display(transport, self._protocol, 2)
         # Cursor Commands
-        self.cursor = Cursor(self.connection, self._cfg)
+        self.cursor = Cursor(transport, self._protocol)
         # Mark Commands
-        self.marks = MarkList(self.connection, self._cfg)
+        self.marks = MarkList(transport, self._protocol)
         # Aux Input and Output Comnmands
         def aux_in(i):
             """Helper function to create an aux input command."""
-            return Command(query=('OAUX? {0}'.format(i), Float),
-                           connection=self.connection,
-                           cfg=self._cfg)
+            return Command(query=('OAUX? {0}'.format(i), Float))
 
-        self.aux_input = CommandSequence(aux_in(i) for i in xrange(1, 5))
+        self.aux_input = CommandSequence(
+            self._transport,
+            self._protocol,
+            (aux_in(i) for i in range(1, 5))
+        )
         self.aux_output = tuple(
-            Output(i, self.connection, self._cfg) for i in xrange(1, 5)
+            Output(transport, self._protocol, i) for i in range(1, 5)
         )
         self.start_on_trigger = Command('TSTR?', 'TSTR', Boolean)
         # Math Commands
@@ -548,8 +550,8 @@ class SR850(IEC60488, PowerOn):
             'FTYP',
             Enum('line', 'exp', 'gauss')
         )
-        self.fit_params = FitParameters(self.connection, self._cfg)
-        self.statistics = Statistics(self.connection, self._cfg)
+        self.fit_params = FitParameters(transport, self._protocol)
+        self.statistics = Statistics(transport, self._protocol)
         # Store and Recall File Commands
         # TODO The filename syntax is not validated yet.
         self.filename = Command('FNAM?', 'FNAM', String(max=12))
@@ -906,6 +908,10 @@ class SR850(IEC60488, PowerOn):
 class Display(InstrumentBase):
     """Represents a SR850 display.
 
+    :param transport: A transport object.
+    :param protocol: A protocol object.
+    :param idx: The display id.
+
     .. note::
 
         The SR850 will generate an error if one tries to set a parameter of an
@@ -939,8 +945,8 @@ class Display(InstrumentBase):
         * *<vertical>* is the vertical position.
 
     """
-    def __init__(self, idx, connection, cfg):
-        super(Display, self).__init__(connection, cfg)
+    def __init__(self, transport, protocol, idx):
+        super(Display, self).__init__(transport, protocol)
         idx = int(idx)
         self.type = Command(
             'DTYP? {0}'.format(idx),
@@ -978,6 +984,9 @@ class Display(InstrumentBase):
 class Cursor(InstrumentBase):
     """Represents the SR850 cursor of the active display.
 
+    :param transport: A transport object.
+    :param protocol: A protocol object.
+
     .. note::
 
         The cursor commands are only effective if the active display is a chart
@@ -997,8 +1006,8 @@ class Cursor(InstrumentBase):
         position. To get the actual cursor location, use :attr:`Display.cursor`.
 
     """
-    def __init__(self, connection, cfg):
-        super(Cursor, self).__init__(connection, cfg)
+    def __init__(self, transport, protocol):
+        super(Cursor, self).__init__(transport, protocol)
         self.seek_mode = Command('CSEK?', 'CSEK', Enum('max', 'min', 'mean'))
         self.width = Command(
             'CWID?',
@@ -1044,6 +1053,10 @@ class Cursor(InstrumentBase):
 class Output(InstrumentBase):
     """Represents a SR850 analog output.
 
+    :param transport: A transport object.
+    :param protocol: A protocol object.
+    :param idx: The output id.
+
     :ivar mode: The analog output mode. Valid are 'fixed', 'log' and 'linear'.
     :ivar voltage: The output voltage in volt, in the range -10.5 to 10.5.
     :ivar limits: The output voltage limits and offset, represented by the
@@ -1060,8 +1073,8 @@ class Output(InstrumentBase):
             lock-in internal error.
 
     """
-    def __init__(self, idx, connection, cfg):
-        super(Output, self).__init__(connection, cfg)
+    def __init__(self, transport, protocol, idx):
+        super(Output, self).__init__(transport, protocol)
         idx = int(idx)
         self.mode = Command(
             'AUXM? {0}'.format(idx),
@@ -1087,12 +1100,15 @@ class Output(InstrumentBase):
 class Trace(InstrumentBase):
     """Represents a SR850 trace.
 
+    :param transport: A transport object.
+    :param protocol: A protocol object.
+    :param idx: The trace id.
+
     :ivar float value: The value of the trace (read only).
-
     :ivar traces: A sequence of four traces represented by the following tuple
-        *(<a>, <b>, <c>, <store>)* where 
+        *(<a>, <b>, <c>, <store>)* where
 
-        * *<a>, <b>, <c>* define the trace which is calculated as 
+        * *<a>, <b>, <c>* define the trace which is calculated as
           *<a> * <b> / <c>*. Each one of them is one of the following
           quantities '1', 'x', 'y', 'r', 'theta', 'xn', 'yn', 'rn', 'Al1',
           'Al2', 'Al3', 'Al4', 'F', 'x**2', 'y**2', 'r**2', 'theta**2',
@@ -1112,8 +1128,8 @@ class Trace(InstrumentBase):
         lock-in error is generated.
 
     """
-    def __init__(self, idx, connection, cfg):
-        super(Trace, self).__init__(connection, cfg)
+    def __init__(self, transport, protocol, idx):
+        super(Trace, self).__init__(transport, protocol)
         self.idx = idx = int(idx)
         self.value = Command(('OUTR? {0}'.format(idx), Float))
 
@@ -1151,11 +1167,13 @@ class Trace(InstrumentBase):
 class Mark(InstrumentBase):
     """A SR850 mark.
 
-    :ivar idx: The index of the mark.
+    :param transport: A transport object.
+    :param protocol: A protocol object.
+    :param idx: The mark index.
 
     """
-    def __init__(self, idx, connection, cfg):
-        super(Mark, self).__init__(connection, cfg)
+    def __init__(self, transport, protocol, idx):
+        super(Mark, self).__init__(transport, protocol)
         self.idx = idx = int(idx)
 
     @property
@@ -1195,14 +1213,14 @@ class Mark(InstrumentBase):
 
 class MarkList(InstrumentBase):
     """A sequence like structure holding the eight SR850 marks."""
-    def __init__(self, connection, cfg):
-        super(MarkList, self).__init__(connection, cfg)
-        self._marks = [Mark(i, self.connection, self._cfg) for i in xrange(8)]
+    def __init__(self, transport, protocol):
+        super(MarkList, self).__init__(transport, protocol)
+        self._marks = [Mark(transport, self._protocol, i) for i in range(8)]
 
     def active(self):
         """The indices of the active marks."""
-        # TODO avoid direct usage of connection object.
-        marks = tuple(int(x) for x in self.connection.ask('MACT').split(','))
+        # TODO avoid direct usage of transport object.
+        marks = tuple(int(x) for x in transport.ask('MACT').split(','))
         return marks[1:]
 
     def __getitem__(self, item):
@@ -1211,6 +1229,9 @@ class MarkList(InstrumentBase):
 
 class FitParameters(InstrumentBase):
     """The calculated fit parameters.
+
+    :param transport: A transport object.
+    :param protocol: A protocol object.
 
     The meaning of the fit parameters depends on the fit function used to
     obtain them. These are
@@ -1265,8 +1286,8 @@ class FitParameters(InstrumentBase):
         ========  =============================
 
     """
-    def __init__(self, connection, cfg):
-        super(FitParameters, self).__init__(connection, cfg)
+    def __init__(self, transport, protocol):
+        super(FitParameters, self).__init__(transport, protocol)
         self.a = Command(('PARS? 0', Float))
         self.b = Command(('PARS? 1', Float))
         self.c = Command(('PARS? 2', Float))
@@ -1276,14 +1297,17 @@ class FitParameters(InstrumentBase):
 class Statistics(InstrumentBase):
     """Provides access to the results of the statistics calculation.
 
+    :param transport: A transport object.
+    :param protocol: A protocol object.
+
     :ivar mean: The mean value.
     :ivar standard_deviation: The standart deviation.
     :ivar total_data: The sum of all the data points within the range.
     :ivar time_delta: The time delta of the range.
 
     """
-    def __init__(self, connection, cfg):
-        super(Statistics, self).__init__(connection, cfg)
+    def __init__(self, transport, protocol):
+        super(Statistics, self).__init__(transport, protocol)
         self.mean = Command(('SPAR? 0', Float))
         self.standard_deviation = Command(('SPAR? 1', Float))
         self.total_data = Command(('SPAR? 2', Float))

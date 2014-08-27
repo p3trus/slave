@@ -3,11 +3,15 @@
 # Slave, (c) 2012, see AUTHORS.  Licensed under the GNU GPL.
 
 """
-The sr830 module implements an interface for the Stanford Research SR830.
+The sr830 module implements an interface for the Stanford Research Systems
+SR830.
 
 The SR830 lock in amplifier is an IEEE Std. 488-2 1987 compliant device.
 
 """
+from __future__ import (absolute_import, division,
+                        print_function, unicode_literals)
+from future.builtins import *
 
 from slave.core import Command, InstrumentBase
 from slave.types import Boolean, Enum, Float, Integer, Register, Set, String
@@ -17,8 +21,8 @@ __all__ = ['SR830']
 
 
 class Aux(InstrumentBase):
-    def __init__(self, connection, id):
-        super(Aux, self).__init__(connection)
+    def __init__(self, transport, protocol, id):
+        super(Aux, self).__init__(transport, protocol)
         self.id = id = int(id)
         #: Queries the aux input voltages.
         self.input = Command(('OAUX? {0}'.format(id), Float))
@@ -30,12 +34,12 @@ class Aux(InstrumentBase):
 
 class Status(InstrumentBase):
     """Wraps a readable and writeable register."""
-    def __init__(self, query, write, register, connection):
-        super(Status, self).__init__(connection)
-        for k, v in register.iteritems():
-            q = query + ' {0}'.format(int(v))
-            w = write + ' {0},'.format(int(v)) if write else None
-            name = k.replace(' ', '_')
+    def __init__(self, transport, protocol, query, write, register):
+        super(Status, self).__init__(transport, protocol)
+        for k, v in register.items():
+            q = query + ' {0}'.format(int(k))
+            w = write + ' {0},'.format(int(k)) if write else None
+            name = v.replace(' ', '_')
             setattr(self, name, Command(q, w, Boolean))
         self.value = Command(query, write, Register(register))
 
@@ -45,93 +49,123 @@ class Status(InstrumentBase):
 
 
 class ErrorStatus(Status):
-    def __init__(self, connection):
+    def __init__(self, transport, protocol):
         register = {
-            'backup error': 1,
-            'ram error': 2,
-            'rom error': 4,
-            'gpib error': 5,
-            'dsp error': 6,
-            'math error': 7,
+            1: 'backup error',
+            2: 'ram error',
+            4: 'rom error',
+            5: 'gpib error',
+            6: 'dsp error',
+            7: 'math error',
         }
-        super(ErrorStatus, self).__init__('ERRS?', None,
-                                          register, connection)
+        super(ErrorStatus, self).__init__(
+            transport,
+            protocol,
+            'ERRS?',
+            None,
+            register,
+        )
 
 
 class ErrorEnable(Status):
-    def __init__(self, connection):
+    def __init__(self, transport, protocol):
         register = {
-            'backup error': 1,
-            'ram error': 2,
-            'rom error': 4,
-            'gpib error': 5,
-            'dsp error': 6,
-            'math error': 7,
+            1: 'backup error',
+            2: 'ram error',
+            4: 'rom error',
+            5: 'gpib error',
+            6: 'dsp error',
+            8: 'math error',
         }
-        super(ErrorEnable, self).__init__('ERRE?', 'ERRE',
-                                          register, connection)
+        super(ErrorEnable, self).__init__(
+            transport,
+            protocol,
+            'ERRE?',
+            'ERRE',
+            register
+        )
 
 
 class LockInStatus(Status):
-    def __init__(self, connection):
+    def __init__(self, transport, protocol):
         register = {
-            'input overload': 0,
-            'TC filter overload': 1,
-            'output overload': 2,
-            'reference unlock': 3,
-            'frequency range switch': 4,
-            'indirect TC change': 5,
-            'triggered': 6,
+            0: 'input overload',
+            1: 'TC filter overload',
+            2: 'output overload',
+            3: 'reference unlock',
+            4: 'frequency range switch',
+            5: 'indirect TC change',
+            6: 'triggered',
         }
-        super(LockInStatus, self).__init__('LIAS?', None,
-                                           register, connection)
+        super(LockInStatus, self).__init__(
+            transport,
+            protocol,
+            'LIAS?',
+            None,
+            register
+        )
 
 
 class LockInEnable(Status):
-    def __init__(self, connection):
+    def __init__(self, transport, protocol):
         register = {
-            'input overload': 0,
-            'TC filter overload': 1,
-            'output overload': 2,
-            'reference unlock': 3,
-            'frequency range switch': 4,
-            'indirect TC change': 5,
-            'triggered': 6,
+            0: 'input overload',
+            1: 'TC filter overload',
+            2: 'output overload',
+            3: 'reference unlock',
+            4: 'frequency range switch',
+            5: 'indirect TC change',
+            6: 'triggered',
         }
-        super(LockInEnable, self).__init__('LIAE?', 'LIAE',
-                                           register, connection)
+        super(LockInEnable, self).__init__(
+            transport,
+            protocol,
+            'LIAE?',
+            'LIAE',
+            register
+        )
 
 
 class SerialPollStatus(Status):
     """Represents the serial poll status register."""
-    def __init__(self, connection):
+    def __init__(self, transport, protocol):
         register = {
-            'no scan': 0,
-            'no command': 1,
-            'error': 2,
-            'lockin': 3,
-            'output_buffer': 4,
-            'standard status ': 5,
-            'service request': 6,
+            0: 'no scan',
+            1: 'no command',
+            2: 'error',
+            3: 'lockin',
+            4: 'output_buffer',
+            5: 'standard status ',
+            6: 'service request',
         }
-        super(SerialPollStatus, self).__init__('*STB?', None,
-                                               register, connection)
+        super(SerialPollStatus, self).__init__(
+            transport,
+            protocol,
+            '*STB?',
+            None,
+            register
+        )
 
 
 class SerialPollEnable(Status):
     """Represents the serial poll enable register."""
-    def __init__(self, connection):
+    def __init__(self, transport, protocol):
         register = {
-            'no scan': 0,
-            'no command': 1,
-            'error': 2,
-            'lockin': 3,
-            'output_buffer': 4,
-            'standard status ': 5,
-            'service request': 6,
+            0: 'no scan',
+            1: 'no command',
+            2: 'error',
+            3: 'lockin',
+            4: 'output_buffer',
+            5: 'standard status',
+            6: 'service request',
         }
-        super(SerialPollEnable, self).__init__('*SRE?', '*SRE',
-                                               register, connection)
+        super(SerialPollEnable, self).__init__(
+            transport,
+            protocol,
+            '*SRE?',
+            '*SRE',
+            register
+        )
 
 
 class StandardEventStatus(Status):
@@ -142,32 +176,42 @@ class StandardEventStatus(Status):
     clearing them via the :class:`~SR830.clear` member function.
 
     """
-    def __init__(self, connection):
+    def __init__(self, transport, protocol):
         register = {
-            'input queue overflow': 0,
-            'output queue overflow': 2,
-            'execution failed': 4,
-            'illegal command': 5,
-            'user interaction': 6,
-            'power on': 7,
+            0: 'input queue overflow',
+            2: 'output queue overflow',
+            4: 'execution failed',
+            5: 'illegal command',
+            6: 'user interaction',
+            7: 'power on',
         }
-        super(StandardEventStatus, self).__init__('*ESR?', None,
-                                                  register, connection)
+        super(StandardEventStatus, self).__init__(
+            transport,
+            protocol,
+            '*ESR?',
+            None,
+            register
+        )
 
 
 class StandardEventEnable(Status):
     """Represents the standard event enable register."""
-    def __init__(self, connection):
+    def __init__(self, transport, protocol):
         register = {
-            'input queue overflow': 0,
-            'output queue overflow': 2,
-            'execution failed': 4,
-            'illegal command': 5,
-            'user interaction': 6,
-            'power on': 7,
+            0: 'input queue overflow',
+            2: 'output queue overflow',
+            4: 'execution failed',
+            5: 'illegal command',
+            6: 'user interaction',
+            7: 'power on',
         }
-        super(StandardEventEnable, self).__init__('*ESE?', 'ESE',
-                                                  register, connection)
+        super(StandardEventEnable, self).__init__(
+            transport,
+            protocol,
+            '*ESE?',
+            'ESE',
+            register
+        )
 
 
 class SR830(InstrumentBase):
@@ -181,24 +225,24 @@ class SR830(InstrumentBase):
 
         import visa
         from slave.sr830 import SR830
-        # create a connection with a sr830 instrument via GPIB on channel 8
-        connection = visa.Instrument('GPIB::8')
+        # create a transport with a sr830 instrument via GPIB on channel 8
+        transport = visa.Instrument('GPIB::8')
         # instantiate the lockin interface.
-        lockin = SR830(connection)
+        lockin = SR830(transport)
         # execute a simple measurement
         for i in range(100):
             print 'X:', lockin.x
             time.sleep(1)
 
     """
-    def __init__(self, connection):
+    def __init__(self, transport):
         """Constructs a SR830 instrument object.
 
-        :param connection: Represents a hardware connection to the real
-          instrument, e.g. a py-visa connection object.
+        :param transport: Represents a hardware transport to the real
+          instrument, e.g. a py-visa transport object.
 
         """
-        super(SR830, self).__init__(connection)
+        super(SR830, self).__init__(transport)
 
         # Reference and phase commands
         # ============================
@@ -286,7 +330,7 @@ class SR830(InstrumentBase):
         # Aux input and output commands
         # =============================
         for id in range(1, 5):
-            setattr(self, 'aux{0}'.format(id), Aux(connection, id))
+            setattr(self, 'aux{0}'.format(id), Aux(transport, self._protocol, id))
 
         # Setup commands
         # ==============
@@ -343,28 +387,28 @@ class SR830(InstrumentBase):
 
         # Status reporting commands
         # =========================
-        self.error_status = ErrorStatus(connection)
-        self.error_enable = ErrorEnable(connection)
-        self.lockin_status = LockInStatus(connection)
-        self.lockin_enable = LockInEnable(connection)
-        self.serial_poll_status = SerialPollStatus(connection)
-        self.serial_poll_enable = SerialPollEnable(connection)
-        self.std_event_status = StandardEventStatus(connection)
-        self.std_event_enable = StandardEventEnable(connection)
+        self.error_status = ErrorStatus(transport, self._protocol)
+        self.error_enable = ErrorEnable(transport, self._protocol)
+        self.lockin_status = LockInStatus(transport, self._protocol)
+        self.lockin_enable = LockInEnable(transport, self._protocol)
+        self.serial_poll_status = SerialPollStatus(transport, self._protocol)
+        self.serial_poll_enable = SerialPollEnable(transport, self._protocol)
+        self.std_event_status = StandardEventStatus(transport, self._protocol)
+        self.std_event_enable = StandardEventEnable(transport, self._protocol)
         #: Enables or disables the clearing of the status registers on poweron.
         self.clear_on_poweron = Command('*PSC?', '*PSC', Boolean)
 
     def auto_gain(self):
         """Executes the auto gain command."""
-        self.connection.write('AGAN')
+        self._write('AGAN')
 
     def auto_reserve(self):
         """Executes the auto reserve command."""
-        self.connection.write('ARSV')
+        self._write('ARSV')
 
     def auto_phase(self):
         """Executes the auto phase command."""
-        self.connection.write('APHS')
+        self._write('APHS')
 
     def auto_offset(self, signal):
         """Executes the auto offset command for the selected signal.
@@ -372,40 +416,35 @@ class SR830(InstrumentBase):
         :param i: Can either be 'X', 'Y' or 'R'.
 
         """
-        signals = {'X': 1, 'Y': 2, 'R': 3}
-        self.connection.ask('AOFF {0}'.format(signals[signal]))
+        self._write(('AOFF', Enum('X', 'Y', 'R', start=1)), signal)
 
     def trigger(self):
         """Emits a trigger event."""
-        self.connection.write('TRIG')
+        self._write('TRIG')
 
     def start(self):
         """Starts or resumes data storage."""
-        self.connection.write('STRT')
+        self._write('STRT')
 
     def delayed_start(self):
         """Starts data storage after a delay of 0.5 sec."""
-        self.connection.write('STRD')
+        self._write('STRD')
 
     def pause(self):
         """Pauses data storage."""
-        self.connection.write('PAUS')
+        self._write('PAUS')
 
     def reset_buffer(self):
         """Resets internal data buffers."""
-        self.connection.write('REST')
+        self._write('REST')
 
     def reset_configuration(self):
         """Resets the SR830 to it's default configuration."""
-        self.connection.write('*RST')
+        self._write('*RST')
 
     def save_setup(self, id):
         """Saves the lock-in setup in the setup buffer."""
-        id = int(id)
-        if 0 < id < 10:
-            self.connection.write('SSET {0}'.format(id))
-        else:
-            raise ValueError('Buffer id out of range.')
+        self._write(('SSET', Integer(min=0, max=10)), id)
 
     def recall_setup(self, id):
         """Recalls the lock-in setup from the setup buffer.
@@ -414,9 +453,7 @@ class SR830(InstrumentBase):
           lock-in setup is stored under this id, recalling results in
           an error in the hardware.
         """
-        id = int(id)
-        if 0 < id < 10:
-            self.connection.write('RSET {0}'.format(id))
+        self._write(('RSET', Integer(min=0, max=10)), id)
 
     def snap(self, *args):
         """Records up to 6 parameters at a time.
@@ -426,6 +463,7 @@ class SR830(InstrumentBase):
           and 'CH2'. If none are given 'X' and 'Y' are used.
 
         """
+        # TODO: Do not use transport directly.
         params = {'X': 1, 'Y': 2, 'R': 3, 'Theta': 4, 'AuxIn1': 5, 'AuxIn2': 6,
                   'AuxIn3': 7, 'AuxIn4': 8, 'Ref': 9, 'CH1': 10, 'CH2': 11}
         if not args:
@@ -433,12 +471,12 @@ class SR830(InstrumentBase):
         if len(args) > 6:
             raise ValueError('Too many parameters (max: 6).')
         cmd = 'SNAP? ' + ','.join(map(lambda x: str(params[x]), args))
-        result = self.connection.ask(cmd)
+        result = self.transport.ask(cmd)
         return map(float, result.split(','))
 
     def clear(self):
         """Clears all status registers."""
-        self.connection.write('*CLS')
+        self._write('*CLS')
 
     def trace(self, buffer, start, length=1):
         """Reads the points stored in the channel buffer.
@@ -450,6 +488,8 @@ class SR830(InstrumentBase):
         .. todo::
            Use binary command TRCB to speed up data transmission.
         """
+        # TODO: Do not use transport directly.
         query = 'TRCA? {0}, {1}, {2}'.format(buffer, start, length)
-        result = self.connection.ask(query)
-        return (float(f) for f in result.split())
+        result = self.transport.ask(query)
+        # Result format: "1.0e-004,1.2e-004,". Strip trailing comma then split.
+        return (float(f) for f in result.strip(',').split(','))

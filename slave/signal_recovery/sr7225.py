@@ -1,6 +1,9 @@
 #  -*- coding: utf-8 -*-
 #
 # Slave, (c) 2012, see AUTHORS.  Licensed under the GNU GPL.
+from __future__ import (absolute_import, division,
+                        print_function, unicode_literals)
+from future.builtins import *
 
 from slave.core import Command, InstrumentBase
 from slave.types import Boolean, Enum, Integer, Register, Set, String
@@ -16,7 +19,7 @@ class Float(slave.types.Float):
 
     """
     def __convert__(self, value):
-        if isinstance(value, basestring):
+        if isinstance(value, (str, bytes)):
             value = value.strip('\x00')
         return super(Float, self).__convert__(value)
 
@@ -24,7 +27,7 @@ class Float(slave.types.Float):
 class SR7225(InstrumentBase):
     """Represents a Signal Recovery SR7225 lock-in amplifier.
 
-    :param connection: A connection object.
+    :param transport: A transport object.
 
     .. rubric:: Signal Channel
 
@@ -288,7 +291,7 @@ class SR7225(InstrumentBase):
     :ivar identification: The identification, it responds with `'7225'`.
     :ivar revision: The firmware revision. A multiline string.
 
-        .. warning:: Not every connection can handle multiline responses.
+        .. warning:: Not every transport can handle multiline responses.
 
     :ivar version: The firmware version.
 
@@ -355,12 +358,21 @@ class SR7225(InstrumentBase):
         3: 'echo',
         4: 'promt',
     }
+    #: The overload byte definition.
+    OVERLOAD_BYTE = {
+        1: 'ch1 output overload',
+        2: 'ch2 output overload',
+        3: 'y output overload',
+        4: 'x output overload',
+        6: 'input overload',
+        7: 'reference unlock',
+    }
 
-    def __init__(self, connection):
-        cfg = {
+    def __init__(self, transport):
+        protocol = {
              'program data separator': ',',
         }
-        super(SR7225, self).__init__(connection, cfg=cfg)
+        super(SR7225, self).__init__(transport, protocol=protocol)
         # Signal channel
         # ==============
         self.current_mode = Command('IMODE', 'IMODE',
@@ -424,10 +436,10 @@ class SR7225(InstrumentBase):
 
         # Signal Channel Output Amplifiers
         # ================================
-        self.x_offset = Command('XOF', 'XOF', Boolean,
-                                Integer(min=-30000, max=30000))
-        self.y_offset = Command('YOF', 'YOF', Boolean,
-                                Integer(min=-30000, max=30000))
+        self.x_offset = Command('XOF', 'XOF', [Boolean,
+                                Integer(min=-30000, max=30000)])
+        self.y_offset = Command('YOF', 'YOF', [Boolean,
+                                Integer(min=-30000, max=30000)])
         self.expand = Command('EX', 'EX',
                               Enum('off', 'x', 'y', 'both'))
         self.channel1_output = Command('CH 1', 'CH 1 ',
@@ -487,43 +499,32 @@ class SR7225(InstrumentBase):
                                   Integer(min=25, max=5000))
         # Output Data Curve Buffer
         # ========================
-        cb = Register(dict((v, k) for k, v in self.CURVE_BUFFER.iteritems()))
+        cb = Register(self.CURVE_BUFFER)
         self.curve_buffer_settings = Command('CBD', 'CBD', cb)
         self.curve_buffer_length = Command('LEN', 'LEN', Integer(min=0))
         self.storage_intervall = Command('STR', 'STR', Integer(min=0, max=1e9))
         self.event_marker = Command('EVENT', 'EVENT',
                                     Integer(min=0, max=32767))
-        status_byte = Register(
-            dict((v, k) for k, v in self.STATUS_BYTE.iteritems())
-        )
         self.measurement_status = Command(('M', [Enum('no activity',
                                                       'td running',
                                                       'tdc running',
                                                       'td halted',
                                                       'tdc halted'),
                                                  Integer,
-                                                 status_byte,
+                                                 Register(self.STATUS_BYTE),
                                                  Integer]))
         # Computer Interfaces
         # ===================
-        rs = Register(dict((v, k) for k, v in self.RS232.iteritems()))
+        rs = Register(self.RS232)
         self.rs232 = Command('RS', 'RS', [Enum(*self.BAUD_RATE), rs])
         self.gpib = Command('GP', 'GP',
                             [Integer(min=0, max=31),
                              Enum('CR', 'CR echo', 'CRLF', 'CRLF echo',
                                   'None', 'None echo')])
         self.delimiter = Command('DD', 'DD', Set(13, *range(31, 126)))
-        self.status = Command('ST', type_=status_byte)
-        overload_byte = {
-            'ch1 output overload': 1,
-            'ch2 output overload': 2,
-            'y output overload': 3,
-            'x output overload': 4,
-            'input overload': 6,
-            'reference unlock': 7,
-        }
-        self.overload_status = Command('N', type_=Register(overload_byte))
-        self.status_enable = Command('MSK', 'MSK', status_byte)
+        self.status = Command(('ST', Register(self.STATUS_BYTE)))
+        self.overload_status = Command(('N', Register(self.OVERLOAD_BYTE)))
+        self.status_enable = Command('MSK', 'MSK', Register(self.STATUS_BYTE))
         self.remote = Command('REMOTE', 'REMOTE', Boolean)
         # Instrument identification
         # =========================
@@ -541,23 +542,23 @@ class SR7225(InstrumentBase):
         sensitivity so that the signal magnitude lies in between 30% and 90%
         of the full scale sensitivity.
         """
-        self.connection.write('AS')
+        self._write('AS')
 
     def auto_measure(self):
         """Triggers the auto measure mode."""
-        self.connection.write('ASM')
+        self._write('ASM')
 
     def auto_phase(self):
         """Triggers the auto phase mode."""
-        self.connection.write('AQN')
+        self._write('AQN')
 
     def auto_offset(self):
         """Triggers the auto offset mode."""
-        self.connection.write('AXO')
+        self._write('AXO')
 
     def halt(self):
         """Halts the data acquisition."""
-        self.connection.write('HC')
+        self._write('HC')
 
     def init_curves(self):
         """Initializes the curve storage memory and its status variables.
@@ -565,13 +566,13 @@ class SR7225(InstrumentBase):
         .. warning:: All records of previously taken curves is removed.
 
         """
-        self.connection.write('NC')
+        self._write('NC')
 
     def lock(self):
         """Updates all frequency-dependent gain and phase correction
         parameters.
         """
-        self.connection.write('LOCK')
+        self._write('LOCK')
 
     def reset(self, complete=False):
         """Resets the lock-in to factory defaults.
@@ -581,7 +582,7 @@ class SR7225(InstrumentBase):
            exception of communication and LCD contrast settings.
 
         """
-        self.connection.write('ADF {0:d}'.format(complete))
+        self._write(('ADF', Boolean), complete)
 
     @property
     def sensitivity(self):
@@ -617,11 +618,11 @@ class SR7225(InstrumentBase):
             self.amplitude_stop = stop
         if step:
             self.amplitude_step = step
-        self.connection.write('SWEEP 2')
+        self._write(('SWEEP', Integer), 2)
 
     def start_afsweep(self):
         """Starts a frequency and amplitude sweep."""
-        self.connection.write('SWEEP 3')
+        self._write(('SWEEP', Integer), 3)
 
     def start_fsweep(self, start=None, stop=None, step=None):
         """Starts a frequency sweep.
@@ -637,11 +638,11 @@ class SR7225(InstrumentBase):
             self.frequency_stop = stop
         if step:
             self.frequency_step = step
-        self.connection.write('SWEEP 1')
+        self._write(('SWEEP', Integer), 1)
 
     def stop(self):
         """Stops/Pauses the current sweep."""
-        self.connection.write('SWEEP 0')
+        self._write(('SWEEP', Integer), 0)
 
     def take_data(self, continuously=False):
         """Starts data acquisition.
@@ -653,9 +654,9 @@ class SR7225(InstrumentBase):
 
         """
         if continuously:
-            self.connection.write('TDC')
+            self._write('TDC')
         else:
-            self.connection.write('TD')
+            self._write('TD')
 
     def take_data_triggered(self, mode):
         """Starts triggered data acquisition.
@@ -665,9 +666,4 @@ class SR7225(InstrumentBase):
            only a single data point is stored.
 
         """
-        if mode == 'curve':
-            self.connection.write('TDT 0')
-        elif mode == 'point':
-            self.connection.write('TDT 1')
-        else:
-            raise ValueError('mode must be either "curve" or "point"')
+        self._write(('TDT', Enum('curve', 'point')), mode)

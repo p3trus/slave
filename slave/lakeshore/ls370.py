@@ -1,9 +1,9 @@
 #  -*- coding: utf-8 -*-
 #
 # Slave, (c) 2012, see AUTHORS.  Licensed under the GNU GPL.
-"""
-
-"""
+from __future__ import (absolute_import, division,
+                        print_function, unicode_literals)
+from future.builtins import *
 import collections
 
 from slave.core import Command, InstrumentBase, CommandSequence
@@ -15,7 +15,8 @@ import slave.misc
 class Curve(InstrumentBase):
     """A LS370 curve.
 
-    :param connection: A connection object.
+    :param transport: A transport object.
+    :param protocol: A protocol object.
     :param idx: The curve index.
     :param length: The curve buffer length.
 
@@ -60,8 +61,8 @@ class Curve(InstrumentBase):
         In contrast to the LS370 device, point indices start at 0 **not** 1.
 
     """
-    def __init__(self, connection, idx, length):
-        super(Curve, self).__init__(connection)
+    def __init__(self, transport, protocol, idx, length):
+        super(Curve, self).__init__(transport, protocol)
         self.idx = idx = int(idx)
         self.header = Command(
             'CRVHDR? {0}'.format(idx),
@@ -91,12 +92,8 @@ class Curve(InstrumentBase):
         # construct command
         response_t = [Float, Float]
         data_t = [Integer(min=1), Integer(min=1, max=200)]
-        cmd = Command(
-            ('CRVPT?', response_t, data_t),
-            connection=self.connection
-        )
         # Since indices in LS304 start at 1, it must be added.
-        return cmd.query((self.idx, item + 1))
+        return self._query(('CRVPT?', response_t, data_t), self.idx, item + 1)
 
     def __setitem__(self, item, value):
         if isinstance(item, slice):
@@ -107,19 +104,19 @@ class Curve(InstrumentBase):
             item = slave.misc.index(item, len(self))
             unit, temp = value
             data_t = [Integer(min=1), Integer(min=1, max=200), Float, Float]
-            cmd = Command(write=('CRVPT', data_t), connection=self.connection)
             # Since indices in LS304 start at 1, it must be added.
-            cmd.write((self.idx, item + 1, unit, temp))
+            self._write(('CRVPT', data_t, item + 1, unit, temp))
 
     def delete(self):
         """Deletes this curve."""
-        self.connection.write('CRVDEL {0}'.format(self.idx))
+        self._write(('CRVDEL', Integer), self.idx)
 
 
 class Display(InstrumentBase):
     """A LS370 Display at the chosen location.
 
-    :param connection: A connection object.
+    :param transport: A transport object.
+    :param protocol: A protocol object.
     :param location: The display location.
 
     :ivar config: The configuration of the display.
@@ -133,14 +130,14 @@ class Display(InstrumentBase):
 
     """
 
-    def __init__(self, connection, location):
-        super(Display, self).__init__(connection)
+    def __init__(self, transport, protocol, location):
+        super(Display, self).__init__(transport, protocol)
         location = int(location)
         self.config = Command(
             'DISPLOC? {0}'.format(location),
             'DISPLOC {0},'.format(location),
             [
-                Integer(min=0, max=16), 
+                Integer(min=0, max=16),
                 Enum('kelvin', 'ohm', 'linear', 'min', 'max', start=1),
                 Integer(min=4, max=6)
             ]
@@ -150,15 +147,18 @@ class Display(InstrumentBase):
 class Heater(InstrumentBase):
     """An LS370 Heater.
 
-    :param manual_output: The manual heater output, a float representing the
+    :param transport: A transport object.
+    :param protocol: A protocol object.
+
+    :ivar manual_output: The manual heater output, a float representing the
         percent of current or actual power depending on the heater output
         selection.
-    :param output: The heater output in percent of current or actual power
+    :ivar output: The heater output in percent of current or actual power
         dependant on the heater output selection.
-    :param range: The heater current range. Valid entries are 'off',
+    :ivar range: The heater current range. Valid entries are 'off',
         '31.6 uA', '100 uA', '316 uA', '1 mA', '3.16 mA', '10 mA', '31.6 mA',
         and '100 mA'
-    :param status: The heater status, either 'no error' or 'heater open error'.
+    :ivar status: The heater status, either 'no error' or 'heater open error'.
 
     """
     #: The supported heater ranges.
@@ -167,8 +167,8 @@ class Heater(InstrumentBase):
         '3.16 mA', '10 mA', '31.6 mA', '100 mA'
     ]
 
-    def __init__(self, connection):
-        super(Heater, self).__init__(connection)
+    def __init__(self, transport, protocol):
+        super(Heater, self).__init__(transport, protocol)
         self.manual_output = Command('MOUT?', 'MOUT', Float)
         self.output = Command(('HTR?', Float))
         self.range = Command(
@@ -185,7 +185,12 @@ class Heater(InstrumentBase):
 class Input(InstrumentBase, collections.Sequence):
     """The LS370 Input.
 
-    It is a sequence like interface to each class:`~.InputChannel`.
+    :param transport: A transport object.
+    :param protocol: A protocol object.
+
+    :ivar scan:
+
+    It is a sequence like interface to each :class:`~.InputChannel`.
 
     E.g. to access the kelvin reading of channel 5, Assuming an instance of :class:`~.LS370` named
     `ls370`, one would simply write.::
@@ -198,15 +203,15 @@ class Input(InstrumentBase, collections.Sequence):
 
     .. note::
 
-        In contrast to the LS37 internal commands the channel indexing is zero
+        In contrast to the LS370 internal commands the channel indexing is zero
         based.
 
     """
-    def __init__(self, channels, connection, cfg):
-        super(Input, self).__init__(connection, cfg)
+    def __init__(self, transport, protocol, channels):
+        super(Input, self).__init__(transport, protocol)
         # The ls370 channels start at 1
         self._channels = tuple(
-            InputChannel(idx, connection, cfg) for idx in xrange(1, channels + 1)
+            InputChannel(transport, protocol, idx) for idx in range(1, channels + 1)
         )
         self.scan = Command(
             'SCAN?',
@@ -224,7 +229,8 @@ class Input(InstrumentBase, collections.Sequence):
 class InputChannel(InstrumentBase):
     """A LS370 input channel.
 
-    :param connection: A connection object.
+    :param transport: A transport object.
+    :param protocol: A protocol object.
     :param idx: The channel index.
 
     :ivar alarm: The alarm configuration.
@@ -310,8 +316,8 @@ class InputChannel(InstrumentBase):
           excitation or 1-12 for voltage excitation.
 
     """
-    def __init__(self, idx, connection, cfg):
-        super(InputChannel, self).__init__(connection, cfg)
+    def __init__(self, transport, protocol, idx):
+        super(InputChannel, self).__init__(transport, protocol)
         self.index = idx = int(idx)
         self.alarm = Command(
             'ALARM ? {0}'.format(idx),
@@ -365,14 +371,14 @@ class InputChannel(InstrumentBase):
         self.reading_status = Command((
             'RDGST? {0}'.format(idx),
             Register({
-                'cs overload': 0,  # current source overload
-                'vcm overload': 1,  # voltage common mode overload
-                'vmix overload': 2,  # differential overload
-                'vdif overload': 3,  # mixer overload
-                'range over': 4,
-                'range under': 5,
-                'temp over': 6,
-                'temp under': 7,
+                0: 'cs overload',  # current source overload
+                1: 'vcm overload',  # voltage common mode overload
+                2: 'vmix overload',  # differential overload
+                3: 'vdif overload',  # mixer overload
+                4: 'range over',
+                5: 'range under',
+                6: 'temp over',
+                7: 'temp under',
             })
         ))
         self.resistance = Command(('RDGR?', Float))
@@ -392,7 +398,8 @@ class InputChannel(InstrumentBase):
 class Output(InstrumentBase):
     """Represents a LS370 analog output.
 
-    :param connection: A connection object.
+    :param transport: A transport object.
+    :param protocol: A protocol object.
     :param channel: The analog output channel. Valid are either 1 or 2.
 
     :ivar analog: The analog output parameters, represented by the tuple
@@ -413,8 +420,8 @@ class Output(InstrumentBase):
     :ivar value: The value of the analog output.
 
     """
-    def __init__(self, connection, channel):
-        super(Output, self).__init__(connection)
+    def __init__(self, transport, protocol, channel):
+        super(Output, self).__init__(transport, protocol)
         if not channel in (1, 2):
             raise ValueError('Invalid Channel number. Valid are either 1 or 2')
         self.channel = channel
@@ -432,7 +439,8 @@ class Output(InstrumentBase):
 class Relay(InstrumentBase):
     """A LS370 relay.
 
-    :param connection: A connection object.
+    :param transport: A transport object.
+    :param protocol: A protocol object.
     :param idx: The relay index.
 
     :ivar config: The relay configuration.
@@ -447,15 +455,15 @@ class Relay(InstrumentBase):
     :ivar status: The relay status.
 
     """
-    def __init__(self, connection, idx):
-        super(Relay, self).__init__(connection)
+    def __init__(self, transport, protocol, idx):
+        super(Relay, self).__init__(transport, protocol)
         idx = int(idx)
         self.config = Command(
             'RELAY? {0}'.format(idx),
             'RELAY {0},'.format(idx),
             [
                 Enum('off', 'on', 'alarm', 'zone'),
-                Enum('scan', range(1, 17)),
+                Enum('scan', *range(1, 17)),
                 Enum('low', 'high', 'both')
             ]
         )
@@ -467,7 +475,7 @@ class LS370(IEC60488):
 
     Represents a Lakeshore model ls370 ac resistance bridge.
 
-    :param connection: A connection object.
+    :param transport: A transport object.
 
     :ivar baud: The baud rate of the rs232 interface. Valid entries are `300`,
         `1200` and `9600`.
@@ -533,6 +541,8 @@ class LS370(IEC60488):
         * *<rate>* A float representing the ramping rate in kelvin per minute
           in the range 0.001 to 10.
     :ivar ramping: The ramping status, either `True` or `False`.
+    :ivar low_relay: The low relay, an instance of :class:`~.Relay`.
+    :ivar high_relay: The high relay, an instance of :class:`~.Relay`.
     :ivar setpoint: The temperature control setpoint.
     :ivar still: The still output value.
 
@@ -564,8 +574,8 @@ class LS370(IEC60488):
           From -100 to 100.
 
     """
-    def __init__(self, connection, scanner=None):
-        super(LS370, self).__init__(connection)
+    def __init__(self, transport, scanner=None):
+        super(LS370, self).__init__(transport)
         self.baud = Command('BAUD?', 'BAUD', Enum(300, 1200, 9600))
         self.beeper = Command('BEEP?', 'BEEP', Boolean)
         self.brightness = Command('BRIGT?', 'BRIGT', Enum(25, 50, 75, 100))
@@ -579,7 +589,7 @@ class LS370(IEC60488):
             'CSET?',
             'CSET',
             [Integer(min=0, max=16), Enum('unfiltered', 'filtered'),
-             Enum('kelvin', 'ohm'), Integer(min=0, max=255), 
+             Enum('kelvin', 'ohm', start=1), Integer(min=0, max=255),
              Enum('current', 'power', start=1), Enum(*Heater.RANGE),
              Float(min=1., max=100000.)]
         )
@@ -587,9 +597,17 @@ class LS370(IEC60488):
         self.digital_output = Command(
             'DOUT?',
             'DOUT',
-            Register({'DO1': 0, 'DO2': 1, 'DO3': 2, 'DO4': 3, 'DO5': 4}),
+            Register({
+                0: 'DO1',
+                1: 'DO2',
+                2: 'DO3',
+                3: 'DO4',
+                4: 'DO5'
+            }),
         )
-        self.displays = tuple(Display(connection, i) for i in range(1, 9))
+        self.displays = tuple(
+            Display(transport, self._protocol, i) for i in range(1, 9)
+        )
         self.display_locations = Command(
             'DISPLAY?',
             'DISPLAY',
@@ -611,11 +629,14 @@ class LS370(IEC60488):
                             Enum('local', 'remote', 'lockout', start=1))
         self.monitor = Command(
             'MONITOR?',
-            'MONITOR', 
+            'MONITOR',
             Enum('off', 'cs neg', 'cs pos', 'vad',
                  'vcm neg', 'vcm pos', 'vdif', 'vmix')
         )
-        self.output = (Output(connection, 1), Output(connection, 2))
+        self.output = (
+            Output(transport, self._protocol, 1),
+            Output(transport, self._protocol, 2)
+        )
         self.pid = Command(
             'PID?',
             'PID',
@@ -629,11 +650,15 @@ class LS370(IEC60488):
             [Boolean, Float(min=1e-3, max=10.)]
         )
         self.ramping = Command(('RAMPST?', Boolean))
+        self.low_relay = Relay(transport, self._protocol, 1)
+        self.high_relay = Relay(transport, self._protocol, 2)
         self.scanner = scanner
         self.setpoint = Command('SETP?', 'SETP', Float)
         self.still = Command('STILL?', 'STILL', Float)
-        self.all_curves = Curve(connection, 0, 200)
-        self.user_curve = tuple(Curve(connection, i, 200) for i in range(1, 21))
+        self.all_curves = Curve(transport, self._protocol, 0, 200)
+        self.user_curve = tuple(
+            Curve(transport, self._protocol, i, 200) for i in range(1, 21)
+        )
 
         def make_zone(i):
             """Helper function to create a zone command."""
@@ -643,14 +668,16 @@ class LS370(IEC60488):
                 Enum(*Heater.RANGE), Boolean, Boolean,
                 Integer(min=-100, max=100),Integer(min=-100, max=100)
             ]
-            return Command('ZONE? {0}'.format(i), 'ZONE {0},'.format(i),
-                           type_, connection=self.connection)
-
-        self.zones = CommandSequence(make_zone(i) for i in xrange(1, 11))
+            return Command('ZONE? {0}'.format(i), 'ZONE {0},'.format(i), type_)
+        self.zones = CommandSequence(
+            self._transport,
+            self._protocol,
+            (make_zone(i) for i in range(1, 11))
+        )
 
     def clear_alarm(self):
         """Clears the alarm status for all inputs."""
-        self.connection.write('ALMRST')
+        self._write('ALMRST')
 
     def _factory_default(self, confirm=False):
         """Resets the device to factory defaults.
@@ -660,13 +687,13 @@ class LS370(IEC60488):
 
         """
         if confirm is True:
-            self.connection.write('DFLT 99')
+            self._write(('DFLT', Integer), 99)
         else:
             raise ValueError('Reset to factory defaults was not confirmed.')
 
     def reset_minmax(self):
         """Resets Min/Max functions for all inputs."""
-        self.connection.write('MNMXRST')
+        self._write('MNMXRST')
 
     @property
     def scanner(self):
@@ -695,5 +722,5 @@ class LS370(IEC60488):
             '3716L': 16,
             '3708': 8,
         }
-        self.input = Input(channels=channels[value], connection=self.connection, cfg=self._cfg)
+        self.input = Input(self._transport, self._protocol, channels=channels[value])
         self._scanner = value

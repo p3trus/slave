@@ -9,13 +9,6 @@ from setuptools import setup
 
 desc = ('A lightweight python package to simplify the communication with '
         'several scientific instruments.')
-# if we are running on python 3, enable 2to3.
-extra = {}
-if sys.version_info >= (3, 0):
-    extra.update(
-        use_2to3=True,
-    )
-
 
 setup(
     name='slave',
@@ -37,8 +30,13 @@ setup(
     url='https://github.com/p3trus/slave',
     description=desc,
     long_description=open('README.rst').read(),
-    packages=['slave', 'slave.test', 'slave.keithley'],
-    # make sure to add custom_fixers to the MANIFEST.in 
+    packages=[
+        'slave',
+        'slave.cryomagnetics',
+        'slave.lakeshore',
+        'slave.signal_recovery',
+        'slave.srs',
+        'slave.test'
+    ],
     include_package_data=True,
-    **extra
 )

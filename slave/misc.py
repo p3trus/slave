@@ -1,7 +1,7 @@
 #  -*- coding: utf-8 -*-
 #
 # Slave, (c) 2012, see AUTHORS.  Licensed under the GNU GPL.
-
+import csv
 import collections
 import threading
 import logging
@@ -43,33 +43,6 @@ class ForwardSequence(collections.Sequence):
         return self._set(item, value)
 
 
-class LockedConnection(object):
-    """Helper class wrapping a connection object and to add thread locking.
-
-    :param connection: The wrapped connection object.
-    :param lock: Can be used to inject a custom thread lock, default: `None`.
-
-    The LockedConnection wrapps a normal connection object and forwards the
-    calls to :meth:`.ask` and :meth:`.write` member functions to the connection
-    object. A thread lock is acquired before, and released after the call to
-    the internal connection object.
-
-    """
-    lock = threading.Lock()
-
-    def __init__(self, connection, lock=None):
-        self._connection = connection
-        self._lock = lock or LockedConnection.lock
-
-    def ask(self, value):
-        with self._lock:
-            return self._connection.ask(value)
-
-    def write(self, value):
-        with self._lock:
-            self._connection.write(value)
-
-
 def index(index, length):
     """Generates an index.
 
@@ -90,7 +63,37 @@ def index(index, length):
     raise IndexError()
 
 
-class NullHandler(logging.Handler):
-    """A fallback code for python < 2.7"""
-    def emit(self, record):
-        pass
+class Measurement(object):
+    """Small measurement helper class.
+
+    For each call to :meth:`.__call__` a comma separated row, representing the
+    return values for each callable item in measurables is written to the file
+    specified by path.
+
+    """
+    def __init__(self, path, measurables):
+        self._path = path
+        self._measurables = measurables
+        self._file = None
+        self._writer = None
+        self.open()
+
+    def open(self):
+        if not self._file:
+            self._file = open(self._path, 'wb')
+            self._writer = csv.writer(self._file)
+
+    def close(self):
+        if self._file:
+            self._file.close()
+            self._file = None
+            self._writer = None
+
+    def __call__(self):
+        self._writer.writerow([str(x()) for x in self._measurables])
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, type, value, traceback):
+        self.close()

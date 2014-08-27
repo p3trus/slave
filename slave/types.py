@@ -16,12 +16,15 @@ The :class:`~.Command` class needs an object with three methods:
  * :meth:`.simulate()`, generates a valid user space value.
 
 The abstract :class:`~.Type` class implements this interface but most of the
-time it is sufficient to inherit from :class:`~.SingleType`. 
+time it is sufficient to inherit from :class:`~.SingleType`.
 
 :class:`~.SingleType` provides a default implementation, as well as three hooks
 to modify the behaviour.
 
 """
+from __future__ import (absolute_import, division,
+                        print_function, unicode_literals)
+from future.builtins import *
 import random
 import string
 import sys
@@ -166,8 +169,8 @@ class Integer(Range):
 
     def simulate(self):
         """Generates a random integer in the available range."""
-        min_ = (-sys.maxint - 1) if self._min is None else self._min
-        max_ = sys.maxint if self._max is None else self._max
+        min_ = (-sys.maxsize - 1) if self._min is None else self._min
+        max_ = sys.maxsize if self._max is None else self._max
         return random.randint(min_, max_)
 
 
@@ -293,22 +296,36 @@ class Enum(Mapping):
 
 
 class Register(SingleType):
-    """Represents a binary register, where bits are mapped with a name."""
+    """Represents a binary register, where bits are mapped to a key.
+
+    :param mapping: The mapping defines the mapping between bits and keys, e.g.
+        ::
+
+            mapping = {
+                0: 'First bit',
+                1: 'Second bit',
+            }
+            reg = Register(mapping)
+
+
+    """
     def __init__(self, mapping):
         super(Register, self).__init__()
-        self._map = dict((str(k), int(v)) for k, v in mapping.iteritems())
+        self._map = dict((str(key), int(bit)) for bit, key in mapping.items())
 
     def __convert__(self, value):
-        x = 0
-        for k, v in value.iteritems():
+        x = int(0)
+        for k, v in value.items():
             if v:  # set bit
-                x |= 1 << self._map[k]
+                x |= int(1) << self._map[k]
         return x
 
     def load(self, value):
-        bit = lambda x, i: bool(x & (1 << i))
+        # We need to cast all integers with the int() function. Otherwise we
+        # would mix
+        bit = lambda x, i: bool(x & (int(1) << int(i)))
         value = int(value)
-        return dict((k, bit(value, i)) for k, i in self._map.iteritems())
+        return dict((k, bit(value, i)) for k, i in self._map.items())
 
     def simulate(self):
         """Returns a dictionary representing the mapped register with random

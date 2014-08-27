@@ -28,8 +28,8 @@ object relational mappers.
 
     class Device(IEC60488, PowerOn):
         """An iec60488 conforming device api with additional commands."""
-        def __init__(self, connection):
-            super(Device, self).__init__(connection)
+        def __init__(self, transport):
+            super(Device, self).__init__(transport)
             # A custom command
             self.my_command = Command(
                 'QRY?', # query message header
@@ -44,20 +44,9 @@ the arguments and sends them to the device. This leads to very intuitive
 interfaces.
 
 Several device drivers are already implemented, and many more are under
-development. A short usage example is given below::
+development. A short usage example is given below
 
-    import time
-    import visa
-    from slave.sr830 import SR830
-
-    lockin = SR830(visa.instrument('GPIB::08'))
-    # configure the lockin amplifier
-    lockin.reserve = 'high'
-    lockin.time_constant = 3
-    # take 60 measurements and print the result
-    for i in range(60):
-        print lockin.x
-        time.sleep(1)
+.. literalinclude:: ../../examples/quickstart.py
 
 For a complete list of built-in device drivers, see :ref:`builtin_drivers`.
 
@@ -70,14 +59,14 @@ User Guide
    :maxdepth: 2
 
    installation
+   changelog
    quickstart
-   connection
+   transport
    logging
    builtin_drivers
    custom_device_drivers
+   async
    examples
-
-.. _api_reference:
 
 API Reference
 =============

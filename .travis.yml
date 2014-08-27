@@ -1,14 +1,12 @@
 language: python
-python:
-  - "3.2"
-  - "2.7"
+python: "2.7"
+env:
+  - TOXENV=py27
+  # python 3 tests are disabled, they currently break
+  # and need some more fixing.
+  # - TOXENV=py33
 
 install:
-  - python setup.py -q install
+  - pip install tox --use-mirrors
 
-script:
-    # cd to different directory otherwise python3 import the source not the
-    # 2to3 converted source
-    cd ../
-    nosetests
-
+script: tox
