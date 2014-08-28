@@ -213,7 +213,7 @@ class Input(InstrumentBase, collections.Mapping):
 
     def __iter__(self):
         # TODO check if correct
-        return self._channels.itervalues()
+        return self._channels.keys()
 
     def __len__(self):
         return len(self._channels)
