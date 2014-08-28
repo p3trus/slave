@@ -1,10 +1,10 @@
 #  -*- coding: utf-8 -*-
 #
-# Slave, (c) 2012, see AUTHORS.  Licensed under the GNU GPL.
+# Slave, (c) 2012-2014, see AUTHORS.  Licensed under the GNU GPL.
 
 import sys
 
-from setuptools import setup
+from setuptools import setup, find_packages
 
 
 desc = ('A lightweight python package to simplify the communication with '
@@ -30,13 +30,6 @@ setup(
     url='https://github.com/p3trus/slave',
     description=desc,
     long_description=open('README.rst').read(),
-    packages=[
-        'slave',
-        'slave.cryomagnetics',
-        'slave.lakeshore',
-        'slave.signal_recovery',
-        'slave.srs',
-        'slave.test'
-    ],
+    packages=find_packages(),
     include_package_data=True,
 )
