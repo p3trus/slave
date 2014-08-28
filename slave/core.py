@@ -24,10 +24,11 @@ implementation might look like::
 """
 from __future__ import (absolute_import, division,
                         print_function, unicode_literals)
+# We're not using a star import here, because python-future 0.13's `newobject`
+# breaks multiple inheritance due to it's metaclass.
+from future.builtins import map, zip, dict, int, list, range, str
 import collections
 import itertools as it
-
-from future.builtins import *
 
 from slave.transport import SimulatedTransport
 import slave.protocol

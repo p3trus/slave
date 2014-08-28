@@ -24,7 +24,9 @@ Usage::
 """
 from __future__ import (absolute_import, division,
                         print_function, unicode_literals)
-from future.builtins import *
+# We're not using a star import here, because python-future 0.13's `newobject`
+# breaks multiple inheritance due to it's metaclass.
+from future.builtins import map, zip, dict, int, list, range, str
 
 from slave.core import Command, InstrumentBase
 from slave.types import Boolean, Integer, Register, String
@@ -304,12 +306,12 @@ class Trigger(object):
 
         .. note::
 
-            It first tries to execute `transport.trigger()`. If this fails,
+            It first tries to execute `transport._trigger()`. If this fails,
             the `*TRG` is sent.
 
         """
         try:
-            self.transport.trigger()
+            self._transport.trigger()
         except AttributeError:
             self._write('*TRG')
 
