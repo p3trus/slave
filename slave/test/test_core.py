@@ -115,6 +115,14 @@ class TestCommand(object):
         cmd = Command(write='HEADER')
         cmd.write(transport, protocol)
 
+    def test_write_with_query_only_cmd(self):
+        protocol = MockProtocol()
+        transport = MockTransport()
+        cmd = Command(('HEADER', Integer))
+        with pytest.raises(AttributeError) as excinfo:
+            cmd.write(transport, protocol)
+        assert str(excinfo.value) ==  'Command is not writeable'
+
     def test_query_without_message_data_and_single_data_response(self):
         protocol = MockProtocol(response=['1'])
         transport = MockTransport()
@@ -134,6 +142,14 @@ class TestCommand(object):
         assert protocol.header == 'HEADER'
         assert protocol.data == ()
         assert response == [1, 2]
+
+    def test_query_with_write_only_cmd(self):
+        protocol = MockProtocol()
+        transport = MockTransport()
+        cmd = Command(write='HEADER')
+        with pytest.raises(AttributeError) as excinfo:
+            cmd.query(transport, protocol)
+        assert str(excinfo.value) ==  'Command is not queryable'
 
     def test_simulation_with_query_and_writeable_cmd(self):
         protocol = MockProtocol()
