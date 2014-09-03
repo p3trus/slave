@@ -98,8 +98,9 @@ class IEC60488(Protocol):
     def query(self, transport, header, *data):
         message = self.create_message(header, *data)
         logger.debug('IEC60488 query: "%s"', message)
-        transport.write(message)
-        response = transport.read_until(self.resp_term.encode(self.encoding))
+        with transport:
+            transport.write(message)
+            response = transport.read_until(self.resp_term.encode(self.encoding))
         # TODO: Currently, response headers are not handled.
         logger.debug('IEC60488 response: "%s"', response)
         return self.parse_response(response)
@@ -107,7 +108,8 @@ class IEC60488(Protocol):
     def write(self, transport, header, *data):
         message = self.create_message(header, *data)
         logger.debug('IEC60488 write: "%s"', message)
-        transport.write(message)
+        with transport:
+            transport.write(message)
 
 
 class SignalRecovery(IEC60488):
@@ -174,23 +176,25 @@ class SignalRecovery(IEC60488):
     def query(self, transport, header, *data):
         message = self.create_message(header, *data)
         logger.debug('SignalRecovery query: "%s"', message)
-        transport.write(message)
+        with transport:
+            transport.write(message)
 
-        response = transport.read_until(self.resp_term.encode(self.encoding))
-        logger.debug('SignalRecovery response: "%s"', response)
-        status_byte, overload_byte = transport.read_bytes(2)
+            response = transport.read_until(self.resp_term.encode(self.encoding))
+            logger.debug('SignalRecovery response: "%s"', response)
+            status_byte, overload_byte = transport.read_bytes(2)
+
         logger.debug('SignalRecovery stb: "%s" olb: "%s"', status_byte, overload_byte)
-
         self.call_byte_handler(status_byte, overload_byte)
         return self.parse_response(response)
 
     def write(self, transport, header, *data):
         message = self.create_message(header, *data)
         logger.debug('SignalRecovery write: "%s"', message)
-        transport.write(message)
+        with transport:
+            transport.write(message)
 
-        response = transport.read_until(self.resp_term.encode(self.encoding))
-        status_byte, overload_byte = transport.read_bytes(2)
+            response = transport.read_until(self.resp_term.encode(self.encoding))
+            status_byte, overload_byte = transport.read_bytes(2)
         logger.debug('SignalRecovery stb: "%s" olb: "%s"', status_byte, overload_byte)
 
         self.call_byte_handler(status_byte, overload_byte)

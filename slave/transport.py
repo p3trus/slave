@@ -25,6 +25,8 @@ from __future__ import (absolute_import, division,
                         print_function, unicode_literals)
 from future.builtins import *
 import socket
+import threading
+
 import ctypes as ct
 import pkg_resources
 from distutils.version import LooseVersion
@@ -34,12 +36,15 @@ class Transport(object):
     """A utility class to write and read data.
 
     The :class:`~.Transport` base class defines a common interface used by the
-    `slave` library. Subclasses must implement `__read__` and `__write__`.
+    `slave` library. Transports are intended to be used as context managers.
+
+    Subclasses must implement `__read__` and `__write__`.
 
     """
-    def __init__(self):
+    def __init__(self, max_bytes=1024, lock=None):
         self._buffer = bytearray()
-        self._max_bytes = 1024
+        self._max_bytes = max_bytes
+        self.lock = lock or threading.Lock()
 
     def read_bytes(self, num_bytes):
         """Reads at most `num_bytes`."""
@@ -69,6 +74,12 @@ class Transport(object):
     def write(self, data):
         self.__write__(data)
 
+    def __enter__(self):
+        self.lock.acquire()
+
+    def __exit__(self, type, value, traceback):
+        self.lock.release()
+
     def __read__(self, num_bytes):
         raise NotImplementedError()
 
@@ -87,18 +98,41 @@ class SimulatedTransport(object):
 class Socket(Transport):
     """A slave compatible adapter for pythons socket.socket class.
 
-    E.g.::
+    :param address: The socket address a tuple of host string and port. E.g.::
 
-        from slave.signal_recovery import SR7230
-        from slave.transport import Socket
+            from slave.signal_recovery import SR7230
+            from slave.transport import Socket
 
-        lockin = SR7230(Socket(address=('192.168.178.1', 50000)))
+            lockin = SR7230(Socket(address=('192.168.178.1', 50000)))
+
+    :param alwaysopen: A boolean flag deciding wether the socket should be
+        opened and closed for each use as a contextmanager or should be opened
+        just once and kept open until closed explicitely. E.g.::
+
+            from slave.transport import Socket
+
+            transport = Socket(address=('192.168.178.1', 50000), alwaysopen=False)
+            with transport:
+                # connection is created
+                transport.write(b'*IDN?')
+                response = transport.read_until(b'\n')
+                # connection is closed again.
+
+            transport = Socket(address=('192.168.178.1', 50000), alwaysopen=True)
+            # connection is already opened.
+            with transport:
+                transport.write(b'*IDN?')
+                response = transport.read_until(b'\n')
+                # connection is kept open.
 
     """
-    def __init__(self, address, *args, **kw):
+    def __init__(self, address, alwaysopen=True, *args, **kw):
         super(Socket, self).__init__()
-        self._socket = socket.socket(*args, **kw)
-        self._socket.connect(address)
+        self.address = address
+        self.alwaysopen = alwaysopen
+        self._socket = None
+        if self.alwaysopen:
+            self.open()
 
     def __write__(self, data):
         self._socket.sendall(data)
@@ -106,6 +140,26 @@ class Socket(Transport):
     def __read__(self, num_bytes):
         return self._socket.recv(num_bytes)
 
+    def open(self):
+        if self._socket:
+            raise ValueError('Socket is already open.')
+        self._socket = socket.create_connection(self.address)
+
+    def close(self):
+        if not self._socket:
+            raise ValueError("Can't close socket. Not opened yet.")
+        self._socket.close()
+
+    def __enter__(self):
+        super(Socket, self).__enter__()
+        if self._socket is None:
+            self.open()
+
+    def __exit__(self, type, value, tb):
+        if not self.alwaysopen:
+            self.close()
+            self._socket = None
+        super(Socket, self).__exit__(type, value, tb)
 
 def visa(*args, **kw):
     """A pyvisa adapter factory function."""
