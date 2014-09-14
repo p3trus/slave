@@ -14,6 +14,8 @@ class SR7230(InstrumentBase):
     """Represents a Signal Recovery SR7230 lock-in amplifier.
 
     :param transport: A transport object.
+    :param option: Specifies if an optional card is installed. Valid are `None`
+        or '250kHz'. This changes some frequency related limits.
 
     .. rubric:: Signal Channel
 
@@ -204,6 +206,36 @@ class SR7230(InstrumentBase):
     :ivar noise_output: The noise output, the mean absolute value of the Y
         channel. (read only)
 
+    .. rubric:: Internal oscillator
+
+    :ivar amplitude: A float between 0. and 5. representing the oscillator
+        amplitude in V rms.
+    :ivar amplitude_start: Amplitude sweep start value.
+    :ivar amplitude_stop: Amplitude sweep end value.
+    :ivar amplitude_step: Amplitude sweep amplitude step.
+    :ivar frequency: The oscillator frequency in Hz. Valid entries are 0. to
+        1.2e5.
+    :ivar frequency_start: The frequency sweep start value.
+    :ivar frequency_stop: The frequency sweep stop value.
+    :ivar frequency_step: The frequency sweep step size and sweep type.
+        *(<step>, <mode>)*, where
+
+        * *<step>* The step size in Hz.
+        * *<mode>* The sweep mode, either 'log', 'linear' or 'seek'. In 'seek'
+          mode the sweep stops automatically when the signal magnitude exceeds
+          50% of full scale. It's most commonly used to set up virtual reference
+          mode.
+
+    :ivar sweep_rate: The frequency and amplitude sweep step rate in time per
+        step in seconds. Valid entries are 0.001 to 1000. with a resolution of
+        0.001.
+    :ivar modulation: The state of the oscillator amplitude/frequency
+        modulation. Valid are `False`, 'amplitude' and 'frequency'.
+    :ivar amplitude_modulation: The amplitude modulation commands, an instance
+        of :class:`~.AmplitudeModulation`.
+    :ivar frequency_modulation: The frequency modulation commands, an instance
+        of :class:`~.FrequencyModulation`.
+
     """
     SENSITIVITY_VOLTAGE = [
         '10 nV', '20 nV', '50 nV', '100 nV', '200 nV', '500 nV', '1 uV',
@@ -233,9 +265,10 @@ class SR7230(InstrumentBase):
         '2 ks', '5 ks', '10 ks', '20 ks', '50 ks', '100 ks'
     ]
 
-    def __init__(self, transport):
+    def __init__(self, transport, option=None):
         protocol = slave.protocol.SignalRecovery()
         super(SR7230, self).__init__(transport, protocol)
+        self.option = option
         # Signal Channel
         # ==============
         self.current_mode = Command(
@@ -363,6 +396,61 @@ class SR7230(InstrumentBase):
         self.noise = Command(('NHZ.', Float))
         self.noise_bandwidth = Command(('ENBW.', Float))
         self.noise_output = Command(('NN.', Float))
+        # TODO: Equation commands
+
+        # Internal oscillator
+        # ===================
+        self.amplitude = Command('OA.', 'OA.', Float(min=0., max=5.))
+        self.amplitude_start = Command(
+            'ASTART.',
+            'ASTART.',
+            Float(min=0., max=5.)
+        )
+        self.amplitude_stop = Command(
+            'ASTOP.',
+            'ASTOP.',
+           Float(min=0., max=5.)
+        )
+        self.amplitude_step = Command(
+            'ASTEP.',
+            'ASTEP.',
+            Float(min=0., max=5.)
+        )
+        fmax = 250e3 if self.option is '250kHz' else 120e3
+        self.frequency = Command('OF.', 'OF.', Float(min=0, max=fmax))
+        self.frequency_start = Command(
+            'FSTART.',
+            'FSTART.',
+            Float(min=0, max=fmax)
+        )
+        self.frequency_stop = Command(
+            'FSTOP.',
+            'FSTOP.',
+            Float(min=0, max=fmax)
+        )
+        self.frequency_step = Command(
+            'FSTEP.',
+            'FSTEP.',
+            [Float(min=0, max=fmax), Enum('log', 'linear', 'seek')]
+        )
+        self.sweep_rate = Command(
+            'SRATE.',
+            'SRATE.',
+            Float(min=1e-3, max=1e3)
+        )
+        self.modulation = Command(
+            'MENABLE',
+            'MENABLE',
+            Enum(False, 'amplitude', 'frequency')
+        )
+        self.amplitude_modulation = AmplitudeModulation(
+            self._transport,
+            self._protocol
+        )
+        self.frequency_modulation = FrequencyModulation(
+            self._transport,
+            self._protocol
+        )
 
     @property
     def sensitivity(self):
@@ -405,7 +493,164 @@ class SR7230(InstrumentBase):
         """Triggers the auto offset mode."""
         self._write('AXO')
 
+    def start_asweep(self, start=None, stop=None, step=None):
+        """Starts a amplitude sweep.
+
+        :param start: Sets the start frequency.
+        :param stop: Sets the target frequency.
+        :param step: Sets the frequency step.
+
+        """
+        if start:
+            self.amplitude_start = start
+        if stop:
+            self.amplitude_stop = stop
+        if step:
+            self.amplitude_step = step
+        self._write(('SWEEP', Integer), 2)
+
+    def start_afsweep(self):
+        """Starts a frequency and amplitude sweep."""
+        self._write(('SWEEP', Integer), 3)
+
+    def start_fsweep(self, start=None, stop=None, step=None):
+        """Starts a frequency sweep.
+
+        :param start: Sets the start frequency.
+        :param stop: Sets the target frequency.
+        :param step: Sets the frequency step.
+
+        """
+        if start:
+            self.frequency_start = start
+        if stop:
+            self.frequency_stop = stop
+        if step:
+            self.frequency_step = step
+        self._write(('SWEEP', Integer), 1)
+
+    def stop(self):
+        """Stops the current sweep."""
+        self._write(('SWEEP', Integer), 0)
+
+    def pause_asweep(self):
+        """Pauses amplitude sweep."""
+        self._write(('SWEEP', Integer), 6)
+
+    def pause_fsweep(self):
+        """Pauses frequency sweep."""
+        self._write(('SWEEP', Integer), 5)
+
+    def pause_afsweep(self):
+        """Pauses dual frequency/amplitude sweep."""
+        self._write(('SWEEP', Integer), 7)
+
+    def link_asweep(self):
+        """Links amplitude sweep to curve buffer acquisition."""
+        self._write(('SWEEP', Integer), 10)
+
+    def link_fsweep(self):
+        """Links frequency sweep to curve buffer acquisition."""
+        self._write(('SWEEP', Integer), 9)
+
+    def link_afsweep(self):
+        """Links dual amplitude/frequency sweep to curve buffer acquisition."""
+        self._write(('SWEEP', Integer), 11)
+
     def update_correction(self):
         """Updates all frequency-dependant gain and phase correction
         parameters."""
         self._write('LOCK')
+
+
+class AmplitudeModulation(InstrumentBase):
+    """Represents the amplitude modulation commands.
+
+    :ivar float center: The amplitude modulation center voltage. A floating
+        point in the range -10 to 10 in volts.
+    :ivar integer depth: The amplitude modulation depth in percent in the range
+        0 - 100.
+    :ivar int filter: The amplitude modulation filter control. An integer
+        in the range 0 - 10, where 0 is the widest bandwidth and 10 is the
+        lowest.
+    :ivar source: The amplitude modulation source voltage used to modulate the
+        oscillator amplitude. Valid are 'adc1' and 'external'.
+    :ivar float span: The amplitude modulation span voltage in volts. A float
+        in the range -10 to 10.
+
+        .. note:: The sum of center and span voltage can't exceed +/- 10V.
+
+    """
+    def __init__(self, transport, protocol):
+        super(AmplitudeModulation, self).__init__(transport, protocol)
+        self.center = Command(
+            'AMCENTERV.',
+            'AMCENTERV.',
+            Float(min=-10., max=10.)
+        )
+        self.depth = Command('AMDEPTH', 'AMDEPTH', Integer(min=0, max=101))
+        self.filter = Command('AMFILTER', 'AMFILTER', Integer(min=0, max=11))
+        self.source = Command('AMSOURCE', 'AMSOURCE', Enum('adc1', 'external'))
+        self.span = Command('AMVSPAN.', 'AMVSPAN.', Float(min=-10, max=10))
+
+
+class FrequencyModulation(InstrumentBase):
+    """Represents the frequency modulation commands.
+
+    :ivar float center_frequency: The center frequency of the oscillator
+        frequency modulation. A float in the range 0. to 120e3 (250e3 if 250
+        kHz option is installed).
+    :ivar float center_voltage: The center voltage of the oscillator frequency
+        modulation. A float in the range -10 to 10.
+    :ivar int filter: The amplitude modulation filter control. An integer
+        in the range 0 - 10, where 0 is the widest bandwidth and 10 is the
+        lowest.
+    :ivar float span_frequency: The oscillator frequency modulation span frequency. A
+        float in the range 0 up to 60e3 (125e3 if 250kHz option is installed).
+
+    .. note::
+
+        The center frequency must be larger than the span frequency. Invalid
+        values raise a `ValueError`.
+    :ivar float span_voltage: The oscillator frequency modulation span voltage.
+        A float in the range -10 to 10.
+
+    """
+    def __init__(self, transport, protocol, option=None):
+        super(FrequencyModulation, self).__init__(transport, protocol)
+        self._fmax = 250e3 if option is '250kHz' else 120e3
+        self.center_voltage = Command(
+            'FMCENTERV.',
+            'FMCENTERV.',
+            Float(min=-10., max=10.)
+        )
+        self.filter = Command('FMFILTER', 'FMFILTER', Integer(min=0, max=11))
+        self.span_voltage = Command(
+            'FMSPANV.',
+            'FMSPANV.',
+            Float(min=-10., max=10.)
+        )
+
+    @property
+    def center_frequency(self):
+        return self._query(('FMCENTERF.', Float))
+
+    @center_frequency.setter
+    def center_frequency(self, value):
+        span = self.span
+        if span > value:
+            raise ValueError("Span frequency {} can't exceed center frequency "
+                             "{}".format(span, value))
+        self._write(('FMCENTERF.', Float(min=0, max=self._fmax)))
+
+    @property
+    def span_frequency(self):
+        return self._query(('FMSPANF.', Float))
+
+    @span_frequency.setter
+    def span_frequency(self, value):
+        center_freq = self.center_frequency
+        if value > center_freq:
+            raise ValueError("Span frequency {} can't exceed center frequency "
+                             "{}".format(value, center_freq))
+        self._write(('FMSPANF.', Float(min=0, max=self._fmax / 2.)))
