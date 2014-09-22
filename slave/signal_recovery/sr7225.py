@@ -1,6 +1,6 @@
 #  -*- coding: utf-8 -*-
 #
-# Slave, (c) 2012, see AUTHORS.  Licensed under the GNU GPL.
+# Slave, (c) 2012-2014, see AUTHORS.  Licensed under the GNU GPL.
 from __future__ import (absolute_import, division,
                         print_function, unicode_literals)
 from future.builtins import *
@@ -86,8 +86,8 @@ class SR7225(InstrumentBase):
         '1 V'      '1 uA'            ---
         =========  ================  ===========
 
-    :ivar ac_gain: The gain of the signal channel amplifier. An integer between
-        0 and 9, corresponding to 0dB to 90dB.
+    :ivar ac_gain: The gain of the signal channel amplifier. See :attr:`SR7230.AC_GAIN`
+        for valid values.
     :ivar ac_gain_auto: A boolean corresponding to the ac gain automatic mode.
         It is `False` if the ac_gain is under manual control, and `True`
         otherwise.
