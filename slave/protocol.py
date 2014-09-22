@@ -204,3 +204,93 @@ class SignalRecovery(IEC60488):
             self.stb_callback(status_byte)
         if self.olb_callback:
             self.olb_callback(overload_byte)
+
+
+class OxfordIsobus(Protocol):
+    """Implements the oxford isobus protocol.
+
+    :param address: The isobus address.
+    :param echo: Enables/Disables device command echoing.
+    :param msg_term: The message terminator.
+    :param resp_term: The response terminator.
+    :param encoding: The message and response encoding.
+
+    Oxford Isobus messages messages are created in the following manner, where
+    `HEADER` is a single char::
+
+        +--------+    +------+
+        + HEADER +--->+ DATA +
+        +--------+    +------+
+
+    Isobus allows to connect multiple devices on a serial line. To address a
+    specific device a control character '@' followed by an integer address is
+    used::
+
+        +---+    +---------+    +--------+    +------+
+        + @ +--->+ ADDRESS +--->+ HEADER +--->+ DATA +
+        +---+    +---------+    +--------+    +------+
+
+    On success, the device answeres with the header followed by data if
+    requested. If no echo response is desired, the '$' control char must be
+    prepended to the command message. This is useful if a single command must
+    sent to all connected devices at once.
+
+    On error, the device answeres with a '?' char followed by the command
+    message. E.g the error response to a message `@7R10` would be `?R10`.
+
+    """
+    def __init__(self, address=None, echo=True, msg_term='\r',
+                 resp_term='\r', encoding='ascii'):
+        self.address = address
+        self.echo = echo
+        self.msg_term = msg_term
+        self.resp_term = resp_term
+        self.encoding = encoding
+
+    def create_message(self, header, *data):
+        msg = []
+        if not self.echo:
+            msg.append('$')
+        if self.address:
+            msg.append('@{}'.format(self.address))
+        msg.append(header)
+        msg.extend(data)
+        msg.append(self.msg_term)
+        return ''.join(msg).encode(self.encoding)
+
+    def parse_response(self, response, header):
+        response = response.decode(self.encoding)
+        if response.startswith('?'):
+            # TODO: Maybe we should raise a more informative exception.
+            raise IOError(response)
+        # ISOBUS uses a single char as message header but we allow longer header
+        # for convenience.
+        if not response.startswith(header[0]):
+            raise ValueError('Response header mismatch')
+        # TODO: Check if Isobus allows more than one return value. If it does,
+        # this won't work.
+        return response[1:]
+
+    def query(self, transport, header, *data):
+        message = self.create_message(header, *data)
+        logger.debug('OxfordIsobus query: "%s"', message)
+        with transport:
+            transport.write(message)
+            response = transport.read_until(self.resp_term.encode(self.encoding))
+
+        logger.debug('OxfordIsobus response: "%s"', response)
+        return self.parse_response(response, header)
+
+    def write(self, transport, header, *data):
+        message = self.create_message(header, *data)
+        logger.debug('OxfordIsobus write: "%s"', message)
+        with transport:
+            transport.write(message)
+            if self.echo:
+                response = transport.read_until(self.resp_term.encode(self.encoding))
+                logger.debug('OxfordIsobus response: "%s"', response)
+
+                parsed = self.parse_response(response, header)
+                # A write should not return any data.
+                if parsed:
+                    raise ValueError('Unexpected response data:{}'.format(parsed))
