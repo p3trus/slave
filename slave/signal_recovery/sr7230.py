@@ -4,8 +4,9 @@
 from __future__ import (absolute_import, division,
                         print_function, unicode_literals)
 from future.builtins import *
+import datetime
 
-from slave.core import Command, InstrumentBase
+from slave.core import Command, InstrumentBase, CommandSequence
 from slave.types import Boolean, Enum, Float, Integer, Register, Set, String
 import slave.types
 
@@ -236,6 +237,34 @@ class SR7230(InstrumentBase):
     :ivar frequency_modulation: The frequency modulation commands, an instance
         of :class:`~.FrequencyModulation`.
 
+    .. rubric:: Auxiliary Inputs
+    :ivar aux: A :class:`~.CommandSequence` instance, providing access to all
+        four analog to digital input channel voltage readings. E.g.::
+
+        # prints voltage reading of first aux input channel.
+        print(sr7230.aux[0])
+
+    :ivar aux_trigger_mode: The trigger modes of the auxiliary input channels.
+        Valid are 'internal', 'external', 'burst' and 'fast burst'
+
+        ============ ===========================================================
+        mode         description
+        ============ ===========================================================
+        'internal'   The internal
+        'external'   The ADC TRIG IN connector is used to trigger readings.
+        'burst'      Allows sampling rates of 40 kHz, but only ADC1 and ADC2 can
+                     be used.
+        'fast burst' Sampling rates up to 200 kHz are possible, but only ADC1
+                     can be used.
+        ============ ===========================================================
+
+    .. rubric:: Instrument Identification
+
+    :ivar identification: The model number `7230`. (read only)
+    :ivar version: The firmware version. (read only)
+    :ivar date: The last calibration date. (read only)
+    :ivar name: The name of the lock-in amplifier, a string with up 64 chars.
+
     """
     SENSITIVITY_VOLTAGE = [
         '10 nV', '20 nV', '50 nV', '100 nV', '200 nV', '500 nV', '1 uV',
@@ -451,6 +480,43 @@ class SR7230(InstrumentBase):
             self._transport,
             self._protocol
         )
+        # Analog Outputs
+        # ==============
+        # TODO
+
+        # Digital I/O
+        # ===========
+        # TODO
+
+        # Auxiliary Inputs
+        # ================
+        self.aux = CommandSequence(
+            self._transport,
+            self._protocol,
+            [Command(('ADC. {}'.format(i), Float)) for i in range(1, 5)]
+        )
+        self.aux_trigger_mode = Command(
+            'TADC',
+            'TADC',
+            Enum('internal', 'external', 'burst', 'burst')
+        )
+        # Output Data Curve Buffer
+        # ========================
+        # TODO
+
+        # Computer Interfaces
+        # ===================
+        # TODO
+
+        # Instrument Identification
+        # =========================
+        self.identification = Command(('ID', String))
+        self.version = Command(('VER', String))
+        self.name = Command('NAME', 'NAME', String(max=64))
+
+        # Dual Mode Command
+        # =================
+        # TODO
 
     @property
     def sensitivity(self):
@@ -471,6 +537,11 @@ class SR7230(InstrumentBase):
             self._highbandwidth_sensitivity = value
         else:
             self._lownoise_sensitivity = value
+
+    @property
+    def date(self):
+        d = self._query(('DATE', String))
+        return datetime.datetime(day=int(d[:2]), month=int(d[2:4]), year=int(d[4:]))
 
     def auto_sensitivity(self):
         """Triggers the auto sensitivity mode.
@@ -562,7 +633,14 @@ class SR7230(InstrumentBase):
         parameters."""
         self._write('LOCK')
 
+    def factory_defaults(full=False):
+        """Resets the device to factory defaults.
 
+        :param full: If full is `True`, all settings are returned to factory
+            defaults, otherwise the communication settings are not changed.
+
+        """
+        self._write(('ADF', Boolean), not full)
 class AmplitudeModulation(InstrumentBase):
     """Represents the amplitude modulation commands.
 
