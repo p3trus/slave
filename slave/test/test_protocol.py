@@ -8,7 +8,7 @@ import collections
 
 import pytest
 
-from slave.protocol import IEC60488, SignalRecovery
+from slave.protocol import IEC60488, SignalRecovery, OxfordIsobus
 from slave.transport import Transport
 
 
@@ -102,3 +102,76 @@ class TestSignalRecovery(TestIEC60488Protocol):
         response = protocol.query(transport, 'HEADER')
         assert stb_callback.data == 0
         assert olb_callback.data == 1
+
+
+class TestOxfordIsobus(object):
+    def test_create_message_without_data_and_without_address(self):
+        protocol = OxfordIsobus()
+        assert protocol.create_message('R') == b'R\r'
+
+    def test_create_message_without_data_with_address(self):
+        protocol = OxfordIsobus(address=7)
+        assert protocol.create_message('R') == b'@7R\r'
+
+    def test_create_message_with_data_and_without_address(self):
+        protocol = OxfordIsobus()
+        assert protocol.create_message('R', '1337') == b'R1337\r'
+
+    def test_create_message_with_data_and_address(self):
+        protocol = OxfordIsobus(address=7)
+        assert protocol.create_message('R', '1337') == b'@7R1337\r'
+
+    def test_create_message_without_echo_data_and_address(self):
+        protocol = OxfordIsobus(echo=False)
+        assert protocol.create_message('R') == b'$R\r'
+
+    def test_create_message_without_echo_data_and_with_address(self):
+        protocol = OxfordIsobus(address=7, echo=False)
+        assert protocol.create_message('R') == b'$@7R\r'
+
+    def test_create_message_without_echo_with_data_and_without_address(self):
+        protocol = OxfordIsobus(echo=False)
+        assert protocol.create_message('R', '1337') == b'$R1337\r'
+
+    def test_create_message_without_echo_with_data_and_address(self):
+        protocol = OxfordIsobus(address=7, echo=False)
+        assert protocol.create_message('R', '1337') == b'$@7R1337\r'
+
+    def test_parse_response_without_data(self):
+        protocol = OxfordIsobus()
+        assert protocol.parse_response(b'R', 'R') == ''
+
+    def test_parse_response_with_data(self):
+        protocol = OxfordIsobus()
+        assert protocol.parse_response(b'R1337', 'R') == '1337'
+
+    def test_parse_response_with_error(self):
+        protocol = OxfordIsobus()
+        with pytest.raises(IOError) as excinfo:
+            protocol.parse_response(b'?R', 'R')
+        assert str(excinfo.value) == '?R'
+
+    def test_parse_response_with_wrong_header(self):
+        protocol = OxfordIsobus()
+        with pytest.raises(ValueError) as excinfo:
+            protocol.parse_response(b'U1', 'R')
+        assert str(excinfo.value) == 'Response header mismatch'
+
+    def test_write_with_data(self):
+        transport = MockTransport(responses=[b'R\r'])
+        protocol = OxfordIsobus(address=7)
+        protocol.write(transport, 'R', '10')
+        assert transport.messages[0] == b'@7R10\r'
+
+    def test_write_with_response_data(self):
+        transport = MockTransport(responses=[b'R10\r'])
+        protocol = OxfordIsobus(address=7)
+        with pytest.raises(ValueError) as excinfo:
+            protocol.write(transport, 'R', '11')
+        assert str(excinfo.value) == 'Unexpected response data:10'
+
+    def test_query(self):
+        transport = MockTransport(responses=[b'R1337\r'])
+        protocol = OxfordIsobus(address=7)
+        assert protocol.query(transport, 'R10') == '1337'
+        assert transport.messages[0] == b'@7R10\r'
