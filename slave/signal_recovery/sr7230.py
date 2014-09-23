@@ -241,8 +241,8 @@ class SR7230(InstrumentBase):
     :ivar aux: A :class:`~.CommandSequence` instance, providing access to all
         four analog to digital input channel voltage readings. E.g.::
 
-        # prints voltage reading of first aux input channel.
-        print(sr7230.aux[0])
+            # prints voltage reading of first aux input channel.
+            print(sr7230.aux[0])
 
     :ivar aux_trigger_mode: The trigger modes of the auxiliary input channels.
         Valid are 'internal', 'external', 'burst' and 'fast burst'
@@ -257,6 +257,11 @@ class SR7230(InstrumentBase):
         'fast burst' Sampling rates up to 200 kHz are possible, but only ADC1
                      can be used.
         ============ ===========================================================
+
+    .. rubric:: Output Data Curve Buffer
+
+    :ivar curve: An instance of :class:`~.Curve`, representing the curve buffer
+        related commands.
 
     .. rubric:: Instrument Identification
 
@@ -293,6 +298,16 @@ class SR7230(InstrumentBase):
         '2 s', '5 s', '10 s', '20 s', '50 s', '100 s', '200 s', '500 s', '1 ks',
         '2 ks', '5 ks', '10 ks', '20 ks', '50 ks', '100 ks'
     ]
+    STATUS_BYTE = {
+        0: 'command complete',
+        1: 'invalid command',
+        2: 'command parameter error',
+        3: 'reference unlock',
+        4: 'output overload',
+        5: 'new adc',
+        6: 'input overload',
+        7: 'data available',
+    }
 
     def __init__(self, transport, option=None):
         protocol = slave.protocol.SignalRecovery()
@@ -502,6 +517,8 @@ class SR7230(InstrumentBase):
         )
         # Output Data Curve Buffer
         # ========================
+        # TODO CBD
+        self.curve = Curve(self._transport, self._protocol)
         # TODO
 
         # Computer Interfaces
@@ -628,6 +645,46 @@ class SR7230(InstrumentBase):
         """Links dual amplitude/frequency sweep to curve buffer acquisition."""
         self._write(('SWEEP', Integer), 11)
 
+    def take_data(self):
+        """Starts data acquisition."""
+        self._write('TD')
+
+    def take_data_triggered(self, mode):
+        """Configures data acquisition to start on various trigger conditions.
+
+        :param mode: Defines the trigger condition.
+
+            value start condition sample condition stop condition
+        """
+
+    def take_data_continuously(self, stop):
+        """Starts continuous data acquisition.
+
+        :param stop: The stop condition. Valid are 'halt', 'rising' and 'falling'.
+
+            ========= =======================================================
+            Value     Description
+            ========= =======================================================
+            'halt'    Data acquisition stops when the halt command is issued.
+            'rising'  Data acquisition stops on the rising edge of a trigger
+                      signal.
+            'falling' Data acquisition stops on the falling edge of a trigger
+                      signal.
+            ========= =======================================================
+
+        .. note:: The internal buffer is used as a circular buffer.
+
+        """
+        self._write(('TDC', Enum('halt', 'rising', 'falling')))
+
+    def halt(self):
+        """Halts curve acquisition in progress.
+
+        If a sweep is linked to curve buffer acquisition it is halted as well.
+
+        """
+        self._write('HC')
+
     def update_correction(self):
         """Updates all frequency-dependant gain and phase correction
         parameters."""
@@ -641,6 +698,8 @@ class SR7230(InstrumentBase):
 
         """
         self._write(('ADF', Boolean), not full)
+
+
 class AmplitudeModulation(InstrumentBase):
     """Represents the amplitude modulation commands.
 
@@ -685,13 +744,13 @@ class FrequencyModulation(InstrumentBase):
         lowest.
     :ivar float span_frequency: The oscillator frequency modulation span frequency. A
         float in the range 0 up to 60e3 (125e3 if 250kHz option is installed).
+    :ivar float span_voltage: The oscillator frequency modulation span voltage.
+        A float in the range -10 to 10.
 
     .. note::
 
         The center frequency must be larger than the span frequency. Invalid
         values raise a `ValueError`.
-    :ivar float span_voltage: The oscillator frequency modulation span voltage.
-        A float in the range -10 to 10.
 
     """
     def __init__(self, transport, protocol, option=None):
@@ -732,3 +791,118 @@ class FrequencyModulation(InstrumentBase):
             raise ValueError("Span frequency {} can't exceed center frequency "
                              "{}".format(value, center_freq))
         self._write(('FMSPANF.', Float(min=0, max=self._fmax / 2.)))
+
+
+class Curve(InstrumentBase):
+    """Represents the curve buffer commands.
+
+    :ivar buffer_mode: The curve buffer acquisition mode, either 'standard' or
+        'fast'.
+    :ivar buffer_length: In fast mode, the max number of points is 100000. In
+        standard mode it depends on the number of curves acquired.
+    :ivar storage_interval: The time between successive points in microseconds.
+        In normal mode, the smallest value is 1000 us and 1 us in fast mode.
+    :ivar trigger_output: The trigger output generated when buffer acquisition
+        is running.
+
+        ======= ======================================
+        Value   Description
+        ======= ======================================
+        'curve' A trigger is generated once per curve.
+        'point' A trigger is generated once per point.
+        ======= ======================================
+
+    :ivar trigger_output_polarity: The polarity of the trigger output. Valid are
+        'rising', 'falling'.
+    :ivar acquisition_status: The state of the curve acquisition. A tuple
+        corresponding to *(<state>, <sweeps>, <status byte>, <points>)*, where
+
+        * *<state>* is the curve acquisition state. Possible values are
+
+          =================== ==================================================
+          Value               Description
+          =================== ==================================================
+          `False`             No curve acquisition in progress.
+          `True`              Curve acquisition via :meth:`SR7230.take_data` in
+                              progress.
+          'continuous'        Curve acquisition via
+                            :meth:`~.Sr7230.take_data_continuously` in progress.
+          'halted'            Curve acquisition via :meth:`SR7230.take_data`
+                              in progress but halted.
+          'continuous halted' Curve acquisition via
+                              :meth:`~.Sr7230.take_data_continuously` in
+                              progress but halted.
+          =================== ==================================================
+
+        * *<sweeps>* the number of sweeps acquired.
+        * *<status byte>* the status byte, see :attr:`SR7230.status_byte`.
+        * *<points>* The number of points acquired.
+
+    :ivar event: The event variable. An integer in the range 0 to 32767. It can
+        be used as an event marker at curve acquisition.
+
+    """
+    #: The parameters that can be stored in the curve buffer.
+    BUFFER = {
+        0: 'x',
+        1: 'y',
+        2: 'r',
+        3: 'theta',
+        4: 'sensitivity',
+        5: 'noise',
+        6: 'ratio',
+        7: 'log ratio',
+        8: 'adc1',
+        9: 'adc2',
+        10: 'adc3',
+        11: 'adc4',
+        12: 'dac1',
+        13: 'dac2',
+        14: 'event',
+        15: 'reference frequency bits 0-15',
+        16: 'reference frequency bits 16-32',
+        17: 'x2',
+        18: 'y2',
+        19: 'r2',
+        20: 'theta2',
+        21: 'sensitivity2',
+    }
+
+    def __init__(self, transport, protocol):
+        super(Curve, self).__init__(transport, protocol)
+        self.buffer = Command('CBD', 'CBD', Register(Curve.BUFFER))
+        self.buffer_mode = Command('CMODE', 'CMODE', Enum('standard', 'fast'))
+        self.buffer_length = Command('LEN', 'LEN', Integer(min=0, max=100001))
+        self.storage_interval = Command('STR', 'STR', Integer)
+        self.trigger_output = Command(
+            'TRIGOUT',
+            'TRIGOUT',
+            Enum('curve', 'point')
+        )
+        self.trigger_output_polarity = Command(
+            'TRIGOUTPOL',
+            'TRIGOUTPOL',
+            Enum('rising', 'falling')
+        )
+        self.event = Command('EVENT', 'EVENT', Integer(min=0, max=32767))
+        self.acquisition_status = Command((
+            'M',
+            [
+                Enum(False, True, 'continuous', 'halted', 'continuous halted'),
+                Integer,
+                Register(SR7230.STATUS_BYTE),
+                Integer
+            ]
+        ))
+
+    def clear(self):
+        """Initialises the curve buffer and related status variables."""
+        self._write('NC')
+
+    def __getitem__(self, item):
+        if not self.buffer[item]:
+            raise KeyError('Curve was not stored.')
+        # get number of points
+        length = self.buffer_length
+        return self.
+
