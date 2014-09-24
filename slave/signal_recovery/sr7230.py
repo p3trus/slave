@@ -10,6 +10,26 @@ from slave.core import Command, InstrumentBase, CommandSequence
 from slave.types import Boolean, Enum, Float, Integer, Register, Set, String
 import slave.types
 
+try:
+    from numpy import fromstring
+except ImportError:
+    import array
+    import sys
+
+    def fromstring(string, dtype):
+        if dtype.startswith('>'):
+            endian = 'big'
+            dtype = dtype[1:]
+        elif dtype.startswith('<'):
+            endian = 'little'
+            dtype = dytpe[1:]
+        else:
+            endian = sys.byteorder
+        data = array.array(dtype, string)
+        if endian != sys.byteorder:
+            data.byteswap()
+        return data
+
 
 class SR7230(InstrumentBase):
     """Represents a Signal Recovery SR7230 lock-in amplifier.
@@ -796,6 +816,8 @@ class FrequencyModulation(InstrumentBase):
 class Curve(InstrumentBase):
     """Represents the curve buffer commands.
 
+    :ivar buffer: Defines which curves are to be stored. See :attr:`~.BUFFER`
+        for valid entries.
     :ivar buffer_mode: The curve buffer acquisition mode, either 'standard' or
         'fast'.
     :ivar buffer_length: In fast mode, the max number of points is 100000. In
@@ -843,34 +865,15 @@ class Curve(InstrumentBase):
 
     """
     #: The parameters that can be stored in the curve buffer.
-    BUFFER = {
-        0: 'x',
-        1: 'y',
-        2: 'r',
-        3: 'theta',
-        4: 'sensitivity',
-        5: 'noise',
-        6: 'ratio',
-        7: 'log ratio',
-        8: 'adc1',
-        9: 'adc2',
-        10: 'adc3',
-        11: 'adc4',
-        12: 'dac1',
-        13: 'dac2',
-        14: 'event',
-        15: 'reference frequency bits 0-15',
-        16: 'reference frequency bits 16-32',
-        17: 'x2',
-        18: 'y2',
-        19: 'r2',
-        20: 'theta2',
-        21: 'sensitivity2',
-    }
+    BUFFER = [
+        'x', 'y', 'r', 'theta', 'sensitivity', 'noise', 'ratio', 'log ratio',
+        'adc1', 'adc2', 'adc3', 'adc4', 'dac1', 'dac2', 'event',
+        'reference frequency bits 0-15', 'reference frequency bits 16-32',
+        'x2', 'y2', 'r2', 'theta2', 'sensitivity2'
+    ]
 
     def __init__(self, transport, protocol):
         super(Curve, self).__init__(transport, protocol)
-        self.buffer = Command('CBD', 'CBD', Register(Curve.BUFFER))
         self.buffer_mode = Command('CMODE', 'CMODE', Enum('standard', 'fast'))
         self.buffer_length = Command('LEN', 'LEN', Integer(min=0, max=100001))
         self.storage_interval = Command('STR', 'STR', Integer)
@@ -899,10 +902,27 @@ class Curve(InstrumentBase):
         """Initialises the curve buffer and related status variables."""
         self._write('NC')
 
+    @property
+    def buffer(self):
+        params = self._query(
+            ('CBD', Register({i: v for i, v in enumerate(Curve.BUFFER)}))
+        )
+        return [k for k,v in params.items() if v is True]
+
+    @buffer.setter
+    def buffer(self, value):
+        value = {v: True for v in value}
+        self._write(
+            ('CBD', Register({i: v for i, v in enumerate(Curve.BUFFER)})),
+            value
+        )
+
     def __getitem__(self, item):
-        if not self.buffer[item]:
+        if not item in self.buffer:
             raise KeyError('Curve was not stored.')
         # get number of points
-        length = self.buffer_length
-        return self.
-
+        points = self.buffer_length
+        # get bytearray of data
+        data = self._protocol.query_bytes(self._transport, points * 2, 'DCB', str(Curve.BUFFER.index(item)))
+        # The binary data is a sequence of two byte big endian short ints.
+        return fromstring(buffer(data), dtype='>h')

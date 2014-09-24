@@ -62,6 +62,25 @@ class Transport(object):
             return self.read_bytes(num_bytes)
         return data
 
+    def read_exactly(self, num_bytes):
+        """Reads exactly `num_bytes`"""
+        buffer_size = len(self._buffer)
+        if buffer_size > num_bytes:
+            # The buffer is larger than the requested amount of bytes.
+            print('>', buffer_size, num_bytes)
+            data, self._buffer = self._buffer[:num_bytes], self._buffer[num_bytes:]
+        elif buffer_size == num_bytes:
+            print('==', buffer_size, num_bytes)
+            # Buffer size matches requested number of bytes.
+            data, self._buffer = self._buffer, bytearray()
+        else:
+            # Buffer is too small. Try to read `num_bytes` and call `read_bytes()`
+            # again. This ensures that `num_bytes` are returned.
+            print('<', buffer_size, num_bytes)
+            self._buffer += self.__read__(num_bytes)
+            return self.read_exactly(num_bytes)
+        return data
+
     def read_until(self, delimiter):
         """Reads until the delimiter is found."""
         if delimiter in self._buffer:
