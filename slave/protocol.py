@@ -198,7 +198,7 @@ class SignalRecovery(IEC60488):
 
         """
         message = self.create_message(header, *data)
-        logger.debug('SignalRecovery query: "%s"', message)
+        logger.debug('SignalRecovery query bytes: "%s"', message)
         with transport:
             transport.write(message)
 
