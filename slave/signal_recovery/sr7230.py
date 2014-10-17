@@ -844,8 +844,8 @@ class Curve(InstrumentBase):
           =================== ==================================================
           Value               Description
           =================== ==================================================
-          `False`             No curve acquisition in progress.
-          `True`              Curve acquisition via :meth:`SR7230.take_data` in
+          `off`               No curve acquisition in progress.
+          `on`                Curve acquisition via :meth:`SR7230.take_data` in
                               progress.
           'continuous'        Curve acquisition via
                             :meth:`~.Sr7230.take_data_continuously` in progress.
@@ -868,12 +868,22 @@ class Curve(InstrumentBase):
     BUFFER = [
         'x', 'y', 'r', 'theta', 'sensitivity', 'noise', 'ratio', 'log ratio',
         'adc1', 'adc2', 'adc3', 'adc4', 'dac1', 'dac2', 'event',
-        'reference frequency bits 0-15', 'reference frequency bits 16-32',
+        'frequency', 'frequency',
         'x2', 'y2', 'r2', 'theta2', 'sensitivity2'
+    ]
+    FAST_BUFFER = [
+        # TODO demod2 is not a good name for the input to the second demodulator
+        # stage.
+        'x', 'y', 'adc1', 'adc2', 'x2', 'y2', 'demod2'
     ]
 
     def __init__(self, transport, protocol):
         super(Curve, self).__init__(transport, protocol)
+        self._buffer = Command(
+            'CBD',
+            'CBD',
+            Register({i: v for i, v in enumerate(Curve.BUFFER)})
+        )
         self.buffer_mode = Command('CMODE', 'CMODE', Enum('standard', 'fast'))
         self.buffer_length = Command('LEN', 'LEN', Integer(min=0, max=100001))
         self.storage_interval = Command('STR', 'STR', Integer)
@@ -891,7 +901,7 @@ class Curve(InstrumentBase):
         self.acquisition_status = Command((
             'M',
             [
-                Enum(False, True, 'continuous', 'halted', 'continuous halted'),
+                Enum('off', 'on', 'continuous', 'halted', 'continuous halted'),
                 Integer,
                 Register(SR7230.STATUS_BYTE),
                 Integer
@@ -904,25 +914,30 @@ class Curve(InstrumentBase):
 
     @property
     def buffer(self):
-        params = self._query(
-            ('CBD', Register({i: v for i, v in enumerate(Curve.BUFFER)}))
-        )
-        return [k for k,v in params.items() if v is True]
+        return [k for k,v in self._buffer.items() if v is True]
 
     @buffer.setter
     def buffer(self, value):
-        value = {v: True for v in value}
-        self._write(
-            ('CBD', Register({i: v for i, v in enumerate(Curve.BUFFER)})),
-            value
-        )
+        self._buffer = {v: True for v in value}
 
     def __getitem__(self, item):
         if not item in self.buffer:
             raise KeyError('Curve was not stored.')
-        # get number of points
-        points = self.buffer_length
-        # get bytearray of data
-        data = self._protocol.query_bytes(self._transport, points * 2, 'DCB', str(Curve.BUFFER.index(item)))
-        # The binary data is a sequence of two byte big endian short ints.
-        return fromstring(buffer(data), dtype='>h')
+        if self.buffer_mode is 'fast':
+            curve_idx = str(Curve.FAST_BUFFER.index(item))
+        else:
+            curve_idx = str(Curve.BUFFER.index(item))
+
+        nbytes = self.buffer_length * 2
+        # We have to treat the frequency curve differently. It uses a 4 byte
+        # integer instead of a 2 byte int like the other curves.
+        if item is 'frequency':
+            f1 = self._protocol.query_bytes(self._transport, nbytes, 'DCB', '15')
+            f2 = self._protocol.query_bytes(self._transport, nbytes, 'DCB', '16')
+            f1 = fromstring(buffer(data), dtype='>h')
+            f2 = fromstring(buffer(data), dtype='>h')
+            # TODO: We're relying on numpy here.
+            return np.array(f2, dtype='i4') * 65536 + f1
+        else:
+            data = self._protocol.query_bytes(self._transport, nbytes, 'DCB', curve_idx)
+            return fromstring(buffer(data), dtype='>h')
