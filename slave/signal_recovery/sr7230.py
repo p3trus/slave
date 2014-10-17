@@ -533,7 +533,7 @@ class SR7230(InstrumentBase):
         self.aux_trigger_mode = Command(
             'TADC',
             'TADC',
-            Enum('internal', 'external', 'burst', 'fast burst')
+            Enum('internal', 'external', 'fast burst', 'burst')
         )
         # Output Data Curve Buffer
         # ========================
