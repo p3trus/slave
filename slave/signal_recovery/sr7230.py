@@ -1,13 +1,59 @@
 #  -*- coding: utf-8 -*-
 #
 # Slave, (c) 2014, see AUTHORS.  Licensed under the GNU GPL.
+"""Implements the signal recovery sr7230 driver.
+
+
+The following example shows how to use the fast curve buffer to acquire data.
+
+::
+    import time
+    from slave.transport import Socket
+    from slave.signal_recovery import SR7230
+
+    lockin = SR7230(Socket(address=('192.168.178.1', 50000)))
+
+    lockin.fast_buffer.enabled = True       # Use fast curve buffer.
+    lockin.fast_buffer.storage_interval = 8 # Take date every 8 us.
+    lockin.fast_buffer.length = 100000      # Store the max number of points
+    lockin.take_data()                      # Start data acquisition immediately.
+
+    while lockin.acquisition_status[0] == 'on':
+        time.sleep(0.1)
+
+    x, y = lockin.fast_buffer['x'], lockin.fast_buffer['y']
+
+The fast buffer can store just a limited amount of variables. The standard
+buffer is a lot more flexible. The following examples shows how to use it to
+store the sensitivity, x and y values.
+
+::
+
+    lockin.standard_buffer.enabled = True
+    lockin.standard_buffer.definition = 'X', 'Y', 'sensitivity'
+    lockin.standard_buffer.storage_interval = 1000
+    lockin.standard_buffer.length = 1000
+    lockin.take_data()
+
+    while lockin.acquisition_status[0] == 'on':
+        time.sleep(0.1)
+
+    # Note: The x and y values are not stored in absolute units. They are in
+    # relative units compared to the chosen senitivity.
+    sensitivity = sr7230.standard_buffer['sensitivity']
+    x = sr7230.standard_buffer['x']
+    y = sr7230.standard_buffer['y']
+
+"""
 from __future__ import (absolute_import, division,
                         print_function, unicode_literals)
 from future.builtins import *
 import datetime
 
 from slave.core import Command, InstrumentBase, CommandSequence
-from slave.types import Boolean, Enum, Float, Integer, Register, Set, String
+from slave.types import (
+    Boolean, Enum, Float, Integer, Register, Set, String, Mapping
+)
 import slave.types
 
 try:
@@ -226,6 +272,8 @@ class SR7230(InstrumentBase):
     :ivar noise_bandwidth: The noise bandwidth. (read only)
     :ivar noise_output: The noise output, the mean absolute value of the Y
         channel. (read only)
+    :ivar equation: The equation configuration, a list of two
+        :class:`~.Equation` instances.
 
     .. rubric:: Internal oscillator
 
@@ -257,7 +305,18 @@ class SR7230(InstrumentBase):
     :ivar frequency_modulation: The frequency modulation commands, an instance
         of :class:`~.FrequencyModulation`.
 
+    .. rubric:: Analog Outputs
+
+    :ivar dac: A sequence of four :class:`~.DAC` instances, representing all
+        four analog outpus.
+
+    .. rubric:: Digital I/O
+
+    :ivar digital_ports: The digital port configuration, an instance of
+        :class:`~.DigitalPort`.
+
     .. rubric:: Auxiliary Inputs
+
     :ivar aux: A :class:`~.CommandSequence` instance, providing access to all
         four analog to digital input channel voltage readings. E.g.::
 
@@ -280,8 +339,75 @@ class SR7230(InstrumentBase):
 
     .. rubric:: Output Data Curve Buffer
 
-    :ivar curve: An instance of :class:`~.Curve`, representing the curve buffer
-        related commands.
+    :ivar acquisition_status: The state of the curve acquisition. A tuple
+        corresponding to *(<state>, <sweeps>, <status byte>, <points>)*, where
+
+        * *<state>* is the curve acquisition state. Possible values are
+
+          =================== ==================================================
+          Value               Description
+          =================== ==================================================
+          'off'               No curve acquisition in progress.
+          'on'                Curve acquisition via :meth:`SR7230.take_data` in
+                              progress.
+          'continuous'        Curve acquisition via
+                              :meth:`~.Sr7230.take_data_continuously` in
+                              progress.
+          'halted'            Curve acquisition via :meth:`SR7230.take_data`
+                              in progress but halted.
+          'continuous halted' Curve acquisition via
+                              :meth:`~.Sr7230.take_data_continuously` in
+                              progress but halted.
+          =================== ==================================================
+
+        * *<sweeps>* the number of sweeps acquired.
+        * *<status byte>* the status byte, see :attr:`SR7230.status_byte`.
+        * *<points>* The number of points acquired.
+
+    :ivar fast_buffer: An instance of :class:`~.FastBuffer`, representing the
+        fast curve buffer related commands.
+    :ivar standard_buffer: An instance of :class:`~.FastBuffer`, representing the
+        fast curve buffer related commands.
+    :ivar buffer_trigger_output: The trigger output generated when buffer
+        acquisition is running.
+
+        ======= ======================================
+        Value   Description
+        ======= ======================================
+        'curve' A trigger is generated once per curve.
+        'point' A trigger is generated once per point.
+        ======= ======================================
+
+    :ivar buffer_trigger_output_polarity: The polarity of the trigger output.
+        Valid are 'rising', 'falling'.
+
+    .. rubric:: Computer Interfaces
+
+    :ivar baudrate: The baudrate of the rs232 interface. See
+        :attr:`~.SR7230.BAUDRATE` for valid values.
+    :ivar delimiter: The data delimiter. See :attr:`~.SR7230.DELIMITER` for
+        valid values.
+
+        .. note::
+
+            In normal operation, there is no need to change the delimiter
+            because the communication is handled by the protocol. If the
+            delimiter is changed, the `msg_data_sep` and `resp_data_sep` values
+            of the protocol must be changed manually.
+
+    :ivar status: The status byte. (read only)
+    :ivar overload_status: The overload status. (read only)
+    :ivar ip_address: Four integer values representing the ip address. E.g.
+        169.254.0.10 would translate to a tuple (169, 254, 0, 10)
+
+        .. note::
+
+            Setting the IP address sets the gateway and subnet mask to a default
+            value. If non default values are required set them afterwards.
+
+    :ivar subnet_mask: A tuple of four ints representing the subnet mask.
+    :ivar gateway_address: A tuple of four ints representing the gateway address.
+
 
     .. rubric:: Instrument Identification
 
@@ -291,6 +417,11 @@ class SR7230(InstrumentBase):
     :ivar name: The name of the lock-in amplifier, a string with up 64 chars.
 
     """
+    BAUDRATE = [
+        75, 110, 134.5, 150, 300, 600, 1200, 1800,
+        2000, 2400, 4800, 9600, 19200, 38400
+    ]
+    DELIMITER = [chr(13),] + [chr(i) for i in range(32, 126)]
     SENSITIVITY_VOLTAGE = [
         '10 nV', '20 nV', '50 nV', '100 nV', '200 nV', '500 nV', '1 uV',
         '2 uV', '5 uV', '10 uV', '20 uV', '50 uV', '100 uV', '200 uV',
@@ -327,6 +458,16 @@ class SR7230(InstrumentBase):
         5: 'new adc',
         6: 'input overload',
         7: 'data available',
+    }
+    OVERLOAD_BYTE = {
+        0: 'x1',
+        1: 'y1',
+        2: 'x2',
+        3: 'y2',
+        4: 'adc1',
+        5: 'adc2',
+        6: 'adc3',
+        7: 'adc4',
     }
 
     def __init__(self, transport, option=None):
@@ -460,7 +601,10 @@ class SR7230(InstrumentBase):
         self.noise = Command(('NHZ.', Float))
         self.noise_bandwidth = Command(('ENBW.', Float))
         self.noise_output = Command(('NN.', Float))
-        # TODO: Equation commands
+        self.equation = [
+            Equation(self._transport, self._protocol, 1),
+            Equation(self._transport, self._protocol, 2),
+        ]
 
         # Internal oscillator
         # ===================
@@ -517,11 +661,11 @@ class SR7230(InstrumentBase):
         )
         # Analog Outputs
         # ==============
-        # TODO
+        self.dac = [DAC(self._transport, self._protocol, i) for i in range(1, 5)]
 
         # Digital I/O
         # ===========
-        # TODO
+        self.digital_ports = DigitalPort(self._transport, self._protocol)
 
         # Auxiliary Inputs
         # ================
@@ -537,13 +681,41 @@ class SR7230(InstrumentBase):
         )
         # Output Data Curve Buffer
         # ========================
-        # TODO CBD
-        self.curve = Curve(self._transport, self._protocol)
-        # TODO
+        self.acquisition_status = Command((
+            'M',
+            [
+                Enum('off', 'on', 'continuous', 'halted', 'continuous halted'),
+                Integer,
+                Register(SR7230.STATUS_BYTE),
+                Integer
+            ]
+        ))
+        self.fast_buffer = FastBuffer(self._transport, self._protocol)
+        self.standard_buffer = StandardBuffer(self._transport, self._protocol)
+        self.buffer_trigger_output = Command(
+            'TRIGOUT',
+            'TRIGOUT',
+            Enum('curve', 'point')
+        )
+        self.buffer_trigger_output_polarity = Command(
+            'TRIGOUTPOL',
+            'TRIGOUTPOL',
+            Enum('rising', 'falling')
+        )
 
         # Computer Interfaces
         # ===================
-        # TODO
+        self.baud_rate = Command('RS', 'RS', Enum(*SR7230.BAUDRATE))
+        self.delimiter = Command(
+            'DD',
+            'DD',
+            Mapping({ord(i): i for i in SR7230.DELIMITER})
+        )
+        self.status = Command(('ST', Register(SR7230.STATUS_BYTE)))
+        self.overload_status = Command(('N', Register(SR7230.OVERLOAD_BYTE)))
+        self.ip_address = Command('IPADDR', 'IPADDR', [Integer(0, 256),]*4)
+        self.subnet_mask = Command('SNMASK', 'SNMASK', [Integer(0, 256),]*4)
+        self.gateway_address = Command('GWADDR', 'GWADDR', [Integer(0, 256),]*4)
 
         # Instrument Identification
         # =========================
@@ -600,6 +772,10 @@ class SR7230(InstrumentBase):
     def auto_offset(self):
         """Triggers the auto offset mode."""
         self._write('AXO')
+
+    def clear_buffer(self):
+        """Initialises the curve buffer and related status variables."""
+        self._write('NC')
 
     def start_asweep(self, start=None, stop=None, step=None):
         """Starts a amplitude sweep.
@@ -719,6 +895,65 @@ class SR7230(InstrumentBase):
         """
         self._write(('ADF', Boolean), not full)
 
+    def lock_ip(self):
+        """Locks the ip address.
+
+        Only commands of the locked ip are accepted.
+
+        """
+        self._write('IPLOCK')
+
+    def unlock_ip(self):
+        """Unlocks the ip address."""
+        self._write('IPUNLOCK')
+
+
+class Equation(InstrumentBase):
+    """The equation commands.
+
+    An equation is defined as::
+
+        (A +/- B) * C
+        -------------
+              D
+
+    :ivar value: The value of the equation calculation. (read only)
+    :ivar define: A tuple defining the equation parameter;
+        *(<A>, <op>, <B>, <C>, <D>)* where
+
+        * *<op>* is either '+' or '-'.
+        * <A>, <B>, <C>, <D> is one of :attr:`~.Equation.INPUT`.
+
+    :ivar c1: Equation constant c1, a float in the range -30. to 30.
+    :ivar c2: Equation constant c2, a float in the range -30. to 30.
+
+    """
+    INPUT = [
+        'x1', 'y1', 'r', 'theta', 'adc1', 'adc2', 'adc3', 'adc4', 'c1', 'c2',
+        '0', '1', 'frequency', 'oscillator', 'x2', 'y2', 'r2', 'theta2'
+    ]
+    def __init__(self, transport, protocol, idx):
+        super(Equation, self).__init__(transport, protocol)
+        self.value = Command(('EQU {}'.format(idx), Float))
+        self.define = Command(
+            'DEFEQU {}'.format(idx),
+            'DEFEQU {} '.format(idx),
+            [
+                Enum(*Equation.INPUT), Enum('-', '+'), Enum(*Equation.INPUT),
+                Enum(*Equation.INPUT), Enum(*Equation.INPUT)
+            ]
+        )
+        self.c1 = Command(
+            'C1 {}'.format(idx),
+            'C1 {} '.format(idx),
+            Float(min=-30., max=30.)
+        )
+        self.c2 = Command(
+            'C2 {}'.format(idx),
+            'C2 {} '.format(idx),
+            Float(min=-30., max=30.)
+        )
+
 
 class AmplitudeModulation(InstrumentBase):
     """Represents the amplitude modulation commands.
@@ -813,131 +1048,184 @@ class FrequencyModulation(InstrumentBase):
         self._write(('FMSPANF.', Float(min=0, max=self._fmax / 2.)))
 
 
-class Curve(InstrumentBase):
-    """Represents the curve buffer commands.
+class DAC(InstrumentBase):
+    """
 
-    :ivar buffer: Defines which curves are to be stored. See :attr:`~.BUFFER`
-        for valid entries.
-    :ivar buffer_mode: The curve buffer acquisition mode, either 'standard' or
-        'fast'.
-    :ivar buffer_length: In fast mode, the max number of points is 100000. In
-        standard mode it depends on the number of curves acquired.
-    :ivar storage_interval: The time between successive points in microseconds.
-        In normal mode, the smallest value is 1000 us and 1 us in fast mode.
-    :ivar trigger_output: The trigger output generated when buffer acquisition
-        is running.
-
-        ======= ======================================
-        Value   Description
-        ======= ======================================
-        'curve' A trigger is generated once per curve.
-        'point' A trigger is generated once per point.
-        ======= ======================================
-
-    :ivar trigger_output_polarity: The polarity of the trigger output. Valid are
-        'rising', 'falling'.
-    :ivar acquisition_status: The state of the curve acquisition. A tuple
-        corresponding to *(<state>, <sweeps>, <status byte>, <points>)*, where
-
-        * *<state>* is the curve acquisition state. Possible values are
-
-          =================== ==================================================
-          Value               Description
-          =================== ==================================================
-          `off`               No curve acquisition in progress.
-          `on`                Curve acquisition via :meth:`SR7230.take_data` in
-                              progress.
-          'continuous'        Curve acquisition via
-                            :meth:`~.Sr7230.take_data_continuously` in progress.
-          'halted'            Curve acquisition via :meth:`SR7230.take_data`
-                              in progress but halted.
-          'continuous halted' Curve acquisition via
-                              :meth:`~.Sr7230.take_data_continuously` in
-                              progress but halted.
-          =================== ==================================================
-
-        * *<sweeps>* the number of sweeps acquired.
-        * *<status byte>* the status byte, see :attr:`SR7230.status_byte`.
-        * *<points>* The number of points acquired.
-
-    :ivar event: The event variable. An integer in the range 0 to 32767. It can
-        be used as an event marker at curve acquisition.
+    :ivar voltage: The user specified DAC output voltage.
+    :ivar output: Defines which output apears on the DAC. The allowed values
+        depend on the DAC channel. See :attr:`~.DAC.OUTPUT`.
 
     """
-    #: The parameters that can be stored in the curve buffer.
-    BUFFER = [
+    OUTPUT = [
+        ('x1', 'noise', 'ratio', 'logratio', 'equation1', 'equation2', 'user', 'demod1', 'r2'),
+        ('y1', 'noise', 'ratio', 'logratio', 'equation1', 'equation2', 'user', 'ext adc monitor', 'theta2'),
+        ('r1', 'noise', 'ratio', 'logratio', 'equation1', 'equation2', 'user', 'demod2', 'x2'),
+        ('theta1', 'noise', 'ratio', 'logratio', 'equation1', 'equation2', 'user', 'sync', 'y2'),
+    ]
+    def __init__(self, transport, protocol, idx):
+        super(DAC, self).__init__(transport, protocol)
+        self.voltage = Command(
+            'DAC. {}'.format(idx),
+            'DAC. {} '.format(idx),
+            Float(min=-10., max=10.)
+        )
+        self.output = Command(
+            'CH {}'.format(idx),
+            'CH {} '.format(idx),
+            Enum(*DAC.OUTPUT[idx - 1])
+        )
+
+
+class DigitalPort(InstrumentBase):
+    """The digital port configuration.
+
+    :ivar output: Defines which ports are configured as outputs.
+    :ivar value: Reads the bit state of all lines but writes only to output
+        lines.
+
+    """
+    DIGITAL_OUTPUT = {
+        0: 'DO',
+        1: 'D1',
+        2: 'D2',
+        3: 'D3',
+        4: 'D4',
+        5: 'D5',
+        6: 'D6',
+        7: 'D7',
+    }
+    def __init__(self, transport, protocol):
+        super(DigitalPort, self).__init__(transport, protocol)
+        self.output = Command(
+            'PORTDIR',
+            'PORTDIR',
+            Register(DigitalPort.DIGITAL_OUTPUT)
+        )
+        self.value = Command(
+            'READBYTE',
+            'BYTE',
+            Register(DigitalPort.DIGITAL_OUTPUT)
+        )
+
+
+class FastBuffer(InstrumentBase):
+    """Represents the fast curve buffer command group.
+
+    The fast curve buffer is similar to the :class:`~.StandardBuffer`. It is
+    less flexible but allows for the fastest data acquisition rate.
+
+    :ivar length: The length of the fast curve buffer, at most 100000 can be
+        stored.
+    :ivar enabled: A boolean flag enabling/disabling the fast curve buffer.
+
+        .. note::
+
+            Enabling the fast curve buffer disables the standard curve buffer.
+
+    :ivar storage_interval: The storage interval in microseconds. The smallest
+        value is 1.
+
+    """
+    KEYS = [
+        'x', 'y', 'demod1', 'adc1', 'adc2', 'x2', 'y2', 'demod2'
+    ]
+    def __init__(self, transport, protocol):
+        super(FastBuffer, self).__init__(transport, protocol)
+        self.length = Command('LEN', 'LEN', Integer(min=0, max=100001))
+        self.enabled = Command('CMODE', 'CMODE', Boolean)
+        self.storage_interval = Command('STR', 'STR', Integer(min=1))
+
+    def __getitem__(self, item):
+        try:
+            index = str(FastBuffer.KEYS.index(item))
+        except ValueError:
+            raise KeyError('Invalid Curve key: {}'.format(item))
+        # The data is stored as two byte integers.
+        nbytes = self.buffer_length * 2
+        data = self._protocol.query_bytes(self._transport, nbytes, 'DCB', idx)
+        return fromstring(buffer(data), dtype='>h')
+
+
+class StandardBuffer(InstrumentBase):
+    """Represents the standard buffer command group.
+
+    :ivar length: The size of the standard curve buffer is 100000 points. These
+        are shared equally between all define curves.
+    :ivar enabled: A boolean flag enabling/disabling the fast curve buffer.
+
+        .. note::
+
+            Enabling the fast curve buffer disables the standard curve buffer.
+    :ivar storage_interval: The storage interval in microseconds. The smallest
+        value is 1000.
+    :ivar define: Selects which curves should be stored. See
+        :attr:`~.StandardBuffer.KEYS` for allowed values.
+
+    """
+    KEYS = [
         'x', 'y', 'r', 'theta', 'sensitivity', 'noise', 'ratio', 'log ratio',
         'adc1', 'adc2', 'adc3', 'adc4', 'dac1', 'dac2', 'event',
         'frequency', 'frequency',
         'x2', 'y2', 'r2', 'theta2', 'sensitivity2'
     ]
-    FAST_BUFFER = [
-        # TODO demod2 is not a good name for the input to the second demodulator
-        # stage.
-        'x', 'y', 'adc1', 'adc2', 'x2', 'y2', 'demod2'
-    ]
-
     def __init__(self, transport, protocol):
-        super(Curve, self).__init__(transport, protocol)
-        self._buffer = Command(
+        super(StandardBuffer, self).__init__(transport, protocol)
+        self.enabled = Command('CMODE', 'CMODE', Enum(True, False))
+        self.storage_interval = Command('STR', 'STR', Integer(min=1000))
+        self._define = Command(
             'CBD',
             'CBD',
-            Register({i: v for i, v in enumerate(Curve.BUFFER)})
+            Register({i: v for i, v in enumerate(StandardBuffer.KEYS)})
         )
-        self.buffer_mode = Command('CMODE', 'CMODE', Enum('standard', 'fast'))
-        self.buffer_length = Command('LEN', 'LEN', Integer(min=0, max=100001))
-        self.storage_interval = Command('STR', 'STR', Integer)
-        self.trigger_output = Command(
-            'TRIGOUT',
-            'TRIGOUT',
-            Enum('curve', 'point')
-        )
-        self.trigger_output_polarity = Command(
-            'TRIGOUTPOL',
-            'TRIGOUTPOL',
-            Enum('rising', 'falling')
-        )
-        self.event = Command('EVENT', 'EVENT', Integer(min=0, max=32767))
-        self.acquisition_status = Command((
-            'M',
-            [
-                Enum('off', 'on', 'continuous', 'halted', 'continuous halted'),
-                Integer,
-                Register(SR7230.STATUS_BYTE),
-                Integer
-            ]
-        ))
-
-    def clear(self):
-        """Initialises the curve buffer and related status variables."""
-        self._write('NC')
 
     @property
-    def buffer(self):
-        return [k for k,v in self._buffer.items() if v is True]
+    def length(self):
+        return self._query(('LEN', Integer))
 
-    @buffer.setter
-    def buffer(self, value):
-        self._buffer = {v: True for v in value}
+    @length.setter
+    def length(self, value):
+        curves = self.define
+        # Calculate the max curve buffer length.
+        # Note: The frequency needs twice as much space than other curves.
+        if 'frequency' in curves:
+            maxlen = 100000 / (len(curves) + 1)
+        else:
+            maxlen = 100000 / len(curves)
+        if value > maxlen:
+            raise ValueError('Value {} is too large; max: {}'.format(value, maxlen))
+        self._write(('LEN', Integer), value)
+
+    @property
+    def define(self):
+        return [k for k, v in self._define.items() if v is True]
+
+    @define.setter
+    def define(self, value):
+        self._define = {v: True for v in value}
+
+    def event(self, value):
+        """Set an event marker.
+
+        If the event curve is defined and data acquisition is running, a call to
+        event stores the value in the event curve.
+
+        """
+        self._write(('EVENT', Integer(min=0, max=32768)), value)
 
     def __getitem__(self, item):
-        if not item in self.buffer:
-            raise KeyError('Curve was not stored.')
-        if self.buffer_mode is 'fast':
-            curve_idx = str(Curve.FAST_BUFFER.index(item))
-        else:
-            curve_idx = str(Curve.BUFFER.index(item))
-
+        if not item in self.define:
+            raise KeyError(item)
+        idx = str(StandardBuffer.KEYS.index(item))
+        # The data is stored as two byte integers.
         nbytes = self.buffer_length * 2
-        # We have to treat the frequency curve differently. It uses a 4 byte
-        # integer instead of a 2 byte int like the other curves.
-        if item is 'frequency':
+
+        if item == 'frequency':
             f1 = self._protocol.query_bytes(self._transport, nbytes, 'DCB', '15')
             f2 = self._protocol.query_bytes(self._transport, nbytes, 'DCB', '16')
-            f1 = fromstring(buffer(data), dtype='>h')
+            f1 = fromstring(buffer(data), dtype='>H')
             f2 = fromstring(buffer(data), dtype='>h')
             # TODO: We're relying on numpy here.
-            return np.array(f2, dtype='i4') * 65536 + f1
+            return (f2.astype(float) * 65536 + f1.astype(float)) / 1e3
         else:
-            data = self._protocol.query_bytes(self._transport, nbytes, 'DCB', curve_idx)
+            data = self._protocol.query_bytes(self._transport, nbytes, 'DCB', idx)
             return fromstring(buffer(data), dtype='>h')
