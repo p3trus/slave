@@ -81,9 +81,7 @@ class AsyncCommand(Command):
         else:
             qmu = self._program_message_unit(self._query, *datas)
             _logger.info('query message unit: "{0}"'.format(qmu))
-            print 'ASKING'
             response = yield self.transport.ask(qmu)
-            print 'handling response', response
         _logger.info('response:"{0}"'.format(response))
         header, parsed_data = self._parse_response(response)
         # TODO handle the response header
