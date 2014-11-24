@@ -471,7 +471,7 @@ class SR7230(InstrumentBase):
     }
 
     def __init__(self, transport, option=None):
-        protocol = protocol.SignalRecovery()
+        protocol = SignalRecovery()
         super(SR7230, self).__init__(transport, protocol)
         self.option = option
         # Signal Channel
