@@ -15,7 +15,7 @@ import sys, os
 # Check if doc is build on readthedocs
 on_rtd = os.environ.get('READTHEDOCS', None) == 'True'
 if on_rtd:
-    from unittest.mock import MagicMock
+    from mock import Mock as MagicMock
 
     class Mock(object):
         @classmethod
