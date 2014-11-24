@@ -6,7 +6,7 @@ import sys
 
 from setuptools import setup, find_packages
 
-requires = []
+requires = ['future']
 try:
     import numpy
 except ImportError:
