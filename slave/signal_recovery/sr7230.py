@@ -50,31 +50,13 @@ from __future__ import (absolute_import, division,
 from future.builtins import *
 import datetime
 
+from numpy import fromstring
+
 from slave.core import Command, InstrumentBase, CommandSequence
+from slave.protocol import SignalRecovery
 from slave.types import (
     Boolean, Enum, Float, Integer, Register, Set, String, Mapping
 )
-import slave.types
-
-try:
-    from numpy import fromstring
-except ImportError:
-    import array
-    import sys
-
-    def fromstring(string, dtype):
-        if dtype.startswith('>'):
-            endian = 'big'
-            dtype = dtype[1:]
-        elif dtype.startswith('<'):
-            endian = 'little'
-            dtype = dytpe[1:]
-        else:
-            endian = sys.byteorder
-        data = array.array(dtype, string)
-        if endian != sys.byteorder:
-            data.byteswap()
-        return data
 
 
 class SR7230(InstrumentBase):
@@ -116,7 +98,7 @@ class SR7230(InstrumentBase):
 
         * 'fet' 10MOhm input impedance. It is the default setting.
 
-    :ivar grounding: The input connector shield grounding mode. Valid entries
+    :ivar shield: The input connector shield grounding mode. Valid entries
         are 'ground' and 'float'.
     :ivar coupling: The input connector coupling, either 'ac' or 'dc'.
     :ivar sensitivity: The full-scale sensitivity. The valid entries depend on
@@ -416,6 +398,24 @@ class SR7230(InstrumentBase):
     :ivar date: The last calibration date. (read only)
     :ivar name: The name of the lock-in amplifier, a string with up 64 chars.
 
+    .. rubric:: Dual Mode
+
+    In dual reference mode, two demodulator stages are used instead of one. The
+    standard commands such as `x`, `y` or `sensitivity` won't work. To access
+    the parameters of the two stages use the :attr:`~.SR7230.demod`
+    attribute instead. E.g.::
+
+        # Set lockin into dual reference mode.
+        sr7230.reference_mode = 'dual'
+        # get x value of first demod stage (zero index based).
+        x = sr7230.demod[0].x
+        # set the sensitivity of the second demod stage.
+        sr7230.demod[1].sensitivity = '50 nV'
+
+    :ivar demod: A tuple of two :class:`~.Demodulator` instances. The first with
+        index 0 represents the first demodulator, the second item with index 1
+        represents the second demodulator.
+
     """
     BAUDRATE = [
         75, 110, 134.5, 150, 300, 600, 1200, 1800,
@@ -471,7 +471,7 @@ class SR7230(InstrumentBase):
     }
 
     def __init__(self, transport, option=None):
-        protocol = slave.protocol.SignalRecovery()
+        protocol = protocol.SignalRecovery()
         super(SR7230, self).__init__(transport, protocol)
         self.option = option
         # Signal Channel
@@ -492,7 +492,7 @@ class SR7230(InstrumentBase):
             Enum('main', 'adc1', 'tandem')
         )
         self.fet = Command('FET', 'FET', Enum('bipolar', 'fet'))
-        self.grounding = Command('FLOAT', 'FLOAT', Enum('ground', 'float'))
+        self.shield = Command('FLOAT', 'FLOAT', Enum('ground', 'float'))
         self.coupling = Command('DCCOUPLE', 'DCCOUPLE', Enum('ac', 'dc'))
         self._voltage_sensitivity = Command(
             'SEN',
@@ -725,7 +725,10 @@ class SR7230(InstrumentBase):
 
         # Dual Mode Command
         # =================
-        # TODO
+        self.demod = (
+            Demodulator(self._transport, self._protocol, 1),
+            Demodulator(self._transport, self._protocol, 2),
+        )
 
     @property
     def sensitivity(self):
@@ -845,22 +848,74 @@ class SR7230(InstrumentBase):
         """Starts data acquisition."""
         self._write('TD')
 
-    def take_data_triggered(self, mode):
+    def take_data_triggered(self, trigger, edge, stop):
         """Configures data acquisition to start on various trigger conditions.
 
-        :param mode: Defines the trigger condition.
+        :param trigger: The trigger condition, either 'curve' or 'point'.
 
-            value start condition sample condition stop condition
+            ======= =======================================================
+            Value   Description
+            ======= =======================================================
+            'curve' Each trigger signal starts a curve acquisition. The max
+                    trigger frequency in this mode is 1 kHz.
+            'point' A point is stored for each trigger signal.
+            ======= =======================================================
+
+        :param edge: Defines wether a 'rising' or 'falling' edge is interpreted
+            as a trigger signal.
+        :param stop: The stop condition. Valid are 'buffer', 'halt',
+            'rising' and 'falling'.
+
+            ========= ==========================================================
+            Value     Description
+            ========= ==========================================================
+            'buffer'  Data acquisition stops when the number of point
+                      specified in :attr:`~.Buffer.length` is acquired.
+            'halt'    Data acquisition stops when the halt command is issued.
+            'trigger' Takes data for the period of a trigger event. If edge is
+                      'rising' then teh acquisition starts on the rising edge of
+                      the trigger signal and stops on the falling edge and vice
+                      versa
+            ========= ==========================================================
+
         """
+        param = {
+            ('curve', 'rising', 'buffer'): 0,
+            ('point', 'rising', 'buffer'): 1,
+            ('curve', 'falling', 'buffer'): 2,
+            ('point', 'falling', 'buffer'): 3,
+            ('curve', 'rising', 'halt'): 4,
+            ('point', 'rising', 'halt'): 5,
+            ('curve', 'falling', 'halt'): 6,
+            ('point', 'falling', 'halt'): 7,
+            ('curve', 'rising', 'trigger'): 8,
+            ('curve', 'falling', 'trigger'): 9,
+        }
+        self._write(('TDT', Integer), param(mode, edge, stop))
 
-    def take_data_continuously(self, stop):
+    def take_data_continuously(self, trigger, stop):
         """Starts continuous data acquisition.
 
-        :param stop: The stop condition. Valid are 'halt', 'rising' and 'falling'.
+        :param trigger: The trigger condition, either 'curve' or 'point'.
+
+            ======= ===============================================
+            Value   Description
+            ======= ===============================================
+            'curve' Each trigger signal starts a curve acquisition. The max
+                    trigger frequency in this mode is 1 kHz.
+            'point' A point is stored for each trigger signal.
+            ======= ===============================================
+
+        :param edge: Defines wether a 'rising' or 'falling' edge is interpreted
+            as a trigger signal.
+        :param stop: The stop condition. Valid are 'buffer', 'halt',
+            'rising' and 'falling'.
 
             ========= =======================================================
             Value     Description
             ========= =======================================================
+            'buffer'  Data acquisition stops when the number of point
+                      specified in :attr:`~.Buffer.length` is acquired.
             'halt'    Data acquisition stops when the halt command is issued.
             'rising'  Data acquisition stops on the rising edge of a trigger
                       signal.
@@ -1224,8 +1279,163 @@ class StandardBuffer(InstrumentBase):
             f2 = self._protocol.query_bytes(self._transport, nbytes, 'DCB', '16')
             f1 = fromstring(buffer(data), dtype='>H')
             f2 = fromstring(buffer(data), dtype='>h')
-            # TODO: We're relying on numpy here.
             return (f2.astype(float) * 65536 + f1.astype(float)) / 1e3
         else:
             data = self._protocol.query_bytes(self._transport, nbytes, 'DCB', idx)
             return fromstring(buffer(data), dtype='>h')
+
+
+class Demodulator(InstrumentBase):
+    """Implements the dual reference mode commands.
+
+    .. note::
+
+       These commands only work if the lockin is in dual reference mode. See
+       :attr:`~.SR7230.reference_mode`.
+
+    :ivar x: A float representing the X-channel output in either volt or
+        ampere. (read only)
+    :ivar y: A float representing the Y-channel output in either volt or
+        ampere. (read only)
+    :ivar x_offset: The x-channel output offset control.
+        *(<enabled>, <range>)*, where
+
+        * *<enabled>* A boolean enabling/disabling the output offset.
+        * *<range>* The range of the offset, an integer between -30000 and
+          30000 corresponding to +/- 300%.
+
+    :ivar y_offset: The y-channel output offset control.
+        *(<enabled>, <range>)*, where
+
+        * *<enabled>* A boolean enabling/disabling the output offset.
+        * *<range>* The range of the offset, an integer between -30000 and
+          30000 corresponding to +/- 300%.
+
+    :ivar xy: X and Y-channel output with the following format *(<x>, <y>)*.
+        (read only)
+    :ivar r: The signal magnitude, as float. (read only)
+    :ivar theta: The signal phase, as float. (read only)
+    :ivar r_theta: The magnitude and the signal phase. *(<r>, <theta>)*.
+        (read only)
+    :ivar reference_phase: The phase of the reference signal, a float ranging
+        from -360 to 360 corresponding to the angle in degrees with a resolution
+        of mili degree.
+    :ivar harmonic: The reference harmonic mode, an integer between 1 and 128
+        corresponding to the first to 127 harmonics.
+    :ivar slope: The output lowpass filter slope in dB/octave, either '6 dB',
+        '12 dB', '18 dB' or '24 dB'.
+
+        .. note::
+
+            If :attr:¸.noise_measurement` or :attr:`.fastmode` is enabled, only
+            '6 dB' and '12 dB' are valid.
+
+    :ivar time_constant: The filter time constant. See :attr:`.TIME_CONSTANT`
+        for valid values.
+
+        .. note::
+
+            If :attr:`.noise_measurement` is enabled, only '500 us', '1 ms',
+            '2 ms', '5 ms' and '10 ms' are valid.
+
+    :ivar sensitivity: The full-scale sensitivity. The valid entries depend on
+        the current mode. See :attr:`~.SR7230.sensitivity` for valid entries.
+
+    """
+    def __init__(self, transport, protocol, idx):
+        super(Demodulator, self).__init__(transport, protocol)
+        self.idx = idx
+        self.x = Command(('X{}.'.format(idx), Float))
+        self.x_offset = Command(
+            'XOF{}'.format(idx),
+            'XOF{}'.format(idx),
+            [Boolean, Integer(min=-30000, max=30000)]
+        )
+        self.y = Command(('Y{}.'.format(idx), Float))
+        self.y_offset = Command(
+            'YOF{}'.format(idx),
+            'YOF{}'.format(idx),
+            [Boolean, Integer(min=-30000, max=30000)]
+        )
+        self.xy = Command(('XY{}.'.format(idx), [Float, Float]))
+        self.r = Command(('MAG{}.', Float))
+        self.theta = Command(('PHA{}.', Float))
+        self.r_theta = Command(('MP{}.', [Float, Float]))
+        self.reference_phase = Command(
+            'REFP{}.'.format(idx),
+            'REFP{}.'.format(idx),
+            Float(min=-360., max=360., fmt='{:.3f}')
+        )
+        self.harmonic = Command(
+            'REFN{}'.format(idx),
+            'REFN{}'.format(idx),
+            Integer(min=1, max=128)
+        )
+        self.slope = Command(
+            'SLOPE{}'.format(idx),
+            'SLOPE{}'.format(idx),
+            Enum('6 dB', '12 dB', '18 dB', '24 dB')
+        )
+        self.time_constant = Command(
+            'TC{}'.format(idx),
+            'TC{}'.format(idx),
+            Enum(*SR7230.TIME_CONSTANT)
+        )
+        self._voltage_sensitivity = Command(
+            'SEN{}'.format(idx),
+            'SEN{}'.format(idx),
+            Enum(*SR7230.SENSITIVITY_VOLTAGE, start=1)
+        )
+        self._highbandwidth_sensitivity = Command(
+            'SEN{}'.format(idx),
+            'SEN{}'.format(idx),
+            Enum(*SR7230.SENSITIVITY_CURRENT_HIGHBW, start=1)
+        )
+        self._lownoise_sensitivity = Command(
+            'SEN{}'.format(idx),
+            'SEN{}'.format(idx),
+            Enum(*SR7230.SENSITIVITY_CURRENT_LOWNOISE, start=7)
+        )
+
+    @property
+    def sensitivity(self):
+        imode = self._query((
+            'IMODE',
+            Enum('off', 'high bandwidth', 'low noise')
+        ))
+        if imode == 'off':
+            return self._voltage_sensitivity
+        elif imode == 'high bandwidth':
+            return self._highbandwidth_sensitivity
+        else:
+            return self._lownoise_sensitivity
+
+    @sensitivity.setter
+    def sensitivity(self, value):
+        imode = self._query((
+            'IMODE',
+            Enum('off', 'high bandwidth', 'low noise')
+        ))
+        if imode == 'off':
+            self._voltage_sensitivity = value
+        elif imode == 'high bandwidth':
+            self._highbandwidth_sensitivity = value
+        else:
+            self._lownoise_sensitivity = value
+
+    def auto_sensitivity(self):
+        """Triggers the auto sensitivity mode.
+
+        When the auto sensitivity mode is triggered, the SR7225 adjustes the
+        sensitivity so that the signal magnitude lies in between 30% and 90%
+        of the full scale sensitivity.
+        """
+        self._write('AS{}'.format(self.idx))
+
+    def auto_phase(self):
+        """Triggers the auto phase mode."""
+        self._write('AQN{}'.format(self.idx))
+
+    def auto_offset(self):
+        """Triggers the auto offset mode."""
+        self._write('AXO{}'.format(idx))
