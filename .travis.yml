@@ -2,9 +2,7 @@ language: python
 python: "2.7"
 env:
   - TOXENV=py27
-  # python 3 tests are disabled, they currently break
-  # and need some more fixing.
-  # - TOXENV=py33
+  - TOXENV=py33
 
 install:
   - pip install tox --use-mirrors
