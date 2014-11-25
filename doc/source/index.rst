@@ -68,6 +68,8 @@ User Guide
    async
    examples
 
+.. _api_reference:
+
 API Reference
 =============
 

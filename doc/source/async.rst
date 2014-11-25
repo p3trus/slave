@@ -3,13 +3,17 @@
 Asynchronous IO
 ===============
 
+.. warning::
+
+    This is currently not working!
+
 Slave has a built-in compatibility layer for the tornado framework. It is
 currently in an early state and only socket transports are supported.
 Nevertheless, it is already usable. The following examples will show how to
 make use of it.
 
 A simple asynchronous poller
----------------------------
+----------------------------
 
 In this example we will implement a simple, basically useless, asynchronous
 poller to explain the concept. It simply prints out the polled value. We will

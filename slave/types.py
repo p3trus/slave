@@ -11,9 +11,9 @@ Custom Types
 
 The :class:`~.Command` class needs an object with three methods:
 
- * :meth:`.load(value)`, takes the value and returns the userspace representation.
- * :meth:`.dump(value)`, returns the device space representation of value.
- * :meth:`.simulate()`, generates a valid user space value.
+ * :meth:`~.Type.load(value)`, takes the value and returns the userspace representation.
+ * :meth:`~.Type.dump(value)`, returns the device space representation of value.
+ * :meth:`~.Type.simulate()`, generates a valid user space value.
 
 The abstract :class:`~.Type` class implements this interface but most of the
 time it is sufficient to inherit from :class:`~.SingleType`.

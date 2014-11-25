@@ -167,7 +167,7 @@ class SR850(IEC60488, PowerOn):
     .. rubric:: Math Commands
 
     :ivar math_operation: Sets the math operation used by the
-        :meth:`~.SR850.calculate operation. Valid are '+', '-', '*', '/',
+        :meth:`~.SR850.calculate` operation. Valid are '+', '-', '*', '/',
         'sin', 'cos', 'tan', 'sqrt', '^2', 'log' and '10^x'.
     :ivar math_argument_type: The argument type used in the :meth:`calculate`
         method, either 'trace' or 'constant'.
@@ -859,8 +859,8 @@ class SR850(IEC60488, PowerOn):
         :param operation: Set's the math operation if not `None`. See
             :attr:`~.SR850.math_operation` for details.
         :param trace: If the trace argument is used, it sets the
-            :attr:`~.math_trace_argument' to it and sets the
-            :attr:`~.math_argument_type`to 'trace'
+            :attr:`~.math_trace_argument` to it and sets the
+            :attr:`~.math_argument_type` to 'trace'
         :param constant: If constant is not `None`, the
             :attr:`~.math_constant`is set with this value and the
             :attr:`~.math_argument_type` is set to 'constant'

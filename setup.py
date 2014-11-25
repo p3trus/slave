@@ -6,6 +6,11 @@ import sys
 
 from setuptools import setup, find_packages
 
+requires = ['future']
+try:
+    import numpy
+except ImportError:
+    requires.append('numpy')
 
 desc = ('A lightweight python package to simplify the communication with '
         'several scientific instruments.')
@@ -32,4 +37,5 @@ setup(
     long_description=open('README.rst').read(),
     packages=find_packages(),
     include_package_data=True,
+    install_requires=requires,
 )

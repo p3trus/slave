@@ -13,6 +13,7 @@ Manufacturer       Model                       Class
 =================  ==========================  ============================================
 Lakeshore          LS370 AC Resistance Bridge  :class:`slave.lakeshore.ls370.LS370`
 Signal Recovery    SR7225                      :class:`slave.signal_recovery.sr7225.SR7225`
+Signal Recovery    SR7230                      :class:`slave.signal_recovery.sr7230.SR7230`
 Stanford Research  SR830                       :class:`slave.srs.sr830.SR830`
 Stanford Research  SR850                       :class:`slave.srs.sr850.SR850`
 =================  ==========================  ============================================
@@ -38,9 +39,9 @@ CryoMagnetics Inc.  Magnet Power Supply Model 4G  :class:`slave.cryomagnetics.MP
 Cryostats
 ---------
 
-==============  =============== =================================
+==============  =============== ==================================
 Manufacturer    Model           Class
-==============  =============== =================================
-Quantum Design  PPMS Model 6000 :class:`slave.quantum_design.PPMS
-==============  =============== =================================
+==============  =============== ==================================
+Quantum Design  PPMS Model 6000 :class:`slave.quantum_design.PPMS`
+==============  =============== ==================================
 

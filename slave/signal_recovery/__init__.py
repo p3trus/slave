@@ -6,3 +6,4 @@ from __future__ import (absolute_import, division,
 from future.builtins import *
 
 from slave.signal_recovery.sr7225 import SR7225
+from slave.signal_recovery.sr7230 import SR7230
