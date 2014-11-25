@@ -39,9 +39,9 @@ CryoMagnetics Inc.  Magnet Power Supply Model 4G  :class:`slave.cryomagnetics.MP
 Cryostats
 ---------
 
-==============  =============== =================================
+==============  =============== ==================================
 Manufacturer    Model           Class
-==============  =============== =================================
-Quantum Design  PPMS Model 6000 :class:`slave.quantum_design.PPMS
-==============  =============== =================================
+==============  =============== ==================================
+Quantum Design  PPMS Model 6000 :class:`slave.quantum_design.PPMS`
+==============  =============== ==================================
 

@@ -23,7 +23,7 @@ Note: This release breaks backwards compatibility.
  - Renamed `slave.core.InstrumentBase._cfg` attribute to `_protocol` and in all
    dependant cases.
 
-Changes to the `slave.core`module:
+Changes to the `slave.core` module:
 
  - The `InstrumentBase.transport`attribute was renamed to `_transport` to be
    more consistent. This avoids shadowing of possible commands and show the

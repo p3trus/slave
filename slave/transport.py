@@ -117,7 +117,8 @@ class SimulatedTransport(object):
 class Socket(Transport):
     """A slave compatible adapter for pythons socket.socket class.
 
-    :param address: The socket address a tuple of host string and port. E.g.::
+    :param address: The socket address a tuple of host string and port. E.g.
+        ::
 
             from slave.signal_recovery import SR7230
             from slave.transport import Socket
@@ -134,14 +135,14 @@ class Socket(Transport):
             with transport:
                 # connection is created
                 transport.write(b'*IDN?')
-                response = transport.read_until(b'\n')
+                response = transport.read_until(b'\\n')
                 # connection is closed again.
 
             transport = Socket(address=('192.168.178.1', 50000), alwaysopen=True)
             # connection is already opened.
             with transport:
                 transport.write(b'*IDN?')
-                response = transport.read_until(b'\n')
+                response = transport.read_until(b'\\n')
                 # connection is kept open.
 
     """

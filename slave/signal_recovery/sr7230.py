@@ -1330,8 +1330,8 @@ class Demodulator(InstrumentBase):
             If :attr:¸.noise_measurement` or :attr:`.fastmode` is enabled, only
             '6 dB' and '12 dB' are valid.
 
-    :ivar time_constant: The filter time constant. See :attr:`.TIME_CONSTANT`
-        for valid values.
+    :ivar time_constant: The filter time constant. See
+        :attr:`~.SR7230.TIME_CONSTANT` for proper values.
 
         .. note::
 

@@ -98,7 +98,7 @@ class Command(object):
 
         The types have the same requirements as the type parameter. If they are
     :param write: A string representing the *command program header*, e.g.
-        '*CLS'. To allow for customization of the writing a 2-tuple value
+        `'*CLS'`. To allow for customization of the writing a 2-tuple value
         with the following requirements is valid as well.
 
         * (<command header>, <response data type>)
