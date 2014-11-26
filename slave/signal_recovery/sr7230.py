@@ -5,8 +5,8 @@
 
 
 The following example shows how to use the fast curve buffer to acquire data.
-
 ::
+
     import time
     from slave.transport import Socket
     from slave.signal_recovery import SR7230

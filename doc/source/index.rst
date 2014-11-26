@@ -74,7 +74,7 @@ API Reference
 This part of the documentation covers the complete api of the slave library.
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 3
 
    slave
 
