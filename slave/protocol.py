@@ -1,6 +1,25 @@
 #  -*- coding: utf-8 -*-
 #
 # Slave, (c) 2014, see AUTHORS.  Licensed under the GNU GPL.
+"""The :mod:`slave.protocol` module implements the intermediate abstraction
+layer of the slave library.
+
+The protocol knows how to create command messages and how to parse responses.
+It has no knowledge of which commands are actually supported by the device and
+does not care what kind of connection (e.g. ethernet, gpib, serial, ...) is used
+to communicate with the device.
+
+The common protocol api is defined by the :class:`slave.Protocol` class. Custom
+protocols must implement the :meth:`~.Protocol.query` and
+:meth:`~.Protocol.write` methods.
+
+The following protocols are already implemented and ready to use:
+
+ * :class:`~.IEC60488`
+ * :class:`~.SignalRecovery`
+ * :class:`~.OxfordIsobus`
+
+"""
 from __future__ import (absolute_import, division,
                         print_function, unicode_literals)
 from future.builtins import *

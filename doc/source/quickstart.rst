@@ -17,8 +17,8 @@ transport with the device at primary address 8.
     transport = visa('GPIB::08')
 
 Slave does not communicate directly with the device. It uses an object referred
-to as :ref:`transport object<transport_object>` for the low level
-communication (see :ref:`transport_object` for a detailed explanation).
+to as :class:`~.Transport` object for the low level communication (see
+:ref:`transport_layer` for a detailed explanation).
 
 In the next step, we construct a :class:`~.slave.sr830.SR830` instance and
 inject the `pyvisa`_ transport.

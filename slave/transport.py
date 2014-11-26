@@ -1,16 +1,16 @@
 #  -*- coding: utf-8 -*-
 #
 # Slave, (c) 2012-2014, see AUTHORS.  Licensed under the GNU GPL.
-"""Several implementations of the transport api.
+"""The :mod:`slave.transport` module implements the lowest level abstraction
+layer of the slave library.
 
-The :mod:`slave.transport` module implements the lowest level abstraction layer
-in the slave library. The transport is responsible for sending and receiving
-raw bytes. It interfaces with the hardware, but has no knowledge of the meaning
-of the bytes transfered.
+The transport is responsible for sending and receiving raw bytes. It interfaces
+with the hardware, but has no knowledge of the semantic meaning of the
+transfered bytes.
 
 The :class:`.Transport` class defines a common api used in higher abstraction
-layers. Subclasses of :class:`slave.Transport` must implement `__read__()` and
-`__write__()` methods.
+layers. Custom transports should subclass :class:`slave.Transport` and implement
+the `__read__()` and `__write__()` methods.
 
 The following transports are already available:
 

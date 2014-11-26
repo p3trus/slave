@@ -59,14 +59,12 @@ User Guide
    :maxdepth: 2
 
    installation
-   changelog
    quickstart
-   transport
-   logging
+   basic_concepts
    builtin_drivers
-   custom_device_drivers
-   async
+   logging
    examples
+   changelog
 
 .. _api_reference:
 
