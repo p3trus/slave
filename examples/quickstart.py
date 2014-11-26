@@ -2,13 +2,13 @@
 import time
 
 from slave.srs import SR830
-from slave.transport import Visa
+from slave.transport import visa
 
 
-lockin = SR830(Visa('GPIB::08'))
+lockin = SR830(visa('GPIB::08'))
 lockin.frequency = 22.08
 lockin.amplitude = 5.0
 lockin.reserve = 'high'
-for i in xrange(60):
+for i in range(60):
     print lockin.x
     time.sleep(1)
