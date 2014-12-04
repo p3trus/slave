@@ -67,16 +67,13 @@ class Transport(object):
         buffer_size = len(self._buffer)
         if buffer_size > num_bytes:
             # The buffer is larger than the requested amount of bytes.
-            print('>', buffer_size, num_bytes)
             data, self._buffer = self._buffer[:num_bytes], self._buffer[num_bytes:]
         elif buffer_size == num_bytes:
-            print('==', buffer_size, num_bytes)
             # Buffer size matches requested number of bytes.
             data, self._buffer = self._buffer, bytearray()
         else:
             # Buffer is too small. Try to read `num_bytes` and call `read_bytes()`
             # again. This ensures that `num_bytes` are returned.
-            print('<', buffer_size, num_bytes)
             self._buffer += self.__read__(num_bytes)
             return self.read_exactly(num_bytes)
         return data
@@ -222,6 +219,7 @@ class Visa_1_5(Transport):
 class Serial(Transport):
     """A pyserial adapter."""
     def __init__(self, *args, **kw):
+        super(Serial, self).__init__()
         # We import serial inside the class, because pyserial is only neccessary
         # if the serial adapter is used.
         import serial
@@ -238,6 +236,7 @@ class LinuxGpib(Transport):
     """A linuxgpib adapter."""
     def __init__(self, primary=0, secondary=0, board=0, timeout=13, send_eoi=1,
                  eos=0):
+        super(LinuxGpib, self).__init__()
         lib = ctypes.util.find_library('gpib')
         self._lib = ct.CDLL(lib)
         self._device = self._lib.ibdev(
