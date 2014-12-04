@@ -55,6 +55,24 @@ This part covers the complete api documentation of the slave library.
     :undoc-members:
     :show-inheritance:
 
+:mod:`keithley` Module
+----------------------
+
+.. automodule:: slave.keithley
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+.. automodule:: slave.keithley.k2182
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+.. automodule:: slave.keithley.k6221
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 :mod:`lakeshore` Module
 -----------------------
 
