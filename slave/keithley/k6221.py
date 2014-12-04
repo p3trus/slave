@@ -5,6 +5,7 @@
 :class:`~.K6221` ac/dc current source.
 
 """
+import itertools
 from slave.core import Command, InstrumentBase
 from slave.iec60488 import (IEC60488, Trigger, ObjectIdentification,
     StoredSetting)
@@ -217,7 +218,11 @@ class DigitalIO(InstrumentBase):
     """
     def __init__(self, transport, protocol):
         super(DigitalIO, self).__init__(transport, protocol)
-        self.force_output = Command(':CALC3:LIM?', ':CALC3:LIM', Boolean)
+        self.force_output = Command(
+            ':CALC3:FORC:STAT?',
+            ':CALC3:FORC:STAT',
+            Boolean
+        )
         self.test_limit = Command(':CALC3:LIM?', ':CALC3:LIM', Boolean)
         pattern = Register({
             0: 'out1',
@@ -272,7 +277,11 @@ class DisplayWindow(InstrumentBase):
         super(DisplayWindow, self).__init__(transport, protocol)
         self.id = int(id)
         self.text = DisplayWindowText(self.id, self._transport, self._protocol)
-        self.blinking = Command(':DISP:ATTR?', ':DISP:ATTR', Boolean)
+        self.blinking = Command(
+            ':DISP:WIND{}:ATTR?'.format(id),
+            ':DISP:WIND{}:ATTR'.format(id),
+            Boolean
+        )
 
 
 class DisplayWindowText(InstrumentBase):
@@ -292,7 +301,7 @@ class DisplayWindowText(InstrumentBase):
         )
         self.enabled = Command(
             ':DISP:WIND{0}:TEXT:STAT?'.format(id),
-            ':DISP:WIND{0}::TEXT:STAT'.format(id),
+            ':DISP:WIND{0}:TEXT:STAT'.format(id),
             Boolean
         )
 
@@ -303,8 +312,15 @@ class DisplayWindowText(InstrumentBase):
 class Format(InstrumentBase):
     """The format command subgroup.
 
-    :ivar data_type:
-    :ivar elements:
+    :ivar data: Specifies the data format. Valid are 'ascii', 'real32',
+        'real64', sreal' and dreal'.
+    :ivar elements: A tuple of data elements configuring what should be stored
+        in the buffer. Valid elements are 'reading', 'timestamp', 'units',
+        'rnumber', 'source', 'compliance' 'avoltage', 'all' and 'default'.
+        E.g.::
+
+            k6221.format.elements = 'reading', 'source', 'timestamp'
+
     :ivar byte_order: The byte order. Valid are 'normal' and 'swapped'.
 
         .. note::
@@ -316,20 +332,38 @@ class Format(InstrumentBase):
         'ascii', 'octal', 'hex' and 'binary'.
 
     """
+    DATA = {
+        'ascii': 'ASC',
+        'real32': 'REAL,32', # TODO might break due to the , in the response.
+        'real64': 'REAL,64',
+        'sreal': 'SRE',
+        'dreal': 'DRE'
+    }
+    ELEMENTS = {
+        'reading': 'READ',
+        'timestamp': 'TST',
+        'units': 'UNIT',
+        'rnumber': 'RNUM',
+        'source': 'SOUR',
+        'compliance': 'COMP',
+        'avoltage': 'AVOL',
+        'all': 'ALL',
+        'default': 'DEF',
+    }
     def __init__(self, transport, protocol):
         super(Format, self).__init__(transport, protocol)
-        # TODO write doc
         self.data = Command(
             ':FORM?',
             ':FORM',
-            Mapping({
-                'ascii': 'ASC', 'real32': 'REAL,32', 'real64': 'REAL,64',
-                'sreal': 'SRE', 'dreal': 'DRE'
-            })
+            Mapping(Format.DATA_FORMAT)
         )
-        # TODO
-        # Example response 'READ,TST'
-        # self.elements = Command(':FORM:ELEM?', ':FORM:ELEM', #TODO)
+        self.elements = Command(
+            ':FORM:ELEM?',
+            ':FORM:ELEM',
+            # We use itertools here because we don't know the number of data
+            # types. E.g. a response could be 'READ' or 'READ,TST'.
+            itertools.repeat(Mapping(Format.ELEMENTS))
+        )
         self.byte_order = Command(
             ':FORM:BORD?',
             ':FORM:BORD',
@@ -398,15 +432,15 @@ class Sense(InstrumentBase):
 class SenseData(InstrumentBase):
     """The data command subsystem of the Sense node.
 
-    :ivar fresh: Similar to latest, but the same reading can only be returned once.
-        (read-only)
+    :ivar fresh: Similar to latest, but the same reading can only be returned
+        once. If no fresh reading is available, a call will block. (read-only)
     :ivar latest: Represents the latest pre-math delta reading. (read-only)
 
     """
     def __init__(self, transport, protocol):
         super(SenseData, self).__init__(transport, protocol)
-        self.fresh = Command(':SENS:DATA:FRES?', ':SENS:DATA:FRES', Float)
-        self.latest = Command(':SENS:DATA?', ':SENS:DATA', Float)
+        self.fresh = Command((':SENS:DATA:FRES?', Float))
+        self.latest = Command((':SENS:DATA?', Float))
 
 
 class SenseAverage(InstrumentBase):
@@ -475,7 +509,10 @@ class Source(InstrumentBase):
         self.list = SourceList(self._transport, self._protocol)
         self.delta = SourceDelta(self._transport, self._protocol)
         self.pulse_delta = SourcePulseDelta(self._transport, self._protocol)
-        self.differential_conductance = SourceDifferentialConductance(self._transport, self._protocol)
+        self.differential_conductance = SourceDifferentialConductance(
+            self._transport,
+            self._protocol
+        )
         self.wave = SourceWave(self._transport, self._protocol)
 
     def clear(self):
@@ -490,7 +527,7 @@ class SourceCurrent(InstrumentBase):
     :ivar float range: The current range in ampere. [-105e-3, 105e3].
     :ivar bool auto_range: A boolean flag to enable/disable auto ranging.
     :ivar float compliance: The voltage compliance in volts. [0.1, 105].
-    :ivar bool filtering: The state of the analog filter.
+    :ivar bool analog_filter: The state of the analog filter.
     :ivar float start: The start current. [-105e-3, 105e-3].
     :ivar float step: The step current. [-1e-13, 105e-3].
     :ivar float stop: The stop current. [-105e-3, 105e-3].
@@ -518,10 +555,15 @@ class SourceCurrent(InstrumentBase):
             Boolean
         )
         self.compliance = Command(
-            ':SOUR:CURR:COMPL?',
-            ':SOUR:CURR:COMPL',
+            ':SOUR:CURR:COMP?',
+            ':SOUR:CURR:COMP',
             # TODO max should be included in range
             Float(min=0.1, max=105)
+        )
+        self.analog_filter = Command(
+            ':SOUR:CURR:FILT?',
+            ':SOUR:CURR:FILT',
+            Boolean
         )
         self.start = Command(
             ':SOUR:CURR:STAR?',
@@ -558,12 +600,46 @@ class SourceCurrent(InstrumentBase):
 class SourceSweep(InstrumentBase):
     """The sweep command subsystem of the Source node.
 
-    :ivar :
+    :ivar spacing: The sweep type, valid are 'linear', 'log' and 'list'.
+    :ivar int points: The number of sweep points in the range 1 to 65535.
+    :ivar ranging: The sweep ranging, valid are 'auto', 'best' and 'fixed'.
+    :ivar count: The sweep count, either an integer between 1 and 9999 or
+        float('inf').
+
+        .. note:: The range is not checked.
+
+    :ivar bool compliance_abort: Enables/Disables the compliance abort function.
 
     """
     def __init__(self, transport, protocol):
         super(SourceSweep, self).__init__(transport, protocol)
-        # TODO
+        self.spacing = Command(
+            ':SOUR:SWE:SPAC?',
+            ':SOUR:SWE:SPAC',
+            Mapping({'linear': 'LIN', 'log': 'LOG', 'list': 'LIST'})
+        )
+        self.points = Command(
+            ':SOUR:SWE:POIN?',
+            ':SOUR:SWE:POIN',
+            Integer(min=1, max=65536)
+        )
+        self.ranging = Command(
+            ':SOUR:SWE:RANG?',
+            ':SOUR:SWE:RANG',
+            Mapping({'auto': 'AUTO', 'best': 'BEST', 'fixed': 'FIXED'})
+        )
+        self.count = Command(
+            ':SOUR:SWE:COUN?',
+            ':SOUR:SWE:COUN',
+            # We use a float instead of an integer because it can represent
+            # infinity. E.g. float('inf') is valid python.
+            Float
+        )
+        self.compliance_abort = Command(
+            ':SOUR:SWE:CAB?',
+            ':SOUR:SWE:CAB',
+            Boolean
+        )
 
     def arm(self):
         """Arms the sweep."""
@@ -577,43 +653,292 @@ class SourceSweep(InstrumentBase):
 class SourceList(InstrumentBase):
     """The list command subsystem of the Source node.
 
+    It is used to define arbitrarycurrent pulse sequences. E.g. writing a
+    current sequence is as simple as::
+
+        >>> k6221.source.list.current[:] = [-0.01, -0.02, 0.0]
+        >>> len(k6221.source.list.current)
+        3
+
+    To extend the list, a special member function is provided::
+
+        >>> k6221.source.list.current.extend([0.01, 0.0, 0.0])
+        >>> k6221.source.list.current[:]
+        [-0.01, -0.02, 0.0, 0.01, 0.0, 0.0]
+
+    Slicing notation can also be used to manipulate the sequence::
+
+        >>> k6221.source.list.current[::2] = [-0.03, 0.05, 0.07]
+        >>> k6221.source.list.current[:]
+        [-0.03, -0.02, 0.05, 0.01, 0.07, 0.0]
+
+    :attr:`~.SourceList.delay` and :attr:`~.SourceList.compliance` can be
+    manipulated in the same manner.
+
+    :ivar current: An instance of :class:`~.SourceListSequence`, giving access
+        to the current subsystem.
+    :ivar delay: An instance of :class:`~.SourceListSequence`, giving access
+        to the delay subsystem.
+    :ivar current: An instance of :class:`~.SourceListSequence`, giving access
+        to the compliance subsystem.
+
     """
     def __init__(self, transport, protocol):
         super(SourceList, self).__init__(transport, protocol)
-        # TODO
+        self.current = SourceListSequence(
+            transport,
+            protocol,
+            node='CURR',
+            type=Float(min=-105e-3, max=105e-3) #TODO max should be included.
+        )
+        self.delay = SourceListSequence(
+            transport,
+            protocol,
+            node='DEL',
+            type=Float(min=1e-3, max=1e6)
+        )
+        self.current = SourceListSequence(
+            transport,
+            protocol,
+            node='COMP',
+            type=Float(min=-1e-3, max=105e-3) #TODO max should be included.
+        )
 
+
+class SourceListSequence(InstrumentBase):
+    def __init__(self, transport, protocol, node, type):
+        super(SourceListSequence, self).__init__(transport, protocol)
+        self._node = node
+        self._extend = Command(write=(
+            ':SOUR:LIST:{}:APPEND'.format(node),
+            itertools.repeat(type))
+        )
+        self._sequence = Command(
+            ':SOUR:LIST:{}?'.format(node),
+            ':SOUR:LIST:{}?'.format(node),
+            itertools.repeat(type)
+        )
+
+    def extend(self, iterable):
+        """Extends the list."""
+        self._extend = iterable
+
+    def __getitem__(self, item):
+        return self._sequence[item]
+
+    def __setitem__(self, item, value):
+        seq = self._sequence
+        seq[item] = value
+        self._sequence = seq
+
+    def __len__(self):
+        return self._query((':SOUR:LIST:{}:POIN?'.format(self._node), Integer))
 
 class SourceDelta(InstrumentBase):
     """The delta command subsystem of the Source node.
 
-    :ivar :
+    :ivar float high: The high source value, in the range 0 to 105e-3 (amps).
+    :ivar float low: The low source value, in the range 0 to -105e-3 (amps).
+    :ivar float delay: The delta delay in seconds from 1e-3 to 1e5.
+    :ivar count: The sweep count, either an integer between 1 and 65536 or
+        float('inf').
+
+        .. note:: The range is not checked.
+
+    :ivar bool compliance_abort: Enables/Disables the compliance abort function.
+    :ivar bool cold_switching: The cold switching mode.
 
     """
     def __init__(self, transport, protocol):
         super(SourceDelta, self).__init__(transport, protocol)
-        # TODO
+        self.high = Command(
+            ':SOUR:DEL:HIGH?',
+            ':SOUR:DEL:HIGH',
+            Float(min=0, max=105e-3) # TODO max should be included.
+        )
+        self.low = Command(
+            ':SOUR:DEL:LOW?',
+            ':SOUR:DEL:LOW',
+            Float(min=-105e-3, max=0.) # TODO max should be included.
+        )
+        self.delay = Command(
+            ':SOUR:DEL:DEL?',
+            ':SOUR:DEL:DEL',
+            Float(min=1e-3, max=1e5)
+        )
+        self.count = Command(
+            ':SOUR:DEL:COUN?',
+            ':SOUR:DEL:COUN',
+            # We use a float instead of an integer because it can represent
+            # infinity. E.g. float('inf') is valid python.
+            Float
+        )
+        self.compliance_abort = Command(
+            ':SOUR:DEL:CAB?',
+            ':SOUR:DEL:CAB',
+            Boolean
+        )
+        self.cold_switching = Command(
+            ':SOUR:DEL:CSW?',
+            ':SOUR:DEL:CSW',
+            # TODO check response
+            Boolean
+        )
+
+    def voltmeter_connected(self):
+        """The nanovoltmeter connection status."""
+        return self._query((':SOUR:DEL:NVPR?', Boolean))
+
+    def arm(self):
+        """Arms the source delta mode."""
+        self._write(':SOUR:DEL:ARM')
+
+    def is_armed(self):
+        """A boolean flag returning arm state."""
+        return self._query((':SOUR:DEL:ARM?', Boolean))
 
 
 class SourcePulseDelta(InstrumentBase):
     """The pulse delta command subsystem of the Source node.
 
-    :ivar :
+    :ivar float high: The high source value, in the range 0 to 105e-3 (amps).
+    :ivar float low: The low source value, in the range 0 to -105e-3 (amps).
+    :ivar float width: Pulse width in seconds in the range 50e-6 to 12e-3.
+    :ivar count: The sweep count, either an integer between 1 and 65636 or
+        float('inf').
+
+        .. note:: The range is not checked.
+    :ivar float source_delay: The source delay in seconds in the range 16e-6 to
+        11.966e-3.
+    :ivar ranging: The pulse source ranging mode. Valid are 'best' or 'fixed'.
+    :ivar interval: The interval for each pulse cycle, an integer number of
+        powerline cycles in the range 5 to 999999
+    :ivar bool sweep_output: The state of the sweep output.
+    :ivar int low_measurements: The number of low measurements per cycle, either
+        1 or 2.
 
     """
     def __init__(self, transport, protocol):
         super(SourcePulseDelta, self).__init__(transport, protocol)
-        # TODO
+        self.high = Command(
+            ':SOUR:PDEL:HIGH?',
+            ':SOUR:PDEL:HIGH',
+            Float(min=0, max=105e-3) # TODO max should be included.
+        )
+        self.low = Command(
+            ':SOUR:PDEL:LOW?',
+            ':SOUR:PDEL:LOW',
+            Float(min=-105e-3, max=0.) # TODO max should be included.
+        )
+        self.width = Command(
+            ':SOUR:PDEL:WIDT?',
+            ':SOUR:PDEL:WIDT',
+            Float(min=50e-6, max=12e-3)
+        )
+        self.count = Command(
+            ':SOUR:PDEL:COUN?',
+            ':SOUR:PDEL:COUN',
+            # We use a float instead of an integer because it can represent
+            # infinity. E.g. float('inf') is valid python.
+            Float
+        )
+        self.source_delay = Command(
+            ':SOUR:PDEL:SDEL?',
+            ':SOUR:PDEL:SDEL',
+            Float(min=16e-6, max=11.966e-3)
+        )
+        self.ranging = Command(
+            ':SOUR:PDEL:RANG?',
+            ':SOUR:PDEL:RANG',
+            Mapping({'best': 'BEST', 'fixed': 'FIX'})
+        )
+        self.interval = Command(
+            ':SOUR:PDEL:INT?',
+            ':SOUR:PDEL:INT',
+            Integer(min=1, max=1000000)
+        )
+        self.sweep_output = Command(
+            ':SOUR:PDEL:SWE?',
+            ':SOUR:PDEL:SWE',
+            Boolean
+        )
+        self.low_measurements = Command(
+            ':SOUR:PDEL:LME?',
+            ':SOUR:PDEL:LME',
+            Integer(min=1, max=3)
+        )
+
+    def voltmeter_connected(self):
+        """The nanovoltmeter connection status."""
+        return self._query((':SOUR:PDEL:NVPR?', Boolean))
+
+    def arm(self):
+        """Arms the source delta mode."""
+        self._write(':SOUR:PDEL:ARM')
+
+    def is_armed(self):
+        """A boolean flag returning arm state."""
+        return self._query((':SOUR:PDEL:ARM?', Boolean))
 
 
 class SourceDifferentialConductance(InstrumentBase):
     """The differential conductance command subsystem of the Source node.
 
-    :ivar :
+    :ivar float zero_voltage: The zero voltage of the nanovoltmeter 2182/2182A.
+    :ivar float start: The starting current (amps) in the range -105e-3 to
+        105e-3.
+    :ivar float step: The current step (amps) in the range 0 to 105e-3.
+    :ivar float stop: The stop current (amps) in the range -105e-3 to 105e-3.
+    :ivar float delta: The delta value in the range 0 to 105-e3.
+    :ivar float delay: The delay (seconds) in the range 1e-3 to 1e5.
+    :ivar bool compliance_abort: Enables/Disables the compliance abort function.
 
     """
     def __init__(self, transport, protocol):
         super(SourceDifferentialConductance, self).__init__(transport, protocol)
-        # TODO
+        self.zero_voltage = Command((':SOUR:DCON:NVZ?', Float))
+        self.start = Command(
+            ':SOUR:DCON:STAR?',
+            ':SOUR:DCON:STAR',
+            Float(min=-105e-3, max=105e-3) # TODO max should be included.
+        )
+        self.step = Command(
+            ':SOUR:DCON:STEP?',
+            ':SOUR:DCON:STEP',
+            Float(min=0, max=105e-3) # TODO max should be included.
+        )
+        self.stop = Command(
+            ':SOUR:DCON:STOP?',
+            ':SOUR:DCON:STOP',
+            Float(min=-105e-3, max=105e-3) # TODO max should be included.
+        )
+        self.delta = Command(
+            ':SOUR:DCON:DELT?',
+            ':SOUR:DCON:DELT',
+            Float(min=0., max=105e-3) # TODO max should be included.
+        )
+        self.delay = Command(
+            ':SOUR:DCON:DEL?',
+            ':SOUR:DCON:DEL',
+            Float(min=1e-3, max=1e5)
+        )
+        self.compliance_abort = Command(
+            ':SOUR:DCON:CAB?',
+            ':SOUR:DCON:CAB',
+            Boolean
+        )
+
+    def voltmeter_connected(self):
+        """The nanovoltmeter connection status."""
+        return self._query((':SOUR:DCON:NVPR?', Boolean))
+
+    def arm(self):
+        """Arms the source delta mode."""
+        self._write(':SOUR:DCON:ARM')
+
+    def is_armed(self):
+        """A boolean flag returning arm state."""
+        return self._query((':SOUR:DCON:ARM?', Boolean))
 
 
 class SourceWave(InstrumentBase):
@@ -629,6 +954,8 @@ class SourceWave(InstrumentBase):
     :ivar float offset: The offset of the wave function in amps. [-105e-3, 105e-3]
     :ivar phase_marker: The phase marker command subgroup, an instance of
         :class:`~.SourceWavePhaseMarker`.
+    :ivar arbitrary: The arbitrary sub command group, an instance of
+        :class:`~.SourceWaveArbitrary`.
     :ivar ranging: The source ranging mode. Valid are 'best' or 'fixed'.
     :ivar duration: The waveform duration in seconds. Valid are floats in the
         range [100e-9, 999999.999] or `float('inf')`
@@ -739,10 +1066,46 @@ class SourceWavePhaseMarker(InstrumentBase):
 class SourceWaveArbitrary(InstrumentBase):
     """The arbitrary waveform command subgroup of the SourceWave node.
 
+    It supports slicing notation to read and write up to 100 points into memory.
+
     """
     def __init__(self, transport, protocol):
         super(SourceWaveArbitrary, self).__init__(transport, protocol)
         # TODO
+        self._extend = Command(write=(
+            ':SOUR:WAVE:ARB:APPEND',
+            # TODO max should be included.
+            itertools.repeat(Float(min=-1, max=1.), 100)
+        ))
+        self._sequence = Command(
+                ':SOUR:WAVE:ARB:DATA?',
+                ':SOUR:WAVE:ARB:DATA',
+            itertools.repeat(Float(min=-1, max=1.), 100)
+        )
+
+    def copy(self, index):
+        """Copy arbitrary points into NVRAM.
+
+        :param index: The K6221 can store up to 4 arbitrary wavefunctions. The
+            index parameter chooses the buffer index. Valid are 1 to 4.
+
+        """
+        self._write(('SOUR:WAVE:ARB:COPY', Integer(min=1, max=5)), index)
+
+    def extend(self, iterable):
+        """Extends the list."""
+        self._extend = iterable
+
+    def __getitem__(self, item):
+        return self._sequence[item]
+
+    def __setitem__(self, item, value):
+        seq = self._sequence
+        seq[item] = value
+        self._sequence = seq
+
+    def __len__(self):
+        return self._query((':SOUR:WAVE:ARB:POIN?', Integer))
 
 
 class SourceWaveETrigger(InstrumentBase):
@@ -777,22 +1140,409 @@ class SourceWaveETrigger(InstrumentBase):
             ':SOUR:WAVE:EXTR:IGN',
             Boolean
         )
+        self.inactive_value = Command(
+            ':SOUR:WAVE:EXTR:IVAL?',
+            ':SOUR:WAVE:EXTR:IVAL',
+            Float(min=-1., max=1.) # TODO max value should be included.
+        )
 
 
 # -----------------------------------------------------------------------------
 # Status Command Layer
 # -----------------------------------------------------------------------------
 class Status(InstrumentBase):
+    """The status sub commands.
+
+    :ivar measurement: The measurement status register subcommands, an instance
+        of :class:`~.StatusEvent`. See :attr:`~.Status.MEASUREMENT`.
+    :ivar operation: The operation event register subcommands, an instance of
+        :class:`~.StatusEvent`. See :attr:`~.Status.OPERATION`.
+    :ivar questionable: The questionable event register subcommands, an instance
+        of :class:`~.StatusEvent`.. See :attr:`~.Status.QUESTIONABLE`.
+    :ivar queue: The status queue subcommands, an instance of
+        :class:`~StatusQueue`.
+
+    """
+    #: The measurement status register bits and their corresponding keys.
+    MEASUREMENT = {
+        0: 'reading overflow',
+        1: 'interlock',
+        2: 'over temperature',
+        3: 'compliance',
+        5: 'reading available',
+        6: 'trace notify',
+        7: 'buffer available',
+        8: 'buffer half full',
+        9: 'buffer full',
+        12: 'buffer quarter full',
+        13: 'buffer 3/4 full',
+    }
+    #: The questionable event register bits and their corresponding keys.
+    QUESTIONABLE = {
+        4: 'power',
+        8: 'calibration',
+    }
+    #: The operation event register bits and their corresponding keys.
+    OPERATION = {
+        0: 'calibrating',
+        1: 'sweep done',
+        2: 'sweep aborted',
+        3: 'sweeping',
+        4: 'wave started',
+        5: 'waiting for trigger',
+        6: 'waiting for arm',
+        7: 'wave stopped',
+        8: 'filter settled',
+        10: 'idle',
+        11: 'rs232 error',
+    }
     def __init__(self, transport, protocol):
         super(Status, self).__init__(transport, protocol)
+        self.measurement = StatusEvent(
+            transport,
+            protocol,
+            'MEAS',
+            Status.MEASUREMENT
+        )
+        self.operation = StatusEvent(
+            transport,
+            protocol,
+            'OPER',
+            Status.OPERATION
+        )
+        self.questionable = StatusEvent(
+            transport,
+            protocol,
+            'QUES',
+            Status.QUESTIONABLE
+        )
+        self.queue = StatusQueue(transport, protocol)
+
+    def preset(self):
+        """Returns the status registers to their default states."""
+        self._write(':STAT:PRES')
+
+
+class StatusEvent(InstrumentBase):
+    """A status event sub command group.
+
+    :ivar event: The event register.(read-only)
+    :ivar enable: The event enable register.
+    :ivar condition: The condition register. If the event condition does not
+        exist anymore, the bit is cleared.
+
+    """
+    def __init__(self, transport, protocol, node, register):
+        super(StatusEvent, self).__init__(transport, protocol)
+        self.event = Command(
+            ':STAT:{}?'.format(node),
+            ':STAT:{}'.format(node),
+            Register(register)
+        )
+        self.enable = Command(
+                ':STAT:{}:ENAB?'.format(node),
+                ':STAT:{}:ENAB'.format(node),
+            Register(register)
+        )
+        self.condition = Command(
+            ':STAT:{}:COND?'.format(node),
+            ':STAT:{}:COND'.format(node),
+            Register(register)
+        )
+
+
+class StatusQueue(InstrumentBase):
+    """The status queue sub commands.
+
+    :ivar next: The most recent error message. (read-only)
+    :ivar enable: A list of enabled error messages.
+    :ivar disable: A list of disabled error messages.
+
+    """
+    def __init__(self, transport, protocol):
+        super(StatusQueue, self).__init__(transport, protocol)
+        self.next = Command((':STAT:QUE?', itertools.repeat(Integer())))
+        self.enable = Command(
+            ':STAT:QUE:ENAB?',
+            ':STAT:QUE:ENAB',
+            itertools.repeat(Integer())
+        )
+        self.disable = Command(
+            ':STAT:QUE:DIS?',
+            ':STAT:QUE:DIS',
+            itertools.repeat(Integer())
+        )
+
+    def clear(self):
+        """Clears all messages from the error queue."""
+        self._write(':STAT:QUE:CLE')
 
 
 # -----------------------------------------------------------------------------
 # System Command Layer
 # -----------------------------------------------------------------------------
 class System(InstrumentBase):
+    """The System command subsystem.
+
+    :ivar communicate: The commuicate sub commands, an instance of
+        :class:`~.SystemCommunicate`.
+    :ivar int key: Reading queries the last pressed key, writing simulates a key
+        press. See the manual for valid key-press codes.
+    :ivar bool key_click: Enables/disables the key click.
+    :ivar bool beep: The state of the beeper.
+    :ivar poweron_setup: Chooses which setup is loaded at power on. Valid are
+        'reset', 'preset', 'save0', 'save1', 'save2', 'save3' and 'save4'.
+    :ivar error: The latest error code and message. (read-only)
+    :ivar version: The scpi revision number. (read-only)
+    :ivar analog_board: The analog board subcommands, an instance of
+        :class:`~.StatusBoard`.
+
+    """
     def __init__(self, transport, protocol):
         super(System, self).__init__(transport, protocol)
+        self.communicate = SystemCommunicate(transport, protocol)
+        self.key = Command(
+            ':SYST:KEY?',
+            ':SYST:KEY',
+            Integer
+        )
+        self.key_click = Command(
+            ':SYST:KCL?',
+            ':SYST:KCL',
+            Boolean
+        )
+        self.beep = Command(
+            ':SYST:BEEP:STAT?',
+            ':SYST:BEEP:STAT',
+            Boolean
+        )
+        self.poweron_setup = Command(
+            ':SYST:POS?',
+            ':SYST:POS',
+            Mapping({
+                'reset': 'RST', 'preset': 'PRES', 'save0': 'SAV0',
+                'save1': 'SAV1', 'save2': 'SAV2', 'save3': 'SAV3',
+                'save4': 'SAV4'
+            })
+        )
+        self.error = Command(('SYST:ERR?', Integer, String))
+        self.version = Command((':SYST:VERS?', String))
+        self.analog_board = SystemBoard(transport, protocol, node='ABO')
+        self.digital_board = SystemBoard(transport, protocol, node='DBO')
+        self.password = SystemPassword(transport, protocol)
+
+        def preset(self):
+            """Returns the device to system preset settings."""
+            self._write(':SYST:PRES')
+
+        def clear(self):
+            """Clears the error code and message from the error queue."""
+            self._write(':SYS:CLE')
+
+        def reset_timestamp(self):
+            """Resets the system timestamp to zero."""
+            self._write(':SYS:TST:RES')
+
+        def reset_reading(self):
+            """Resets the system reading number to zero."""
+            self._write(':SYS:RNUM:RES')
+
+
+class SystemCommunicate(InstrumentBase):
+    """The system communicate command subsystem.
+
+    :ivar gpib: The gpib subsystem. An instance of
+        :class:`~.SystemCommunicateGpib`.
+    :ivar serial: The serial subsystem. An instance of
+        :class:`~.SystemCommunicateSerial`
+    :ivar ethernet: The ethernet subsystem. An instance of
+        :class:`~.SystemCommunicateEthernet`.
+    :ivar bool local_lockout: Enables/Disables the local lockout.
+        .. note:: Only valid if RS232 interface is used.
+
+    """
+
+    def __init__(self, transport, protocol):
+        super(System, self).__init__(transport, protocol)
+        self.gpib = SystemCommunicateGpib(transport, protocol)
+        self.serial = SystemCommunicateSerial(transport, protocol)
+        self.ethernet = SystemCommunicateEthernet(transport, protocol)
+        self.local_lockout = Command(
+            ':SYST:COMM:RWL?',
+            ':SYST:COMM:RWL',
+            Boolean
+        )
+
+    def select(self, interface):
+        """Selects the communication interface.
+
+        :param interface: Valid are 'gpib', 'serial' or 'ethernet'
+
+        """
+        self._write(
+            ':SYST:COMM:SEL',
+            Mapping({'gpib': 'GPIB', 'serial': 'SER', 'ethernet': 'ETH'})
+        )
+
+    def local(self):
+        """Set's the device in local mode.
+
+        .. note RS232 only.
+
+        """
+        self._write(':SYST:COMM:LOC')
+
+    def remote(self):
+        """Set's the device in remote mode.
+
+        .. note RS232 only.
+
+        """
+        self._write(':SYST:COMM:REM')
+
+
+class SystemCommunicateGpib(InstrumentBase):
+    """The gpib command subsystem.
+
+    :ivar int address: The gpib address, in the range 0 to 30.
+
+    """
+    def __init__(self, transport, protocol):
+        super(SystemCommunicateGpib, self).__init__(transport, protocol)
+        self.address = Command(
+            ':SYST:COMM:GPIB:ADDR?',
+            ':SYST:COMM:GPIB:ADDR',
+            Integer(min=0, max=31)
+        )
+
+
+class SystemCommunicateSerial(InstrumentBase):
+    """The serial command subsystem.
+
+    ivar handshake: The serial control handshaking. Valid are 'ibfull', 'rfr'
+        and 'off'.
+    :ivar pace: The flow control, either 'xon' or 'xoff'.
+    :ivar terminator: The output terminator. Valid are '\\r', '\\n', '\\r\\n'
+        and '\\n\\r'.
+    :ivar baudrate: The baudrate, see :attr:`~.SystemCommunicateSerial.BAUDRATE`
+
+    """
+    BAUDRATE = [300, 600, 1200, 2400, 4800, 9600, 19200, 38400, 57600, 115200]
+    def __init__(self, transport, protocol):
+        super(SystemCommunicateSerial, self).__init__(transport, protocol)
+        self.handshake = Command(
+            ':SYST:COMM:SER:CONT:RTS?',
+            ':SYST:COMM:SER:CONT:RTS',
+            Mapping({'ibfull': 'IBFULL', 'rfr': 'RFR', 'off': 'OFF'})
+        )
+        self.pace = Command(
+            ':SYST:COMM:SER:PACE?',
+            ':SYST:COMM:SER:PACE',
+            Mapping({'xon': 'XON', 'xoff': 'XOFF'})
+        )
+        self.terminator = Command(
+            ':SYST:COMM:SER:TERM?',
+            ':SYST:COMM:SER:TERM',
+            Mapping({'\r': 'CR', '\n': 'LF', '\r\n': 'CRLF', '\n\r': 'LFCR'})
+        )
+        self.baudrate = Command(
+            ':SYST:COMM:SER:BAUD?',
+            ':SYST:COMM:SER:BAUD',
+            Set(*SystemCommunicateSerial.BAUDRATE)
+        )
+
+    def send(self, data):
+        """Send data via serial port of the device..
+
+        .. warning:: Not implemented yet.
+
+        """
+        raise NotImplementedError()
+
+    def enter(self, data):
+        """Read data from serial port of the device.
+
+        .. warning:: Not implemented yet.
+
+        """
+        raise NotImplementedError()
+
+
+class SystemCommunicateEthernet(InstrumentBase):
+    """The ethernet subcommands.
+
+    :ivar str address: The ip address of the form "n.n.n.n".
+    :ivar str maks: The subnet mask.
+    :ivar str gateway: The gateway address.
+    :ivar bool dhcp: Enables/Disables the dhcp.
+
+    """
+    def __init__(self, transport, protocol):
+        super(SystemCommunicateEthernet, self).__init__(transport, protocol)
+        self.address = Command(
+            ':SYST:COMM:ETH:ADDR?',
+            ':SYST:COMM:ETH:ADDR',
+            String
+        )
+        self.mask = Command(
+            ':SYST:COMM:ETH:MASK?',
+            ':SYST:COMM:ETH:MASK',
+            String
+        )
+        self.gateway = Command(
+            ':SYST:COMM:ETH:GAT?',
+            ':SYST:COMM:ETH:GAT',
+            String
+        )
+        self.dhcp = Command(
+            ':SYST:COMM:ETH:DHCP?',
+            ':SYST:COMM:ETH:DHCP',
+            Boolean
+        )
+
+    def save(self):
+        """Saves the ethernet setting changes."""
+        self._write(':SYST:COMM:ETH:SAVE')
+
+
+class SystemBoard(InstrumentBase):
+    """The system board subcommands.
+
+    :ivar serial: The serial number. (read-only)
+    :ivar revision: The revision number. (read-only)
+
+    """
+    def __init__(self, transport, protocol, node):
+        super(SystemBoard, self).__init__(transport, protocol)
+        self.serial = Command((':SYST:{}:SNUM?'.format(node), String))
+        self.revision = Command((':SYST:{}:REV?'.format(node), String))
+
+
+class SystemPassword(InstrumentBase):
+    """The system password subcommands.
+
+    :ivar bool enable: The state of the password protection.
+
+    """
+    def __init__(self, transport, protocol):
+        super(SystemPassword, self).__init__(transport, protocol)
+        self.enable = Command(
+            ':SYST:PASS:ENAB?',
+            ':SYST:PASS:ENAB',
+            Boolean
+        )
+
+    def enable_protected_cmds(self, password):
+        """Enables the protected commands."""
+        self._write((':SYST:PASS:CDIS', String), password)
+
+    def disable_protected_cmds(self, password):
+        """Disables the protected commands."""
+        self._write((':SYST:PASS:CEN', String), password)
+
+    def new_password(self, password):
+        """Set's a new password."""
+        self._write((':SYST:PASS:NEW', String), password)
 
 
 # -----------------------------------------------------------------------------
