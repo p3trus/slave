@@ -212,7 +212,7 @@ class DigitalIO(InstrumentBase):
         enabling/disabling the digital output.
 
         Keys: 'out1', 'out2', 'out3', 'out4'
-    ivar force_pattern: The force pattern, a register dictionairy with the
+    :ivar force_pattern: The force pattern, a register dictionary with the
         same form as the limit_pattern.
 
     """
@@ -1419,7 +1419,7 @@ class SystemCommunicateGpib(InstrumentBase):
 class SystemCommunicateSerial(InstrumentBase):
     """The serial command subsystem.
 
-    ivar handshake: The serial control handshaking. Valid are 'ibfull', 'rfr'
+    :ivar handshake: The serial control handshaking. Valid are 'ibfull', 'rfr'
         and 'off'.
     :ivar pace: The flow control, either 'xon' or 'xoff'.
     :ivar terminator: The output terminator. Valid are '\\r', '\\n', '\\r\\n'
