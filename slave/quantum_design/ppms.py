@@ -312,9 +312,9 @@ class PPMS(IEC60488):
         # The PPMS uses whitespaces to separate data and semicolon to terminate
         # a message.
         protocol = slave.protocol.IEC60488(
-            msg_data_sep=' ',
+            msg_data_sep=',',
             msg_term=';',
-            resp_data_sep=' ',
+            resp_data_sep=',',
             resp_term=';'
         )
         super(PPMS, self).__init__(transport, protocol)
