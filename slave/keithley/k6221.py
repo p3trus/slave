@@ -145,13 +145,11 @@ class Math(InstrumentBase):
         self.m = Command(
             ':CALC:KMAT:MMF?',
             ':CALC:KMAT:MMF',
-            # TODO max value should be included in range
             Float(min=-9.99999e20, max=9.99999e20)
         )
         self.b = Command(
             ':CALC:KMAT:MBF?',
             ':CALC:KMAT:MBF',
-            # TODO max value should be included in range
             Float(min=-9.99999e20, max=9.99999e20)
         )
         self.enabled = Command(':CALC:STAT?', ':CALC:STAT', Boolean)
@@ -297,7 +295,7 @@ class DisplayWindowText(InstrumentBase):
         self.text = Command(
             ':DISP:WIND{0}:TEXT:DATA?'.format(id),
             ':DISP:WIND{0}:TEXT:DATA'.format(id),
-            String(max=21)
+            String(max=20)
         )
         self.enabled = Command(
             ':DISP:WIND{0}:TEXT:STAT?'.format(id),
@@ -463,12 +461,12 @@ class SenseAverage(InstrumentBase):
         self.window = Command(
             ':SENS:AVER:WIND?',
             ':SENS:AVER:WIND',
-            Float(min=0., max=10.001)  # TODO max should be 10 and should be included.
+            Float(min=0., max=10)
         )
         self.count = Command(
             ':SENS:AVER:COUN?',
             ':SENS:AVER:COUN',
-            Integer(min=2, max=301)
+            Integer(min=2, max=300)
         )
         self.enabled = Command(':SENS:AVER?', ':SENS:AVER', Boolean)
 
@@ -503,7 +501,7 @@ class Source(InstrumentBase):
         self.delay = Command(
             ':SOUR:DEL?',
             ':SOUR:DEL',
-            Float(min=1e-3, max=1e6, fmt='{0:.3f}')
+            Float(min=1e-3, max=999999.999, fmt='{0:.3f}')
         )
         self.sweep = SourceSweep(self._transport, self._protocol)
         self.list = SourceList(self._transport, self._protocol)
@@ -540,13 +538,11 @@ class SourceCurrent(InstrumentBase):
         self.amplitude = Command(
             ':SOUR:CURR?',
             ':SOUR:CURR',
-            # TODO max should be included in range.
             Float(min=-105e-3, max=105e3)
         )
         self.range = Command(
             ':SOUR:CURR:RANG?',
             ':SOUR:CURR:RANG',
-            # TODO max should be included in range
             Float(min=-105e-3, max=105e3)
         )
         self.auto_range = Command(
@@ -557,7 +553,6 @@ class SourceCurrent(InstrumentBase):
         self.compliance = Command(
             ':SOUR:CURR:COMP?',
             ':SOUR:CURR:COMP',
-            # TODO max should be included in range
             Float(min=0.1, max=105)
         )
         self.analog_filter = Command(
@@ -568,31 +563,26 @@ class SourceCurrent(InstrumentBase):
         self.start = Command(
             ':SOUR:CURR:STAR?',
             ':SOUR:CURR:STAR',
-            # TODO max should be included in range
             Float(min=-105e-3, max=105e-3)
         )
         self.step = Command(
             ':SOUR:CURR:STEP?',
             ':SOUR:CURR:STEP',
-            # TODO max should be included in range
             Float(min=1e-13, max=105e-3)
         )
         self.stop = Command(
             ':SOUR:CURR:STOP?',
             ':SOUR:CURR:STOP',
-            # TODO max should be included in range
             Float(min=-105e-3, max=105e-3)
         )
         self.center = Command(
             ':SOUR:CURR:CENT?',
             ':SOUR:CURR:CENT',
-            # TODO max should be included in range
             Float(min=-105e-3, max=105e-3)
         )
         self.span = Command(
             ':SOUR:CURR:SPAN?',
             ':SOUR:CURR:SPAN',
-            # TODO max should be included in range
             Float(min=2e-13, max=210e-3)
         )
 
@@ -621,7 +611,7 @@ class SourceSweep(InstrumentBase):
         self.points = Command(
             ':SOUR:SWE:POIN?',
             ':SOUR:SWE:POIN',
-            Integer(min=1, max=65536)
+            Integer(min=1, max=65535)
         )
         self.ranging = Command(
             ':SOUR:SWE:RANG?',
@@ -689,19 +679,19 @@ class SourceList(InstrumentBase):
             transport,
             protocol,
             node='CURR',
-            type=Float(min=-105e-3, max=105e-3) #TODO max should be included.
+            type=Float(min=-105e-3, max=105e-3)
         )
         self.delay = SourceListSequence(
             transport,
             protocol,
             node='DEL',
-            type=Float(min=1e-3, max=1e6)
+            type=Float(min=1e-3, max=999999.999)
         )
         self.current = SourceListSequence(
             transport,
             protocol,
             node='COMP',
-            type=Float(min=-1e-3, max=105e-3) #TODO max should be included.
+            type=Float(min=-1e-3, max=105e-3)
         )
 
 
@@ -754,17 +744,17 @@ class SourceDelta(InstrumentBase):
         self.high = Command(
             ':SOUR:DEL:HIGH?',
             ':SOUR:DEL:HIGH',
-            Float(min=0, max=105e-3) # TODO max should be included.
+            Float(min=0, max=105e-3)
         )
         self.low = Command(
             ':SOUR:DEL:LOW?',
             ':SOUR:DEL:LOW',
-            Float(min=-105e-3, max=0.) # TODO max should be included.
+            Float(min=-105e-3, max=0.)
         )
         self.delay = Command(
             ':SOUR:DEL:DEL?',
             ':SOUR:DEL:DEL',
-            Float(min=1e-3, max=1e5)
+            Float(min=1e-3, max=9999.999)
         )
         self.count = Command(
             ':SOUR:DEL:COUN?',
@@ -823,12 +813,12 @@ class SourcePulseDelta(InstrumentBase):
         self.high = Command(
             ':SOUR:PDEL:HIGH?',
             ':SOUR:PDEL:HIGH',
-            Float(min=0, max=105e-3) # TODO max should be included.
+            Float(min=0, max=105e-3)
         )
         self.low = Command(
             ':SOUR:PDEL:LOW?',
             ':SOUR:PDEL:LOW',
-            Float(min=-105e-3, max=0.) # TODO max should be included.
+            Float(min=-105e-3, max=0.)
         )
         self.width = Command(
             ':SOUR:PDEL:WIDT?',
@@ -855,7 +845,7 @@ class SourcePulseDelta(InstrumentBase):
         self.interval = Command(
             ':SOUR:PDEL:INT?',
             ':SOUR:PDEL:INT',
-            Integer(min=1, max=1000000)
+            Integer(min=1, max=999999)
         )
         self.sweep_output = Command(
             ':SOUR:PDEL:SWE?',
@@ -865,7 +855,7 @@ class SourcePulseDelta(InstrumentBase):
         self.low_measurements = Command(
             ':SOUR:PDEL:LME?',
             ':SOUR:PDEL:LME',
-            Integer(min=1, max=3)
+            Integer(min=1, max=2)
         )
 
     def voltmeter_connected(self):
@@ -900,27 +890,27 @@ class SourceDifferentialConductance(InstrumentBase):
         self.start = Command(
             ':SOUR:DCON:STAR?',
             ':SOUR:DCON:STAR',
-            Float(min=-105e-3, max=105e-3) # TODO max should be included.
+            Float(min=-105e-3, max=105e-3)
         )
         self.step = Command(
             ':SOUR:DCON:STEP?',
             ':SOUR:DCON:STEP',
-            Float(min=0, max=105e-3) # TODO max should be included.
+            Float(min=0, max=105e-3)
         )
         self.stop = Command(
             ':SOUR:DCON:STOP?',
             ':SOUR:DCON:STOP',
-            Float(min=-105e-3, max=105e-3) # TODO max should be included.
+            Float(min=-105e-3, max=105e-3)
         )
         self.delta = Command(
             ':SOUR:DCON:DELT?',
             ':SOUR:DCON:DELT',
-            Float(min=0., max=105e-3) # TODO max should be included.
+            Float(min=0., max=105e-3)
         )
         self.delay = Command(
             ':SOUR:DCON:DEL?',
             ':SOUR:DCON:DEL',
-            Float(min=1e-3, max=1e5)
+            Float(min=1e-3, max=9999.999)
         )
         self.compliance_abort = Command(
             ':SOUR:DCON:CAB?',
@@ -981,24 +971,21 @@ class SourceWave(InstrumentBase):
         self.duty_cycle = Command(
             ':SOUR:WAVE:DCYC?',
             ':SOUR:WAVE:DCYC',
-            Integer(min=0, max=101)
+            Integer(min=0, max=100)
         )
         self.amplitude = Command(
             ':SOUR:WAVE:AMPL?',
             ':SOUR:WAVE:AMPL',
-            # TODO The max should be included in the range
             Float(min=2e-12, max=105e-3)
         )
         self.frequency = Command(
             ':SOUR:WAVE:FREQ?',
             ':SOUR:WAVE:FREQ',
-            # TODO The max should be included in the range
             Float(min=1e-3, max=1e5)
         )
         self.offset = Command(
             ':SOUR:WAVE:OFFS?',
             ':SOUR:WAVE:OFFS',
-            # TODO The max should be included in the range
             Float(min=-105e-3, max=105e-3)
         )
         self.phase_marker = SourceWavePhaseMarker(self._transport, self._protocol)
@@ -1012,14 +999,15 @@ class SourceWave(InstrumentBase):
                 ':SOUR:WAVE:DUR:TIME?',
                 ':SOUR:WAVE:DUR:TIME',
             # TODO check if lowercase 'inf' works.
-            Float(min=100e-9, max=1e6)
+            # The Keithley accepts 'INF' as a valid duration.
+            Float(min=100e-9, max=999999.999)
         )
         self.cycles = Command(
             ':SOUR:WAVE:DUR:CYCL?',
             ':SOUR:WAVE:DUR:CYCL',
-            # TODO enforce max but allow infinity.
             # TODO check if lowercase 'inf' works.
-            Float(min=1e-3)
+            # The Keithley accepts 'INF' as a valid duration.
+            Float(min=1e-3, max=99999999900)
         )
         self.external_trigger = SourceWaveETrigger(self._transport, self._protocol)
 
@@ -1049,12 +1037,12 @@ class SourceWavePhaseMarker(InstrumentBase):
         self.level = Command(
             ':SOUR:WAVE:PMAR?',
             ':SOUR:WAVE:PMAR',
-            Integer(min=0, max=361)
+            Integer(min=0, max=360)
         )
         self.output_line = Command(
             ':SOUR:WAVE:PMAR:OLIN?',
             ':SOUR:WAVE:PMAR:OLIN',
-            Integer(min=1, max=7)
+            Integer(min=1, max=6)
         )
         self.enabled = Command(
             ':SOUR:WAVE:PMAR:STAT?',
@@ -1071,10 +1059,8 @@ class SourceWaveArbitrary(InstrumentBase):
     """
     def __init__(self, transport, protocol):
         super(SourceWaveArbitrary, self).__init__(transport, protocol)
-        # TODO
         self._extend = Command(write=(
             ':SOUR:WAVE:ARB:APPEND',
-            # TODO max should be included.
             itertools.repeat(Float(min=-1, max=1.), 100)
         ))
         self._sequence = Command(
@@ -1090,7 +1076,7 @@ class SourceWaveArbitrary(InstrumentBase):
             index parameter chooses the buffer index. Valid are 1 to 4.
 
         """
-        self._write(('SOUR:WAVE:ARB:COPY', Integer(min=1, max=5)), index)
+        self._write(('SOUR:WAVE:ARB:COPY', Integer(min=1, max=4)), index)
 
     def extend(self, iterable):
         """Extends the list."""
@@ -1143,7 +1129,7 @@ class SourceWaveETrigger(InstrumentBase):
         self.inactive_value = Command(
             ':SOUR:WAVE:EXTR:IVAL?',
             ':SOUR:WAVE:EXTR:IVAL',
-            Float(min=-1., max=1.) # TODO max value should be included.
+            Float(min=-1., max=1.)
         )
 
 
@@ -1412,7 +1398,7 @@ class SystemCommunicateGpib(InstrumentBase):
         self.address = Command(
             ':SYST:COMM:GPIB:ADDR?',
             ':SYST:COMM:GPIB:ADDR',
-            Integer(min=0, max=31)
+            Integer(min=0, max=30)
         )
 
 
@@ -1672,7 +1658,7 @@ class Arm(InstrumentBase):
         self.timer = Command(
             ':ARM:TIM?',
             ':ARM:TIM',
-            Float(min=0, max=1e5, fmt='{0:.2f}')
+            Float(min=0, max=99999.99, fmt='{0:.2f}')
         )
         self.source_bypass = Command(
             ':ARM:DIR?',
@@ -1682,12 +1668,12 @@ class Arm(InstrumentBase):
         self.input_line = Command(
             ':ARM:ILIN?',
             ':ARM:ILIN',
-            Integer(min=1, max=7)
+            Integer(min=1, max=6)
         )
         self.output_line = Command(
             ':ARM:OLIN?',
             ':ARM:OLIN',
-            Integer(min=1, max=7)
+            Integer(min=1, max=6)
         )
         self.output = Command(
             ':ARM:OUTP?',
@@ -1726,12 +1712,12 @@ class Trigger(InstrumentBase):
         self.input_line = Command(
             ':TRIG:ILIN?',
             ':TRIG:ILIN',
-            Integer(min=1, max=7)
+            Integer(min=1, max=6)
         )
         self.output_line = Command(
             ':TRIG:OLIN?',
             ':TRIG:OLIN',
-            Integer(min=1, max=7)
+            Integer(min=1, max=6)
         )
         self.output = Command(
             ':TRIG:OUTP?',
