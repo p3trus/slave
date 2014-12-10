@@ -497,12 +497,12 @@ class SR7230(InstrumentBase):
         self._voltage_sensitivity = Command(
             'SEN',
             'SEN',
-            Enum(*SR7230.SENSITIVITY_VOLTAGE, start=1)
+            Enum(*SR7230.SENSITIVITY_VOLTAGE, start=3)
         )
         self._highbandwidth_sensitivity = Command(
             'SEN',
             'SEN',
-            Enum(*SR7230.SENSITIVITY_CURRENT_HIGHBW, start=1)
+            Enum(*SR7230.SENSITIVITY_CURRENT_HIGHBW, start=3)
         )
         self._lownoise_sensitivity = Command(
             'SEN',
