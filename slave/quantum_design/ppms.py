@@ -389,7 +389,7 @@ class PPMS(IEC60488):
             'LEVEL?',
             [Float, Enum('>1h', '<1h', 'continuous')]
         ))
-        self.revision = Command(('REV?', String))
+        self.revision = Command(('REV?', [String, String]))
 
     def levelmeter(self, rate):
         """Changes the measuring rate of the levelmeter.
