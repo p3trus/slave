@@ -5,7 +5,7 @@ from __future__ import (absolute_import, division,
                         print_function, unicode_literals)
 from future.builtins import *
 
-from slave.core import Command, Driver
+from slave.driver import Command, Driver
 from slave.types import Boolean, Enum, Integer, Register, Set, String
 import slave.types
 

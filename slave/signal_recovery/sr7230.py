@@ -52,7 +52,7 @@ import datetime
 
 from numpy import fromstring
 
-from slave.core import Command, Driver, CommandSequence
+from slave.driver import Command, Driver, CommandSequence
 from slave.protocol import SignalRecovery
 from slave.types import (
     Boolean, Enum, Float, Integer, Register, Set, String, Mapping

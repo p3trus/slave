@@ -8,7 +8,7 @@ import itertools as it
 
 import pytest
 
-from slave.core import Command, _dump, _load, _to_instance, _typelist
+from slave.driver import Command, _dump, _load, _to_instance, _typelist
 from slave.types import Integer
 from slave.transport import SimulatedTransport
 

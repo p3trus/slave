@@ -8,7 +8,7 @@ from future.builtins import *
 import datetime
 import time
 
-from slave.core import Command, CommandSequence, Driver
+from slave.driver import Command, CommandSequence, Driver
 from slave.types import Enum, Float, Integer, Register, String
 from slave.iec60488 import IEC60488
 import slave.protocol

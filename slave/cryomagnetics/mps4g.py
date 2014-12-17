@@ -7,7 +7,7 @@ from future.builtins import *
 
 import string
 
-from slave.core import Command, Driver
+from slave.driver import Command, Driver
 import slave.protocol
 import slave.iec60488
 from slave.types import Boolean, Float, Mapping, Set, String

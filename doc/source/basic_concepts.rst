@@ -29,7 +29,7 @@ Protocol Layer
 Driver Layer
 ------------
 
-.. automodule:: slave.core
+.. automodule:: slave.driver
 
 
 IEC60488 Compliant Drivers

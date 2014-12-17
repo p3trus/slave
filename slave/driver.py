@@ -7,7 +7,7 @@ The core module contains several helper classes to ease instrument control.
 Implementing an instrument interface is pretty straight forward. A simple
 implementation might look like::
 
-    from slave.core import Driver, Command
+    from slave.driver import Driver, Command
     from slave.types import Integer
 
 

@@ -6,7 +6,7 @@
 
 """
 import itertools
-from slave.core import Command, Driver
+from slave.driver import Command, Driver
 from slave.iec60488 import (IEC60488, Trigger, ObjectIdentification,
     StoredSetting)
 from slave.types import (Boolean, Enum, Float, Integer, Mapping, String, Set,

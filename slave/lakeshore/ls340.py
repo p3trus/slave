@@ -44,7 +44,7 @@ from __future__ import (absolute_import, division,
 from future.builtins import *
 import collections
 
-from slave.core import Command, Driver
+from slave.driver import Command, Driver
 from slave.iec60488 import IEC60488
 from slave.types import Boolean, Enum, Float, Integer, Register, Set, String
 import slave.misc

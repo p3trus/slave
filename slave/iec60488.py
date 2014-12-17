@@ -38,7 +38,7 @@ To ease development, these are implemented in the
 compliant device driver, you only have to subclass it and implement the
 device specific commands, e.g::
 
-    from slave.core import Command
+    from slave.driver import Command
     from slave.iec60488 import IEC60488
 
     class CustomDevice(IEC60488):
@@ -107,7 +107,7 @@ The optional command groups are implemented as Mix-in classes. A device
 supporting required `IEC 60488-2`_ commands as well as the optional Power-on
 commands is implemented as follows::
 
-    from slave.core import Command
+    from slave.driver import Command
     from slave.iec60488 import IEC60488, PowerOn
 
     class CustomDevice(IEC60488, PowerOn):
@@ -166,7 +166,7 @@ from __future__ import (absolute_import, division,
 # breaks multiple inheritance due to it's metaclass.
 from future.builtins import map, zip, dict, int, list, range, str
 
-from slave.core import Command, Driver
+from slave.driver import Command, Driver
 from slave.types import Boolean, Integer, Register, String
 
 
