@@ -52,14 +52,14 @@ import datetime
 
 from numpy import fromstring
 
-from slave.core import Command, InstrumentBase, CommandSequence
+from slave.driver import Command, Driver, CommandSequence
 from slave.protocol import SignalRecovery
 from slave.types import (
     Boolean, Enum, Float, Integer, Register, Set, String, Mapping
 )
 
 
-class SR7230(InstrumentBase):
+class SR7230(Driver):
     """Represents a Signal Recovery SR7230 lock-in amplifier.
 
     :param transport: A transport object.
@@ -963,7 +963,7 @@ class SR7230(InstrumentBase):
         self._write('IPUNLOCK')
 
 
-class Equation(InstrumentBase):
+class Equation(Driver):
     """The equation commands.
 
     An equation is defined as::
@@ -1010,7 +1010,7 @@ class Equation(InstrumentBase):
         )
 
 
-class AmplitudeModulation(InstrumentBase):
+class AmplitudeModulation(Driver):
     """Represents the amplitude modulation commands.
 
     :ivar float center: The amplitude modulation center voltage. A floating
@@ -1041,7 +1041,7 @@ class AmplitudeModulation(InstrumentBase):
         self.span = Command('AMVSPAN.', 'AMVSPAN.', Float(min=-10, max=10))
 
 
-class FrequencyModulation(InstrumentBase):
+class FrequencyModulation(Driver):
     """Represents the frequency modulation commands.
 
     :ivar float center_frequency: The center frequency of the oscillator
@@ -1103,7 +1103,7 @@ class FrequencyModulation(InstrumentBase):
         self._write(('FMSPANF.', Float(min=0, max=self._fmax / 2.)))
 
 
-class DAC(InstrumentBase):
+class DAC(Driver):
     """
 
     :ivar voltage: The user specified DAC output voltage.
@@ -1131,7 +1131,7 @@ class DAC(InstrumentBase):
         )
 
 
-class DigitalPort(InstrumentBase):
+class DigitalPort(Driver):
     """The digital port configuration.
 
     :ivar output: Defines which ports are configured as outputs.
@@ -1163,7 +1163,7 @@ class DigitalPort(InstrumentBase):
         )
 
 
-class FastBuffer(InstrumentBase):
+class FastBuffer(Driver):
     """Represents the fast curve buffer command group.
 
     The fast curve buffer is similar to the :class:`~.StandardBuffer`. It is
@@ -1201,7 +1201,7 @@ class FastBuffer(InstrumentBase):
         return fromstring(buffer(data), dtype='>h')
 
 
-class StandardBuffer(InstrumentBase):
+class StandardBuffer(Driver):
     """Represents the standard buffer command group.
 
     :ivar length: The size of the standard curve buffer is 100000 points. These
@@ -1285,7 +1285,7 @@ class StandardBuffer(InstrumentBase):
             return fromstring(buffer(data), dtype='>h')
 
 
-class Demodulator(InstrumentBase):
+class Demodulator(Driver):
     """Implements the dual reference mode commands.
 
     .. note::

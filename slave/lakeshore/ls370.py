@@ -6,13 +6,13 @@ from __future__ import (absolute_import, division,
 from future.builtins import *
 import collections
 
-from slave.core import Command, InstrumentBase, CommandSequence
+from slave.driver import Command, Driver, CommandSequence
 from slave.iec60488 import IEC60488
 from slave.types import Boolean, Enum, Float, Integer, Register, Set, String
 import slave.misc
 
 
-class Curve(InstrumentBase):
+class Curve(Driver):
     """A LS370 curve.
 
     :param transport: A transport object.
@@ -112,7 +112,7 @@ class Curve(InstrumentBase):
         self._write(('CRVDEL', Integer), self.idx)
 
 
-class Display(InstrumentBase):
+class Display(Driver):
     """A LS370 Display at the chosen location.
 
     :param transport: A transport object.
@@ -144,7 +144,7 @@ class Display(InstrumentBase):
         )
 
 
-class Heater(InstrumentBase):
+class Heater(Driver):
     """An LS370 Heater.
 
     :param transport: A transport object.
@@ -182,7 +182,7 @@ class Heater(InstrumentBase):
         )
 
 
-class Input(InstrumentBase, collections.Sequence):
+class Input(Driver, collections.Sequence):
     """The LS370 Input.
 
     :param transport: A transport object.
@@ -226,7 +226,7 @@ class Input(InstrumentBase, collections.Sequence):
         return self._channels[channel]
 
 
-class InputChannel(InstrumentBase):
+class InputChannel(Driver):
     """A LS370 input channel.
 
     :param transport: A transport object.
@@ -395,7 +395,7 @@ class InputChannel(InstrumentBase):
         )
 
 
-class Output(InstrumentBase):
+class Output(Driver):
     """Represents a LS370 analog output.
 
     :param transport: A transport object.
@@ -436,7 +436,7 @@ class Output(InstrumentBase):
         self.value = Command(('AOUT? {0}'.format(channel), Float))
 
 
-class Relay(InstrumentBase):
+class Relay(Driver):
     """A LS370 relay.
 
     :param transport: A transport object.

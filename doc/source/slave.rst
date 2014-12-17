@@ -29,7 +29,7 @@ This part covers the complete api documentation of the slave library.
 :mod:`core` Module
 ------------------
 
-.. automodule:: slave.core
+.. automodule:: slave.driver
     :members:
     :undoc-members:
     :show-inheritance:

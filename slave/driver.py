@@ -7,11 +7,11 @@ The core module contains several helper classes to ease instrument control.
 Implementing an instrument interface is pretty straight forward. A simple
 implementation might look like::
 
-    from slave.core import InstrumentBase, Command
+    from slave.driver import Driver, Command
     from slave.types import Integer
 
 
-    class MyInstrument(InstrumentBase):
+    class MyInstrument(Driver):
         def __init__(self, transport):
             super(MyInstrument, self).__init__(transport)
             # A simple query and writeable command, which takes and writes an
@@ -203,10 +203,10 @@ class Command(object):
                                                    self.protocol)
 
 
-class InstrumentBase(object):
+class Driver(object):
     """Base class of all instruments.
 
-    The InstrumentBase class applies some *magic* to simplify the Command
+    The Driver class applies some *magic* to simplify the Command
     interaction. Read access on :class:`~.Command` attributes is redirected to
     the :class:`Command.query`, write access to the :class:`Command.write`
     member function.
@@ -221,7 +221,7 @@ class InstrumentBase(object):
         self._protocol = protocol or slave.protocol.IEC60488()
         # super must be the last call, otherwise mixin classes relying on the
         # existance of `_protocol` and `_transport` will fail.
-        super(InstrumentBase, self).__init__(*args, **kw)
+        super(Driver, self).__init__(*args, **kw)
 
     def _write(self, cmd, *datas):
         """Helper function to simplify writing."""

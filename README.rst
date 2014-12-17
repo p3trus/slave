@@ -13,7 +13,7 @@ object relational mappers.
 ::
 
     from slave.iec60488 import IEC60488, PowerOn
-    from slave.core import Command
+    from slave.driver import Command
     from slave.types import Integer, Enum
 
     class Device(IEC60488, PowerOn):

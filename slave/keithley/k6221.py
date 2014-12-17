@@ -6,7 +6,7 @@
 
 """
 import itertools
-from slave.core import Command, InstrumentBase
+from slave.driver import Command, Driver
 from slave.iec60488 import (IEC60488, Trigger, ObjectIdentification,
     StoredSetting)
 from slave.types import (Boolean, Enum, Float, Integer, Mapping, String, Set,
@@ -114,7 +114,7 @@ class K6221(IEC60488, Trigger, ObjectIdentification):
 # -----------------------------------------------------------------------------
 # Calculate Command Layer
 # -----------------------------------------------------------------------------
-class Math(InstrumentBase):
+class Math(Driver):
     """The math command subgroup.
 
     :ivar format: The math format. Valid are `None`, 'linear' or 'reciprocal'.
@@ -157,7 +157,7 @@ class Math(InstrumentBase):
         self.fresh = Command((':CALC:DATA:FRESH', Float))
 
 
-class BufferStatistics(InstrumentBase):
+class BufferStatistics(Driver):
     """The buffer statistics command subgroup.
 
     :ivar format: The selected buffer statistics.
@@ -193,7 +193,7 @@ class BufferStatistics(InstrumentBase):
         self._write(':CALC2:IMM')
 
 
-class DigitalIO(InstrumentBase):
+class DigitalIO(Driver):
     """The limit testing and digital IO command subgroup.
 
     Activating limit testing and enable the output on lines 2 and 3 in case
@@ -247,7 +247,7 @@ class DigitalIO(InstrumentBase):
 # -----------------------------------------------------------------------------
 # Display Command Layer
 # -----------------------------------------------------------------------------
-class Display(InstrumentBase):
+class Display(Driver):
     """The display command subgroup.
 
     :ivar enabled: A boolean representing the state of the frontpanel display
@@ -263,7 +263,7 @@ class Display(InstrumentBase):
         self.bottom = DisplayWindow(2, self._transport, self._protocol)
 
 
-class DisplayWindow(InstrumentBase):
+class DisplayWindow(Driver):
     """The window command subgroup of the Display node.
 
     :ivar text: The window text. An instance of :class:`~.DisplayWindowText`.
@@ -282,7 +282,7 @@ class DisplayWindow(InstrumentBase):
         )
 
 
-class DisplayWindowText(InstrumentBase):
+class DisplayWindowText(Driver):
     """The text command subgroup of the Window node.
 
     :ivar data: An ascii encoded message with up to 20 characters.
@@ -307,7 +307,7 @@ class DisplayWindowText(InstrumentBase):
 # -----------------------------------------------------------------------------
 # Format Command Layer
 # -----------------------------------------------------------------------------
-class Format(InstrumentBase):
+class Format(Driver):
     """The format command subgroup.
 
     :ivar data: Specifies the data format. Valid are 'ascii', 'real32',
@@ -377,7 +377,7 @@ class Format(InstrumentBase):
 # -----------------------------------------------------------------------------
 # Output Command Layer
 # -----------------------------------------------------------------------------
-class Output(InstrumentBase):
+class Output(Driver):
     """The output command subsystem.
 
     :ivar enabled: A boolean representing the state of the output.
@@ -413,7 +413,7 @@ class Output(InstrumentBase):
 # -----------------------------------------------------------------------------
 # Sense Command Layer
 # -----------------------------------------------------------------------------
-class Sense(InstrumentBase):
+class Sense(Driver):
     """The Sense command subsystem.
 
     :ivar data: The sense data subsystem, an instance of :class:`~.SenseData`.
@@ -427,7 +427,7 @@ class Sense(InstrumentBase):
         self.average = SenseAverage(self._transport, self._protocol)
 
 
-class SenseData(InstrumentBase):
+class SenseData(Driver):
     """The data command subsystem of the Sense node.
 
     :ivar fresh: Similar to latest, but the same reading can only be returned
@@ -441,7 +441,7 @@ class SenseData(InstrumentBase):
         self.latest = Command((':SENS:DATA?', Float))
 
 
-class SenseAverage(InstrumentBase):
+class SenseAverage(Driver):
     """The average command subsystem of the Sense node.
 
     :ivar tcontrol: The filter control. Valid are 'moving', 'repeat'.
@@ -474,7 +474,7 @@ class SenseAverage(InstrumentBase):
 # -----------------------------------------------------------------------------
 # Source Command Layer
 # -----------------------------------------------------------------------------
-class Source(InstrumentBase):
+class Source(Driver):
     """The source command subsystem.
 
     :ivar current: The source current command subsystem, an instance of
@@ -518,7 +518,7 @@ class Source(InstrumentBase):
         self._write(':SOUR:CLE')
 
 
-class SourceCurrent(InstrumentBase):
+class SourceCurrent(Driver):
     """The current command subsystem of the Source node.
 
     :ivar float amplitude: The current amplitude in ampere. [-105e-3, 105e3].
@@ -587,7 +587,7 @@ class SourceCurrent(InstrumentBase):
         )
 
 
-class SourceSweep(InstrumentBase):
+class SourceSweep(Driver):
     """The sweep command subsystem of the Source node.
 
     :ivar spacing: The sweep type, valid are 'linear', 'log' and 'list'.
@@ -640,7 +640,7 @@ class SourceSweep(InstrumentBase):
         self._write(':SOUR:SWE:ABOR')
 
 
-class SourceList(InstrumentBase):
+class SourceList(Driver):
     """The list command subsystem of the Source node.
 
     It is used to define arbitrarycurrent pulse sequences. E.g. writing a
@@ -695,7 +695,7 @@ class SourceList(InstrumentBase):
         )
 
 
-class SourceListSequence(InstrumentBase):
+class SourceListSequence(Driver):
     def __init__(self, transport, protocol, node, type):
         super(SourceListSequence, self).__init__(transport, protocol)
         self._node = node
@@ -724,7 +724,7 @@ class SourceListSequence(InstrumentBase):
     def __len__(self):
         return self._query((':SOUR:LIST:{}:POIN?'.format(self._node), Integer))
 
-class SourceDelta(InstrumentBase):
+class SourceDelta(Driver):
     """The delta command subsystem of the Source node.
 
     :ivar float high: The high source value, in the range 0 to 105e-3 (amps).
@@ -788,7 +788,7 @@ class SourceDelta(InstrumentBase):
         return self._query((':SOUR:DEL:ARM?', Boolean))
 
 
-class SourcePulseDelta(InstrumentBase):
+class SourcePulseDelta(Driver):
     """The pulse delta command subsystem of the Source node.
 
     :ivar float high: The high source value, in the range 0 to 105e-3 (amps).
@@ -871,7 +871,7 @@ class SourcePulseDelta(InstrumentBase):
         return self._query((':SOUR:PDEL:ARM?', Boolean))
 
 
-class SourceDifferentialConductance(InstrumentBase):
+class SourceDifferentialConductance(Driver):
     """The differential conductance command subsystem of the Source node.
 
     :ivar float zero_voltage: The zero voltage of the nanovoltmeter 2182/2182A.
@@ -931,7 +931,7 @@ class SourceDifferentialConductance(InstrumentBase):
         return self._query((':SOUR:DCON:ARM?', Boolean))
 
 
-class SourceWave(InstrumentBase):
+class SourceWave(Driver):
     """The wave command subsystem of the Source node.
 
     :ivar function: The wave function. Valid are 'sin', 'square', 'ramp',
@@ -1024,7 +1024,7 @@ class SourceWave(InstrumentBase):
         self._write(':SOUR:WAVE:ABOR')
 
 
-class SourceWavePhaseMarker(InstrumentBase):
+class SourceWavePhaseMarker(Driver):
     """The phase marker command subgroup of the SourceWave node.
 
     :ivar int level: The marker phase in degrees. [0, 360].
@@ -1051,7 +1051,7 @@ class SourceWavePhaseMarker(InstrumentBase):
         )
 
 
-class SourceWaveArbitrary(InstrumentBase):
+class SourceWaveArbitrary(Driver):
     """The arbitrary waveform command subgroup of the SourceWave node.
 
     It supports slicing notation to read and write up to 100 points into memory.
@@ -1094,7 +1094,7 @@ class SourceWaveArbitrary(InstrumentBase):
         return self._query((':SOUR:WAVE:ARB:POIN?', Integer))
 
 
-class SourceWaveETrigger(InstrumentBase):
+class SourceWaveETrigger(Driver):
     """The external trigger command subgroup of the SourceWave node.
 
     .. note:: These commands were introduced with firmware revision **A03**.
@@ -1136,7 +1136,7 @@ class SourceWaveETrigger(InstrumentBase):
 # -----------------------------------------------------------------------------
 # Status Command Layer
 # -----------------------------------------------------------------------------
-class Status(InstrumentBase):
+class Status(Driver):
     """The status sub commands.
 
     :ivar measurement: The measurement status register subcommands, an instance
@@ -1209,7 +1209,7 @@ class Status(InstrumentBase):
         self._write(':STAT:PRES')
 
 
-class StatusEvent(InstrumentBase):
+class StatusEvent(Driver):
     """A status event sub command group.
 
     :ivar event: The event register.(read-only)
@@ -1237,7 +1237,7 @@ class StatusEvent(InstrumentBase):
         )
 
 
-class StatusQueue(InstrumentBase):
+class StatusQueue(Driver):
     """The status queue sub commands.
 
     :ivar next: The most recent error message. (read-only)
@@ -1267,7 +1267,7 @@ class StatusQueue(InstrumentBase):
 # -----------------------------------------------------------------------------
 # System Command Layer
 # -----------------------------------------------------------------------------
-class System(InstrumentBase):
+class System(Driver):
     """The System command subsystem.
 
     :ivar communicate: The commuicate sub commands, an instance of
@@ -1334,7 +1334,7 @@ class System(InstrumentBase):
             self._write(':SYS:RNUM:RES')
 
 
-class SystemCommunicate(InstrumentBase):
+class SystemCommunicate(Driver):
     """The system communicate command subsystem.
 
     :ivar gpib: The gpib subsystem. An instance of
@@ -1387,7 +1387,7 @@ class SystemCommunicate(InstrumentBase):
         self._write(':SYST:COMM:REM')
 
 
-class SystemCommunicateGpib(InstrumentBase):
+class SystemCommunicateGpib(Driver):
     """The gpib command subsystem.
 
     :ivar int address: The gpib address, in the range 0 to 30.
@@ -1402,7 +1402,7 @@ class SystemCommunicateGpib(InstrumentBase):
         )
 
 
-class SystemCommunicateSerial(InstrumentBase):
+class SystemCommunicateSerial(Driver):
     """The serial command subsystem.
 
     :ivar handshake: The serial control handshaking. Valid are 'ibfull', 'rfr'
@@ -1454,7 +1454,7 @@ class SystemCommunicateSerial(InstrumentBase):
         raise NotImplementedError()
 
 
-class SystemCommunicateEthernet(InstrumentBase):
+class SystemCommunicateEthernet(Driver):
     """The ethernet subcommands.
 
     :ivar str address: The ip address of the form "n.n.n.n".
@@ -1491,7 +1491,7 @@ class SystemCommunicateEthernet(InstrumentBase):
         self._write(':SYST:COMM:ETH:SAVE')
 
 
-class SystemBoard(InstrumentBase):
+class SystemBoard(Driver):
     """The system board subcommands.
 
     :ivar serial: The serial number. (read-only)
@@ -1504,7 +1504,7 @@ class SystemBoard(InstrumentBase):
         self.revision = Command((':SYST:{}:REV?'.format(node), String))
 
 
-class SystemPassword(InstrumentBase):
+class SystemPassword(Driver):
     """The system password subcommands.
 
     :ivar bool enable: The state of the password protection.
@@ -1534,7 +1534,7 @@ class SystemPassword(InstrumentBase):
 # -----------------------------------------------------------------------------
 # Trace Command Layer
 # -----------------------------------------------------------------------------
-class Trace(InstrumentBase):
+class Trace(Driver):
     """The trace command subsystem.
 
     :ivar points: The buffer size in number of delta readings. [1, 65536].
@@ -1586,7 +1586,7 @@ class Trace(InstrumentBase):
         return self._query((':TRAC:FREE?', Float))  # TODO check return type.
 
 
-class TraceData(InstrumentBase):
+class TraceData(Driver):
     """The data command subsystem of the Trace node.
 
     The TraceData class provides a listlike interface to access the stored
@@ -1630,7 +1630,7 @@ class TraceData(InstrumentBase):
 # -----------------------------------------------------------------------------
 # Trigger Command Layer
 # -----------------------------------------------------------------------------
-class Arm(InstrumentBase):
+class Arm(Driver):
     """The arm command subsystem.
 
     :ivar source: The event detectpr. Valid are 'immediate', 'timer', 'bus',
@@ -1686,7 +1686,7 @@ class Arm(InstrumentBase):
         self._write(':ARM:SIGN')
 
 
-class Trigger(InstrumentBase):
+class Trigger(Driver):
     """The trigger command subsystem.
 
     :ivar source: The event detector. Valid are 'immediate' or 'tlink'.
@@ -1733,7 +1733,7 @@ class Trigger(InstrumentBase):
 # -----------------------------------------------------------------------------
 # Units Command Layer
 # -----------------------------------------------------------------------------
-class Units(InstrumentBase):
+class Units(Driver):
     """The units command subsystem.
 
     :ivar voltage: The units voltage subsystem, an instance of :class:`~.UnitVoltage`
@@ -1746,7 +1746,7 @@ class Units(InstrumentBase):
         self.power = UnitPower(self._transport, self._protocol)
 
 
-class UnitVoltage(InstrumentBase):
+class UnitVoltage(Driver):
     """The voltage command subgroup of the Units node.
 
     :ivar dc: The voltage reading units, valid are 'V', 'Ohm', 'W', 'Siemens'.
@@ -1761,7 +1761,7 @@ class UnitVoltage(InstrumentBase):
         )
 
 
-class UnitPower(InstrumentBase):
+class UnitPower(Driver):
     """The power command subgroup of the Units node.
 
     :ivar type: The power reading units in the pulse delta mode, valid are

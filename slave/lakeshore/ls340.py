@@ -44,13 +44,13 @@ from __future__ import (absolute_import, division,
 from future.builtins import *
 import collections
 
-from slave.core import Command, InstrumentBase
+from slave.driver import Command, Driver
 from slave.iec60488 import IEC60488
 from slave.types import Boolean, Enum, Float, Integer, Register, Set, String
 import slave.misc
 
 
-class Curve(InstrumentBase):
+class Curve(Driver):
     """Represents a LS340 curve.
 
     :param transport: A transport object.
@@ -172,7 +172,7 @@ class Curve(InstrumentBase):
         raise RuntimeError('Can not delete read-only curves.')
 
 
-class Heater(InstrumentBase):
+class Heater(Driver):
     """Represents the LS340 heater.
 
     :param transport: A transport object.
@@ -201,7 +201,7 @@ class Heater(InstrumentBase):
         self.status = Command(('HTRST?', Enum(*self.ERROR_STATUS)))
 
 
-class Input(InstrumentBase, collections.Mapping):
+class Input(Driver, collections.Mapping):
     def __init__(self, transport, protocol, channels):
         super(Input, self).__init__(transport, protocol)
         self._channels = dict(
@@ -219,7 +219,7 @@ class Input(InstrumentBase, collections.Mapping):
         return len(self._channels)
 
 
-class InputChannel(InstrumentBase):
+class InputChannel(Driver):
     """Represents a LS340 input channel.
 
     :param transport: A transport object.
@@ -357,7 +357,7 @@ class InputChannel(InstrumentBase):
         self.minmax_status = Command(('MDATST? {0}'.format(name), rds, rds))
 
 
-class Output(InstrumentBase):
+class Output(Driver):
     """Represents a LS340 analog output.
 
     :param transport: A transport object.
@@ -398,7 +398,7 @@ class Output(InstrumentBase):
         self.value = Command(('AOUT? {0}'.format(channel), Float))
 
 
-class Program(InstrumentBase):
+class Program(Driver):
     """Represents a LS340 program.
 
     :param transport: A transport object.
@@ -438,7 +438,7 @@ class Program(InstrumentBase):
         self._write(('PGMDEL', Integer), self.idx)
 
 
-class Column(InstrumentBase):
+class Column(Driver):
     """Represents a column of records.
 
     :param transport: A transport object.
@@ -493,7 +493,7 @@ class Column(InstrumentBase):
         )
 
 
-class Loop(InstrumentBase):
+class Loop(Driver):
     """Represents a LS340 control loop.
 
     :param transport: A transport object.
