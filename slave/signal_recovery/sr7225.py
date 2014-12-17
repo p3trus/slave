@@ -5,7 +5,7 @@ from __future__ import (absolute_import, division,
                         print_function, unicode_literals)
 from future.builtins import *
 
-from slave.core import Command, InstrumentBase
+from slave.core import Command, Driver
 from slave.types import Boolean, Enum, Integer, Register, Set, String
 import slave.types
 
@@ -24,7 +24,7 @@ class Float(slave.types.Float):
         return super(Float, self).__convert__(value)
 
 
-class SR7225(InstrumentBase):
+class SR7225(Driver):
     """Represents a Signal Recovery SR7225 lock-in amplifier.
 
     :param transport: A transport object.

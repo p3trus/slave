@@ -13,14 +13,14 @@ from __future__ import (absolute_import, division,
                         print_function, unicode_literals)
 from future.builtins import *
 
-from slave.core import Command, InstrumentBase
+from slave.core import Command, Driver
 from slave.types import Boolean, Enum, Float, Integer, Register, Set, String
 
 
 __all__ = ['SR830']
 
 
-class Aux(InstrumentBase):
+class Aux(Driver):
     def __init__(self, transport, protocol, id):
         super(Aux, self).__init__(transport, protocol)
         self.id = id = int(id)
@@ -32,7 +32,7 @@ class Aux(InstrumentBase):
                               Float(min=-10.5, max=10.5))
 
 
-class Status(InstrumentBase):
+class Status(Driver):
     """Wraps a readable and writeable register."""
     def __init__(self, transport, protocol, query, write, register):
         super(Status, self).__init__(transport, protocol)
@@ -214,7 +214,7 @@ class StandardEventEnable(Status):
         )
 
 
-class SR830(InstrumentBase):
+class SR830(Driver):
     """
     Stanford Research SR830 Lock-In Amplifier instrument class.
 

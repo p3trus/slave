@@ -8,7 +8,7 @@ from future.builtins import *
 import datetime
 import time
 
-from slave.core import Command, CommandSequence, InstrumentBase
+from slave.core import Command, CommandSequence, Driver
 from slave.types import Enum, Float, Integer, Register, String
 from slave.iec60488 import IEC60488
 import slave.protocol
@@ -645,7 +645,7 @@ class PPMS(IEC60488):
         self._write('SHUTDOWN')
 
 
-class AnalogOutput(InstrumentBase):
+class AnalogOutput(Driver):
     """Represents an analog output.
 
     :ivar id: The analog output id.
@@ -692,7 +692,7 @@ class AnalogOutput(InstrumentBase):
             mid
         )
 
-class BridgeChannel(InstrumentBase):
+class BridgeChannel(Driver):
     """Represents the user bridge configuration.
 
     :ivar id: The user bridge channel id.

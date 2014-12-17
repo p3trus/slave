@@ -1,12 +1,12 @@
 #  -*- coding: utf-8 -*-
 #
 # E21, (c) 2012, see AUTHORS.  Licensed under the GNU GPL.
-from slave.core import Command, InstrumentBase
+from slave.core import Command, Driver
 import slave.iec60488 as iec
 from slave.types import Boolean, Float, Integer, Mapping, Set
 
 
-class Initiate(InstrumentBase):
+class Initiate(Driver):
     """The initiate command layer.
 
     :param connection: A connection object.
@@ -27,7 +27,7 @@ class Initiate(InstrumentBase):
         self.connection.write(':INIT')
 
 
-class Output(InstrumentBase):
+class Output(Driver):
     """The Output command layer.
 
     :param connection: A connection object.
@@ -64,7 +64,7 @@ class Output(InstrumentBase):
         )
 
 
-class Sense(InstrumentBase):
+class Sense(Driver):
     """The Sense command layer.
 
     :param connection: A connection object.
@@ -81,7 +81,7 @@ class Sense(InstrumentBase):
         )
 
 
-class Trigger(InstrumentBase):
+class Trigger(Driver):
     """The Trigger command layer.
 
     :param connection: A connection object.
@@ -134,7 +134,7 @@ class Trigger(InstrumentBase):
         self.connection.write(':TRIG:SIGN')
 
 
-class Unit(InstrumentBase):
+class Unit(Driver):
     """The unit command layer.
 
     :param connection: A connection object.

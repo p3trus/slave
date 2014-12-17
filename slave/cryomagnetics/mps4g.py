@@ -7,7 +7,7 @@ from future.builtins import *
 
 import string
 
-from slave.core import Command, InstrumentBase
+from slave.core import Command, Driver
 import slave.protocol
 import slave.iec60488
 from slave.types import Boolean, Float, Mapping, Set, String
@@ -29,7 +29,7 @@ class UnitFloat(Float):
         return float(value)
 
 
-class Range(InstrumentBase):
+class Range(Driver):
     """Represents a MPS4G current range.
 
     :param transport: A transport object.
@@ -53,7 +53,7 @@ class Range(InstrumentBase):
                             Float(min=1e-4, max=100., fmt='{0:.4f}'))
 
 
-class Shim(InstrumentBase):
+class Shim(Driver):
     """Represents a Shim option of the 4GMPS.
 
     :param transport: A transport object.

@@ -166,7 +166,7 @@ from __future__ import (absolute_import, division,
 # breaks multiple inheritance due to it's metaclass.
 from future.builtins import map, zip, dict, int, list, range, str
 
-from slave.core import Command, InstrumentBase
+from slave.core import Command, Driver
 from slave.types import Boolean, Integer, Register, String
 
 
@@ -204,7 +204,7 @@ def _construct_register(reg, default_reg):
     return x
 
 
-class IEC60488(InstrumentBase):
+class IEC60488(Driver):
     """The IEC60488 class implements a IEC 60488-2:2004(E) compliant base
     class.
 

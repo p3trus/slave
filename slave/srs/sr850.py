@@ -5,7 +5,7 @@ from __future__ import (absolute_import, division,
                         print_function, unicode_literals)
 from future.builtins import *
 
-from slave.core import Command, InstrumentBase, CommandSequence
+from slave.core import Command, Driver, CommandSequence
 from slave.types import Boolean, Enum, Float, Integer, Register, String
 from slave.iec60488 import IEC60488, PowerOn
 
@@ -905,7 +905,7 @@ class SR850(IEC60488, PowerOn):
         self._write('CALC')
 
 
-class Display(InstrumentBase):
+class Display(Driver):
     """Represents a SR850 display.
 
     :param transport: A transport object.
@@ -981,7 +981,7 @@ class Display(InstrumentBase):
         self.cursor = Command(('CURS? {0}'.format(idx), (Float, Float)))
 
 
-class Cursor(InstrumentBase):
+class Cursor(Driver):
     """Represents the SR850 cursor of the active display.
 
     :param transport: A transport object.
@@ -1050,7 +1050,7 @@ class Cursor(InstrumentBase):
         self._write('CPRV')
 
 
-class Output(InstrumentBase):
+class Output(Driver):
     """Represents a SR850 analog output.
 
     :param transport: A transport object.
@@ -1097,7 +1097,7 @@ class Output(InstrumentBase):
         )
 
 
-class Trace(InstrumentBase):
+class Trace(Driver):
     """Represents a SR850 trace.
 
     :param transport: A transport object.
@@ -1164,7 +1164,7 @@ class Trace(InstrumentBase):
         return self._ask(cmd)
 
 
-class Mark(InstrumentBase):
+class Mark(Driver):
     """A SR850 mark.
 
     :param transport: A transport object.
@@ -1211,7 +1211,7 @@ class Mark(InstrumentBase):
         self._write(('MTXT', Integer, String), self.idx, value)
 
 
-class MarkList(InstrumentBase):
+class MarkList(Driver):
     """A sequence like structure holding the eight SR850 marks."""
     def __init__(self, transport, protocol):
         super(MarkList, self).__init__(transport, protocol)
@@ -1227,7 +1227,7 @@ class MarkList(InstrumentBase):
         return self._marks[item]
 
 
-class FitParameters(InstrumentBase):
+class FitParameters(Driver):
     """The calculated fit parameters.
 
     :param transport: A transport object.
@@ -1294,7 +1294,7 @@ class FitParameters(InstrumentBase):
         self.t0 = Command(('PARS? 3', Float))
 
 
-class Statistics(InstrumentBase):
+class Statistics(Driver):
     """Provides access to the results of the statistics calculation.
 
     :param transport: A transport object.
