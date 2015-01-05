@@ -1,6 +1,9 @@
 #  -*- coding: utf-8 -*-
 #
-# Slave, (c) 2012, see AUTHORS.  Licensed under the GNU GPL.
+# Slave, (c) 2012-2014, see AUTHORS.  Licensed under the GNU GPL.
+from __future__ import (absolute_import, division,
+                        print_function, unicode_literals)
+from future.builtins import *
 import csv
 import collections
 import threading
@@ -31,7 +34,7 @@ class ForwardSequence(collections.Sequence):
 
     def __getitem__(self, item):
         if isinstance(item, slice):
-            return map(self._get, self._sequence[item])
+            return tuple(map(self._get, self._sequence[item]))
         return self._get(self._sequence[item])
 
     def __setitem__(self, item, value):
@@ -40,7 +43,8 @@ class ForwardSequence(collections.Sequence):
         if isinstance(item, slice):
             for i in self._sequence[item]:
                 self._set(i, value)
-        return self._set(item, value)
+        else:
+            self._set(self._sequence[item], value)
 
 
 def index(index, length):
