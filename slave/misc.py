@@ -75,9 +75,10 @@ class Measurement(object):
     specified by path.
 
     """
-    def __init__(self, path, measurables):
+    def __init__(self, path, measurables, names=None):
         self._path = path
         self._measurables = measurables
+        self._names = names
         self._file = None
         self._writer = None
         self.open()
@@ -86,6 +87,8 @@ class Measurement(object):
         if not self._file:
             self._file = open(self._path, 'wb')
             self._writer = csv.writer(self._file)
+            if self._names:
+                self._writer.writerow(self._names)
 
     def close(self):
         if self._file:
