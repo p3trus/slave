@@ -439,6 +439,17 @@ class SR7230(Driver):
         '500 fA', '1 pA', '2 pA', '5 pA', '10 pA', '20 pA', '50 pA', '100 pA',
         '200 pA', '500 pA', '1 nA', '2 nA', '5 nA', '10 nA'
     ]
+
+    @property
+    def SENSITIVITY(self):
+        imode = self.current_mode
+        if imode == 'off':
+            return self.SENSITIVITY_VOLTAGE
+        elif imode == 'high bandwidth':
+            return self.SENSITIVITY_CURRENT_HIGHBW
+        else:
+            return self.SENSITIVITY_CURRENT_LOWNOISE
+
     AC_GAIN = [
         '0 dB', '6 dB', '12 dB', '18 dB', '24 dB', '30 dB', '36 dB', '42 dB',
         '48 dB', '54 dB', '60 dB', '66 dB', '72 dB', '78 dB', '84 dB', '90 dB'
