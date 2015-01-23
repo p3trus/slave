@@ -255,7 +255,7 @@ class Driver(object):
         else:
             if isinstance(attr, Command):
                 # Redirect write access
-                if (isinstance(value, collections.Iterable) and
+                if (isinstance(value, collections.Sequence) and
                     not isinstance(value, (str, bytes))):
                     attr.write(self._transport, self._protocol, *value)
                 else:
