@@ -127,6 +127,9 @@ class Trace(Driver):
 
     :param connection: A connection object.
 
+    :ivar points: Specify number of readings to store (2-1024).
+    :ivar feed:   Source of readings ('sense', 'calculate' or `None`).
+    :ivar feed_control: Buffer control mode ('never' or 'next')
     """
     def __init__(self, connection):
         super(Trace, self).__init__(connection)
