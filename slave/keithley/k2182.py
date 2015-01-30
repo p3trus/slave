@@ -107,19 +107,30 @@ class Sense(Driver):
 
 class System(Driver):
     """The System command layer.
-    
+
     :param connection: A connection object.
 
+    :ivar autozero: Enable/Disable autozero.
     :ivar front_autozero: Enable/Disable front autozero (disable to speed
                           up delta measurements)
     """
     def __init__(self, connection):
         super(System, self).__init__(connection)
+        self.autozero = Command(
+            ':SYST:AZER?',
+            ':SYST:AZER',
+            Boolean
+        )
         self.front_autozero = Command(
             ':SYST:FAZ?',
             ':SYST:FAZ',
             Boolean
         )
+
+    def preset(self):
+        """Return to system preset defaults."""
+        self._write(':SYST:PRES')
+
 
 
 class Trace(Driver):
