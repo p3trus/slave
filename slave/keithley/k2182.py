@@ -153,11 +153,11 @@ class Trace(Driver):
             ':TRAC:FEED?',
             ':TRAC:FEED',
             Mapping({'sense': 'SENS', 'calculate': 'CALC', None: 'NONE'})
-        }
+        )
         self.feed_control = Command(
             ':TRAC:FEED:CONT?',
             ':TRAC:FEED:CONT?',
-            Mapping({'next', 'NEXT', 'never': 'NEV'})
+            Mapping({'next': 'NEXT', 'never': 'NEV'})
         )
 
     def clear(self):
