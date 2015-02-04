@@ -539,8 +539,11 @@ class PPMS(IEC60488):
             raise TypeError('measure parameter not callable.')
 
         self.set_temperature(temperature, rate, 'no overshoot', wait_for_stability=False)
+        start = datetime.datetime.now()
         while True:
-            if self.system_status['temperature'] == 'normal stability at target temperature':
+            # The PPMS needs some time to update the status code, we therefore ignore it for 10s.
+            if (self.system_status['temperature'] == 'normal stability at target temperature' and
+                (start - datetime.datetime.now() > datetime.timedelta(seconds=10))):
                 break
             measure()
             time.sleep(delay)
@@ -629,8 +632,9 @@ class PPMS(IEC60488):
         """
         self.target_temperature = temperature, rate, mode
         while wait_for_stability:
-            status = self.system_status['temperature']
-            if status == 'normal stability at target temperature':
+            # The PPMS needs some time to update the status code, we therefore ignore it for 10s.
+            if (self.system_status['temperature'] == 'normal stability at target temperature' and
+                (start - datetime.datetime.now() > datetime.timedelta(seconds=10))):
                 break
             time.sleep(delay)
 
