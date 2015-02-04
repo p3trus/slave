@@ -914,7 +914,7 @@ class LS340(IEC60488):
 
         """
         args = [std, dest, serial, T1, U1, T2, U2]
-        dtype = [Integer(min=1, max=21), Integer(min=21, max=61), String(max=11), Float, Float, Float, Float]
+        dtype = [Integer(min=1, max=21), Integer(min=21, max=61), String(max=10), Float, Float, Float, Float]
         if (T3 is not None) and (U3 is not None):
             args.extend([T3, U3])
             dtype.extend([Float, Float])
