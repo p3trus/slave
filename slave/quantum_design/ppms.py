@@ -17,7 +17,7 @@ import slave.protocol
 STATUS_TEMPERATURE = {
     0x0: 'unknown',
     0x1: 'normal stability at target temperature',
-    0x2: 'stable',
+    0x2: 'tracking',
     0x5: 'within tolerance, waiting for equilibrium',
     0x6: 'temperature not in tolerance, not valid',
     0x7: 'filling/emptying reservoir',
