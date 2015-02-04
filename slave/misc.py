@@ -263,7 +263,7 @@ class LockInMeasurement(Measurement):
         # If autoranging is enabled,
         if self._autorange:
             for lia, auto, (x, y) in zip(self._lockins, self._autorange, lockin_xy):
-                sens = auto.range(max(x, y))
+                sens = auto.range(max(abs(x), abs(y)))
                 if lia.sensitivity != sens:
                     lia.sensitivity = sens
 
