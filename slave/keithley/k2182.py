@@ -9,13 +9,14 @@ from slave.types import Boolean, Float, Integer, Mapping, Set
 class Initiate(Driver):
     """The initiate command layer.
 
-    :param connection: A connection object.
+    :param transport: A transport object.
+    :param protocol: A protocol object.
 
     :ivar continuous: A boolean representing the continuous initiation mode.
 
     """
-    def __init__(self, connection):
-        super(Initiate, self).__init__(connection)
+    def __init__(self, transport, protocol):
+        super(Initiate, self).__init__(transport, protocol)
         self.continuous_mode = Command(
             ':INIT:CONT?',
             ':INIT:CONT',
@@ -24,13 +25,14 @@ class Initiate(Driver):
 
     def __call__(self):
         """Initiates one measurement cycle."""
-        self.connection.write(':INIT')
+        self._write(':INIT')
 
 
 class Output(Driver):
     """The Output command layer.
 
-    :param connection: A connection object.
+    :param transport: A transport object.
+    :param protocol: A protocol object.
 
     :ivar gain: The analog output gain. A float between -100e6 and 100e6.
     :ivar offset: The analog output offset. -1.2 to 1.2.
@@ -40,8 +42,8 @@ class Output(Driver):
         relative value.
 
     """
-    def __init__(self, connection):
-        super(Output, self).__init__(connection)
+    def __init__(self, transport, protocol):
+        super(Output, self).__init__(transport, protocol)
         self.gain = Command(
             'OUTP:GAIN?',
             'OUTP:GAIN',
@@ -67,7 +69,7 @@ class Output(Driver):
 class Sense(Driver):
     """The Sense command layer.
 
-    :param connection: A connection object.
+    :param transport: A transport object.
 
     :ivar delta_mode: Enables/Disables the delta measurement mode.
     :ivar function: The sense function, either 'temperature' or 'voltage' (dc).
@@ -76,8 +78,8 @@ class Sense(Driver):
     :ivar range: Set the measurement range (0 to 120 Volt)
 
     """
-    def __init__(self, connection):
-        super(Sense, self).__init__(connection)
+    def __init__(self, transport, protocol):
+        super(Sense, self).__init__(transport, protocol)
         self.delta_mode = Command(
             ':SENS:VOLT:DELT?',
             ':SENS:VOLT:DELT',
@@ -108,14 +110,15 @@ class Sense(Driver):
 class System(Driver):
     """The System command layer.
 
-    :param connection: A connection object.
+    :param transport: A transport object.
+    :param protocol: A protocol object.
 
     :ivar autozero: Enable/Disable autozero.
     :ivar front_autozero: Enable/Disable front autozero (disable to speed
                           up delta measurements)
     """
-    def __init__(self, connection):
-        super(System, self).__init__(connection)
+    def __init__(self, transport, protocol):
+        super(System, self).__init__(transport, protocol)
         self.autozero = Command(
             ':SYST:AZER?',
             ':SYST:AZER',
@@ -132,18 +135,19 @@ class System(Driver):
         self._write(':SYST:PRES')
 
 
-
 class Trace(Driver):
     """The Trace command layer.
 
-    :param connection: A connection object.
+    :param transport: A transport object.
+    :param protocol: A protocol object.
 
     :ivar points: Specify number of readings to store (2-1024).
     :ivar feed:   Source of readings ('sense', 'calculate' or `None`).
     :ivar feed_control: Buffer control mode ('never' or 'next')
+
     """
-    def __init__(self, connection):
-        super(Trace, self).__init__(connection)
+    def __init__(self, transport, protocol):
+        super(Trace, self).__init__(transport, protocol)
         self.points = Command(
             ':TRAC:POIN?',
             ':TRAC:POIN',
@@ -166,15 +170,14 @@ class Trace(Driver):
 
     def free(self):
         """Query bytes available and bytes in use."""
-        response = self._query((':TRAC:FREE?', String))
-        available, in_use = map(float, response.split(','))
-        return available, in_use
+        return self._query((':TRAC:FREE?', [Float, Float]))
 
 
 class Trigger(Driver):
     """The Trigger command layer.
 
-    :param connection: A connection object.
+    :param transport: A transport object.
+    :param protocol: A protocol object.
 
     :ivar auto_delay: The state of the auto delay.
     :ivar delay: The trigger delay, between 0 to 999999.999 seconds.
@@ -183,8 +186,8 @@ class Trigger(Driver):
     :ivar timer: The timer interval, between 0 to 999999.999 seconds.
 
     """
-    def __init__(self, connection):
-        super(Trigger, self).__init__(connection)
+    def __init__(self, transport, protocol):
+        super(Trigger, self).__init__(transport, protocol)
         self.auto_delay = Command(
             ':TRIG:DEL:AUTO?',
             ':TRIG:DEL:AUTO',
@@ -221,19 +224,20 @@ class Trigger(Driver):
         exited.
 
         """
-        self.connection.write(':TRIG:SIGN')
+        self._write(':TRIG:SIGN')
 
 
 class Unit(Driver):
     """The unit command layer.
 
-    :param connection: A connection object.
+    :param transport: A transport object.
+    :param protocol: A protocol object.
 
     :ivar temperature: The unit of the temperature, either 'C', 'F', or 'K'.
 
     """
-    def __init__(self, connection):
-        super(Unit, self).__init__(connection)
+    def __init__(self, transport, protocol):
+        super(Unit, self).__init__(transport, protocol)
         self.temperature = Command(
             ':UNIT:TEMP?',
             ':UNIT:TEMP',
@@ -244,7 +248,7 @@ class Unit(Driver):
 class K2182(iec.IEC60488, iec.StoredSetting, iec.Trigger):
     """A keithley model 2182/A nanovoltmeter.
 
-    :param connection: A connection object
+    :param transport: A transport object.
 
     :ivar initiate: An instance of :class:`.Initiate`.
     :ivar output: An instance of :class:`.Output`.
@@ -260,26 +264,26 @@ class K2182(iec.IEC60488, iec.StoredSetting, iec.Trigger):
         ..note:: This Command is much slower than :meth:`.read`.
 
     """
-    def __init__(self, connection):
-        super(K2182, self).__init__(connection)
-        self.initiate = Initiate(connection)
-        self.output = Output(connection)
+    def __init__(self, transport):
+        super(K2182, self).__init__(transport)
+        self.initiate = Initiate(self._transport, self._protocol)
+        self.output = Output(self._transport, self._protocol)
         self.sample_count = Command(
             ':SAMP:COUN?',
             ':SAMP:COUN',
             Integer(min=1, max=1024)
         )
-        self.sense = Sense(connection)
-        self.system = System(connection)
+        self.sense = Sense(self._transport, self._protocol)
+        self.system = System(self._transport, self._protocol)
         self.temperature = Command((':MEAS:TEMP?', Float))
-        self.trace = Trace(connection)
-        self.triggering = Trigger(connection)
-        self.unit = Unit(connection)
+        self.trace = Trace(self._transport, self._protocol)
+        self.triggering = Trigger(self._transport, self._protocol)
+        self.unit = Unit(self._transport, self._protocol)
         self.voltage = Command((':MEAS:VOLT?', Float))
 
     def abort(self):
         """Resets the trigger system, it put's the device in idle mode."""
-        self.connection.write(':ABOR')
+        self._write(':ABOR')
 
     def fetch(self):
         """Returns the latest available reading
@@ -288,7 +292,7 @@ class K2182(iec.IEC60488, iec.StoredSetting, iec.Trigger):
 
         """
         # TODO check if it can return multiple values.
-        return float(self.connection.ask(':FETC?'))
+        return self._query((':FETC?', Float))
 
     def read(self):
         """A high level command to perform a singleshot measurement.
@@ -297,4 +301,4 @@ class K2182(iec.IEC60488, iec.StoredSetting, iec.Trigger):
         value.
 
         """
-        return float(self.connection.ask(':READ?'))
+        return self._query((':READ?', Float))
