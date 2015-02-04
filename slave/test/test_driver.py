@@ -8,8 +8,8 @@ import itertools as it
 
 import pytest
 
-from slave.driver import Command, _dump, _load, _to_instance, _typelist
-from slave.types import Integer
+from slave.driver import Command, Driver, _dump, _load, _to_instance, _typelist
+from slave.types import Integer, String
 from slave.transport import SimulatedTransport
 
 
@@ -196,3 +196,63 @@ class TestCommand(object):
         cmd = Command(write=('HEADER', [Integer, Integer]))
         cmd.write(transport, protocol, 1, 2)
         assert cmd._simulation_buffer == ['1', '2']
+
+
+class MockDriver(Driver):
+    def __init__(self, transport, protocol):
+        super(MockDriver, self).__init__(transport, protocol)
+        self.no_cmd = 'NO CMD'
+        self.cmd = Command('QUERY', 'WRITE', String)
+        self.multiple_types_cmd = Command('QUERY', 'WRITE', [Integer, String])
+
+
+class TestDriver(object):
+    def test_getting_normal_attribute(self):
+        transport, protocol = MockTransport(), MockProtocol()
+        driver = MockDriver(transport, protocol)
+        assert driver.no_cmd == 'NO CMD'
+
+    def test_setting_normal_attribute(self):
+        transport, protocol = MockTransport(), MockProtocol()
+        driver = MockDriver(transport, protocol)
+        driver.no_cmd = 'MODIFIED'
+        assert driver.__dict__['no_cmd'] == 'MODIFIED'
+
+    def test_setting_new_attribute(self):
+        transport, protocol = MockTransport(), MockProtocol()
+        driver = MockDriver(transport, protocol)
+        driver.new_cmd = 'NEW'
+        assert driver.__dict__['new_cmd'] == 'NEW'
+
+    def test_getting_command(self):
+        transport, protocol = MockTransport(), MockProtocol(response=['RESPONSE'])
+        driver = MockDriver(transport, protocol)
+        assert driver.cmd == 'RESPONSE'
+
+    def test_writing_command(self):
+        transport, protocol = MockTransport(), MockProtocol()
+        driver = MockDriver(transport, protocol)
+        driver.cmd = 'MESSAGE'
+        assert protocol.header == 'WRITE'
+        assert protocol.data == ('MESSAGE',)
+
+    def test_writing_a_sequence(self):
+        transport, protocol = MockTransport(), MockProtocol()
+        driver = MockDriver(transport, protocol)
+        driver.multiple_types_cmd = 1337, 'L33t'
+        assert protocol.header == 'WRITE'
+        assert protocol.data == ('1337', 'L33t')
+
+    def test_query_method(self):
+        transport, protocol = MockTransport(), MockProtocol(response=['RESPONSE'])
+        driver = MockDriver(transport, protocol)
+        assert driver._query(('QUERY', String, String), 'DATA') == 'RESPONSE'
+        assert protocol.header == 'QUERY'
+        assert protocol.data == ('DATA',)
+
+    def test_write_method(self):
+        transport, protocol = MockTransport(), MockProtocol()
+        driver = MockDriver(transport, protocol)
+        driver._write(('WRITE', [Integer, String]), 12, 'DATA')
+        assert protocol.header == 'WRITE'
+        assert protocol.data == ('12', 'DATA')
