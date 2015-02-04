@@ -43,6 +43,7 @@ Temperature Controllers
 Manufacturer  Model  Class
 ============  =====  ====================================
 Lakeshore     LS340  :class:`slave.lakeshore.ls340.LS340`
+Lakeshore     LS350  :class:`slave.lakeshore.ls350.LS350`
 ============  =====  ====================================
 
 Magnet Power Supplies

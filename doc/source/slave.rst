@@ -86,6 +86,11 @@ This part covers the complete api documentation of the slave library.
     :undoc-members:
     :show-inheritance:
 
+.. automodule:: slave.lakeshore.ls350
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 .. automodule:: slave.lakeshore.ls370
     :members:
     :undoc-members:
