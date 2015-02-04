@@ -1,6 +1,6 @@
 #  -*- coding: utf-8 -*-
 #
-# E21, (c) 2012, see AUTHORS.  Licensed under the GNU GPL.
+# E21, (c) 2012-2015, see AUTHORS.  Licensed under the GNU GPL.
 from slave.driver import Command, Driver
 import slave.iec60488 as iec
 from slave.types import Boolean, Float, Integer, Mapping, Set
