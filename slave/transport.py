@@ -186,7 +186,7 @@ def visa(*args, **kw):
     if LooseVersion(version) < LooseVersion('1.5'):
         return Visa_1_4(visa.instrument(*args, **kw))
     else:
-        rm = visa.RessourceManager()
+        rm = visa.ResourceManager()
         return Visa_1_5(rm.get_instrument(*args, **kw))
 
 
@@ -213,7 +213,7 @@ class Visa_1_5(Transport):
         return self._instrument.read_raw(num_bytes)
 
     def __write__(self, data):
-        self.instrument.write_raw(data)
+        self._instrument.write_raw(data)
 
 
 class Serial(Transport):
