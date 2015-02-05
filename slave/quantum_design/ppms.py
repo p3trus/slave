@@ -407,7 +407,7 @@ class PPMS(IEC60488):
         """
         # TODO: Check what 'off' actually does. Manual says it just deactivates
         # hourly readings and opcode 0 should be used to deactivate.
-        self._write(('LEVELON', Enum('on', 'continuous', 'hourly', 'off')))
+        self._write(('LEVELON', Enum('on', 'continuous', 'hourly', 'off')), rate)
 
     @property
     def field(self):
