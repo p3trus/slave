@@ -543,7 +543,7 @@ class PPMS(IEC60488):
         while True:
             # The PPMS needs some time to update the status code, we therefore ignore it for 10s.
             if (self.system_status['temperature'] == 'normal stability at target temperature' and
-                (start - datetime.datetime.now() > datetime.timedelta(seconds=10))):
+                (datetime.datetime.now() - start > datetime.timedelta(seconds=10))):
                 break
             measure()
             time.sleep(delay)
@@ -634,7 +634,7 @@ class PPMS(IEC60488):
         while wait_for_stability:
             # The PPMS needs some time to update the status code, we therefore ignore it for 10s.
             if (self.system_status['temperature'] == 'normal stability at target temperature' and
-                (start - datetime.datetime.now() > datetime.timedelta(seconds=10))):
+                (datetime.datetime.now() - start > datetime.timedelta(seconds=10))):
                 break
             time.sleep(delay)
 
