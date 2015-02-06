@@ -631,6 +631,7 @@ class PPMS(IEC60488):
 
         """
         self.target_temperature = temperature, rate, mode
+        start = datetime.datetime.now()
         while wait_for_stability:
             # The PPMS needs some time to update the status code, we therefore ignore it for 10s.
             if (self.system_status['temperature'] == 'normal stability at target temperature' and
