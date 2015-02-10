@@ -1203,11 +1203,11 @@ class FastBuffer(Driver):
 
     def __getitem__(self, item):
         try:
-            index = str(FastBuffer.KEYS.index(item))
+            idx = str(FastBuffer.KEYS.index(item))
         except ValueError:
             raise KeyError('Invalid Curve key: {}'.format(item))
         # The data is stored as two byte integers.
-        nbytes = self.buffer_length * 2
+        nbytes = self.length * 2
         data = self._protocol.query_bytes(self._transport, nbytes, 'DCB', idx)
         return fromstring(buffer(data), dtype='>h')
 
@@ -1283,7 +1283,7 @@ class StandardBuffer(Driver):
             raise KeyError(item)
         idx = str(StandardBuffer.KEYS.index(item))
         # The data is stored as two byte integers.
-        nbytes = self.buffer_length * 2
+        nbytes = self.length * 2
 
         if item == 'frequency':
             f1 = self._protocol.query_bytes(self._transport, nbytes, 'DCB', '15')
