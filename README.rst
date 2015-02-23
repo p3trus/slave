@@ -14,19 +14,27 @@ object relational mappers.
 
     from slave.iec60488 import IEC60488, PowerOn
     from slave.driver import Command
-    from slave.types import Integer, Enum
+    from slave.types import Enum, Float, Integer, Register
 
     class Device(IEC60488, PowerOn):
         """An iec60488 conforming device api with additional commands."""
-        def __init__(self, transport):
-            super(Device, self).__init__(transport)
-            # A custom command
-            self.my_command = Command(
-                'QRY?', # query message header
-                'WRT',  # command message header
-                # response and command data type
-                [Integer, Enum('first', 'second')]
-            )
+        my_command = Command(
+            'QRY?', # query message header
+            'WRT',  # command message header
+            # response and command data type
+            [Integer, Enum('first', 'second')]
+        )
+        # Hirarchies are created by nesting class statements.
+        class sub_system(Driver):
+            """Subsystem commands."""
+            # Values can be constrained.
+            sub_command = Command(':SUB:QRY?', ':SUB:WRT', Float(min=0.))
+
+            # query-only and write-only commands are possible.
+            status = Command(query=(':SUB:STAT?', Register({0: 'First Bit', 1: 'Second Bit'})))
+
+        def reset(self):
+            self._write('*RST')
 
 Commands mimic instance attributes. Read access queries the device, parses and
 converts the response and finally returns it. Write access parses and converts
@@ -52,7 +60,7 @@ development. A short usage example is given below::
 Requirements
 ------------
 
- * Python 2.6 or higher
+ * Python 2.7 or higher
  * Sphinx (optional, to build the documentation)
  * sphinx_bootstrap_theme(optional, default theme used for the documentation)
  * distribute (Python 3.x)
@@ -60,7 +68,7 @@ Requirements
 Installation
 ------------
 
-To install Slave, simply type
+To install slave, simply type
 
     python setup.py install
 
