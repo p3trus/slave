@@ -71,7 +71,7 @@ class Curve(Driver):
         * *<coefficient>* The curves temperature coefficient. Valid entries are
           `'negative'` and `'positive'`.
 
-    The Curve is implementing the `collections.sequence` protocoll. It models a
+    The Curve is implementing the `collections.sequence` protocol. It models a
     sequence of points. These are tuples with the following structure
     *(<units value>, <temp value>)*, where
 
@@ -199,24 +199,6 @@ class Heater(Driver):
         self.output = Command(('HTR?', Float))
         self.range = Command('RANGE?', 'RANGE', Integer(min=0, max=5))
         self.status = Command(('HTRST?', Enum(*self.ERROR_STATUS)))
-
-
-class Input(Driver, collections.Mapping):
-    def __init__(self, transport, protocol, channels):
-        super(Input, self).__init__(transport, protocol)
-        self._channels = dict(
-            (ch, InputChannel(transport, self._protocol, ch)) for ch in channels
-        )
-
-    def __getitem__(self, channel):
-        return self._channels[channel]
-
-    def __iter__(self):
-        # TODO check if correct
-        return self._channels.keys()
-
-    def __len__(self):
-        return len(self._channels)
 
 
 class InputChannel(Driver):
@@ -951,5 +933,7 @@ class LS340(IEC60488):
             '3465': ('A', 'B', 'C'),
             '3468': ('A', 'B', 'C1', 'C2', 'C3', 'C4', 'D1', 'D2', 'D3', 'D4')
         }
-        self.input = Input(self._transport, self._protocol, channels[value])
+        self.input = {
+            ch: InputChannel(self._transport, self._protocol, ch) for ch in channels[value]
+        }
         self._scanner = value

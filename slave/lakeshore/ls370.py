@@ -182,7 +182,7 @@ class Heater(Driver):
         )
 
 
-class Input(Driver, collections.Sequence):
+class Input(Driver):
     """The LS370 Input.
 
     :param transport: A transport object.
@@ -219,11 +219,26 @@ class Input(Driver, collections.Sequence):
             (Integer(min=0, max=len(self)), Boolean)
         )
 
-    def __len__(self):
-        return len(self._channels)
+    def count(self, value):
+        return self._channels.count(value)
+
+    def index(self, value):
+        return self._channels.index(value)
+
+    def __contains__(self, y):
+        return self._channels.__contains__(y)
 
     def __getitem__(self, channel):
         return self._channels[channel]
+
+    def __iter__(self):
+        return self._channels.__iter__()
+
+    def __len__(self):
+        return len(self._channels)
+
+    def __reversed__(self):
+        return self._channels.__reversed__()
 
 
 class InputChannel(Driver):
