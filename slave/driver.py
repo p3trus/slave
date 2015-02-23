@@ -1,25 +1,116 @@
 #  -*- coding: utf-8 -*-
 #
 # Slave, (c) 2012 - 2014 see AUTHORS.  Licensed under the GNU GPL.
-"""
-The core module contains several helper classes to ease instrument control.
+"""The driver layer is highest level of abstraction in slave.
 
-Implementing an instrument interface is pretty straight forward. A simple
-implementation might look like::
+The basic building blocks for custom drivers are
 
-    from slave.driver import Driver, Command
-    from slave.types import Integer
+ * :class:`Driver`
+ * :class:`Command`
+ * :mod:`slave.types` used by the :class:`Command`
+
+The best way to learn is to check the implementation of the builtin drivers.
+Note that most of the builtin drivers still use the oldstyle syntax. Despite
+being more verbose you can still learn a lot.
+
+In the following we will implement a few drivers using the new style syntax.
+
+A Motorized Valve
+-----------------
+
+We start with a simple example, a motorized Valve. We assume it implements the
+following commands:
+
+======= ===================================================================
+Command Description
+======= ===================================================================
+`POS?`  Reads the position of the stepper motor controlling the valve, e.g.
+        'POS?' could return '7'.
+`POS`   Sets the valve position, e.g. 'POS 8'.
+'VER?'  Returns the version string.
+'CLO'   Closes the valve completely.
+======= ===================================================================
+
+The corresponding driver could look like this::
+
+    from slave.driver import Command, Driver
+    from slave.types import Integer, String
 
 
-    class MyInstrument(Driver):
-        def __init__(self, transport):
-            super(MyInstrument, self).__init__(transport)
-            # A simple query and writeable command, which takes and writes an
-            # Integer.
-            self.my_cmd = Command('QRY?', 'WRT', Integer)
-            # A query and writeable command that converts a string parameter to
-            # int and vice versa.
-            self.my_cmd2 = Command('QRY2?', 'WRT2', Enum('first', 'second'))
+    class Valve(Driver):
+        position = Command('POS?', 'POS', Integer)
+        # Read only command.
+        version = Command(query=('VER?', String))
+
+        def close(self):
+            '''Close valve completely.'''
+            self._write('CLOSE')
+
+.. note::
+
+        slave uses the following convention for it's own drivers. A stateful
+        command is represented by a :class:`Command`, a stateless command by a
+        method.
+
+To use it, we instantiate it with the appropriate transport (we assume the
+device is controlled over ethernet)::
+
+    >>> from slave.transport import Socket
+    >>> transport = Socket(address=('192.168.178.1', 50000))
+    >>> valve = Valve(transport)
+
+Getting the current valve position is as simple as::
+
+    >>> valve.position
+    13
+
+To change it, we simply assign a new value::
+
+    >>> valve.position = 7
+    >>> valve.position
+    7
+
+This example introduced the basic usage. To learn more about the advanced
+techniques such as multiple return types, variable return types, asymmetric
+commands, ... check out the documentation for the :mod:`slave.types` module,
+:class:`slave.driver.Command` class and the source code of the builtin drivers.
+
+Hirarchical Drivers
+-------------------
+
+To create hirarchical drivers, class statements can simply be nested, e.g.::
+
+    class SourceMeter(Driver):
+        identification = Command(('*IDN?', String))
+
+        # Nesting of class statements creates the hirarchy
+        class source(Driver):
+            '''The source subsystem.'''
+            # Arbitrarily deep nesting is possible
+            class current(Driver):
+                '''The DC current subsystem.'''
+                amplitude = Command('SOUR:CURR:AMP?', ':SOUR:CURR:AMP', Float)
+
+            class wave(Driver):
+                '''The ac current subsystem.'''
+                function = Command(
+                    ':SOUR:WAVE:FUN?',
+                    'SOUR:WAVE:FUN',
+                    Enum('sine', 'step', 'noise')
+                )
+
+                def init(self):
+                    self._write(':SOUR:WAVE:INIT')
+
+                def abort(self):
+                    self._write(':SOUR:WAVE:ABOR')
+
+    Usage is as simple as::
+
+        >>> meter = SourceMeter(transport)
+        >>> meter.source.wave.function
+        'step'
+
 
 """
 from __future__ import (absolute_import, division,
@@ -27,6 +118,7 @@ from __future__ import (absolute_import, division,
 # We're not using a star import here, because python-future 0.13's `newobject`
 # breaks multiple inheritance due to it's metaclass.
 from future.builtins import map, zip, dict, int, list, range, str
+from future.utils import with_metaclass
 import collections
 import itertools as it
 
@@ -197,13 +289,34 @@ class Command(object):
                 self._simulation_buffer = _dump(self._write.data_type, response)
             return response
 
+    def __get__(self, obj, type=None):
+        if obj is None:
+            return self
+        return self.query(obj._transport, obj._protocol)
+
+    def __set__(self, obj, value):
+        if obj is None:
+            raise AttributeError()
+        # Redirect write access
+        if (isinstance(value, collections.Sequence) and
+            not isinstance(value, (str, bytes))):
+            self.write(obj._transport, obj._protocol, *value)
+        else:
+            self.write(obj._transport, obj._protocol, value)
+
     def __repr__(self):
         """The commands representation."""
         return '<Command({0},{1},{2})>'.format(self._query, self._write,
                                                    self.protocol)
 
+class DriverMeta(type):
+    def __get__(self, obj, type=None):
+        if obj is None:
+            return self
+        return self(obj._transport, obj._protocol)
 
-class Driver(object):
+
+class Driver(with_metaclass(DriverMeta)):
     """Base class of all instruments.
 
     The Driver class applies some *magic* to simplify the Command
@@ -236,6 +349,9 @@ class Driver(object):
     def __getattribute__(self, name):
         """Redirects read access of command attributes to
         the :class:`~Command.query` function.
+
+        .. note: Method is only neccessary for oldstyle drivers.
+
         """
         attr = object.__getattribute__(self, name)
         if isinstance(attr, Command):
@@ -246,6 +362,9 @@ class Driver(object):
         """Redirects write access of command attributes to the
         :class:`~Command.write` function and injects transport, and command
         config into commands.
+
+        .. note: Method is only neccessary for oldstyle drivers.
+
         """
         try:
             attr = object.__getattribute__(self, name)
