@@ -28,6 +28,7 @@ import socket
 import threading
 
 import ctypes as ct
+import ctypes.util
 import pkg_resources
 from distutils.version import LooseVersion
 
