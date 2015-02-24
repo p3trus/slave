@@ -258,7 +258,7 @@ class LinuxGpib(Transport):
 
     def __read__(self, num_bytes):
         buffer = ct.create_string_buffer(num_bytes)
-        self._lib.ibrd(self._device, ct.byref(num_buffer), ct.c_long(num_bytes))
+        self._lib.ibrd(self._device, ct.byref(buffer), ct.c_long(num_bytes))
         return buffer.value
 
     def trigger(self):
