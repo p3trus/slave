@@ -47,6 +47,19 @@ This part covers the complete api documentation of the slave library.
     :undoc-members:
     :show-inheritance:
 
+:mod:`ics` Module
+-----------------
+
+.. automodule:: slave.ics
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+.. automodule:: slave.ics.ics4807
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 :mod:`iec60488` Module
 ----------------------
 

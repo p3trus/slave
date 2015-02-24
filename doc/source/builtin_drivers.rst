@@ -63,3 +63,11 @@ Manufacturer    Model           Class
 Quantum Design  PPMS Model 6000 :class:`slave.quantum_design.ppms.PPMS`
 ==============  =============== =======================================
 
+Data Acquisition Cards
+----------------------
+
+=============== ========== ==================================
+Manufacturer    Model      Class
+=============== ========== ==================================
+ICS Electronics Model 4807 :class:`slave.ics.ics4807.ICS4807`
+=============== ========== ==================================
