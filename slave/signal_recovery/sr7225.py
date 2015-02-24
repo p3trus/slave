@@ -8,6 +8,7 @@ from future.builtins import *
 from slave.driver import Command, Driver
 from slave.types import Boolean, Enum, Integer, Register, Set, String
 import slave.types
+import slave.protocol
 
 
 class Float(slave.types.Float):
@@ -392,7 +393,8 @@ class SR7225(Driver):
     ]
 
     def __init__(self, transport):
-        super(SR7225, self).__init__(transport)
+        protocol = slave.protocol.IEC60488(msg_term='\r\n', resp_term='\r\n')
+        super(SR7225, self).__init__(transport, protocol)
         # Signal channel
         # ==============
         self.current_mode = Command(
