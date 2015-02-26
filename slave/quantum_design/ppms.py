@@ -49,8 +49,11 @@ STATUS_CHAMBER = {
     0x3: 'sealed, condition unknown',
     0x4: 'performing purge/seal',
     0x5: 'performing vent/seal',
+    0x6: 'pre pump',
+    0x7: 'high vacuum',
     0x8: 'pumping continuously',
     0x9: 'venting continuously',
+    0xe: 'high vacuum error',
     0xf: 'failure',
 }
 
