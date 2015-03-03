@@ -169,7 +169,8 @@ class Curve(Driver):
         """
         if self._writeable:
             self._write(('CRVDEL', Integer), self.idx)
-        raise RuntimeError('Can not delete read-only curves.')
+        else:
+            raise RuntimeError('Can not delete read-only curves.')
 
 
 class Heater(Driver):
