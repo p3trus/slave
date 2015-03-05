@@ -952,7 +952,7 @@ class SR7230(Driver):
         parameters."""
         self._write('LOCK')
 
-    def factory_defaults(full=False):
+    def factory_defaults(self, full=False):
         """Resets the device to factory defaults.
 
         :param full: If full is `True`, all settings are returned to factory
