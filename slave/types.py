@@ -4,7 +4,22 @@
 """Contains the type factory classes used to load and dump values to string.
 
 The type module contains several type classes used by the :class:`~.Command`
-class to load and dump values.
+class to load and dump values. These are
+
+Single types:
+
+ * :class:`Boolean`
+ * :class:`Integer`
+ * :class:`Float`
+ * :class:`Enum`
+ * :class:`Register`
+ * :class:`String`
+ * :class:`Mapping`
+ * :class:`Set`
+
+Composite types:
+
+ * :class:`Stream`
 
 Custom Types
 ------------
@@ -25,9 +40,13 @@ to modify the behaviour.
 from __future__ import (absolute_import, division,
                         print_function, unicode_literals)
 from future.builtins import *
+
+from slave.driver import _to_instance
+
 import random
 import string
 import sys
+import itertools
 
 
 class Type(object):
@@ -335,3 +354,32 @@ class Register(SingleType):
 
     def __repr__(self):
         return 'Register({0!r})'.format(self._map)
+
+
+class Stream(object):
+    """A type container for a variable number of types.
+
+    :param args: A sequence of types.
+
+    The :class:`Stream` class is a type container for variable numbers of types.
+    Let's say a command returns the content of an internal buffer which can
+    contain a variable number of Floats. The corresponding slave command could
+    look like this::
+
+        Command('QRY?', 'WRT', Stream(Float))
+
+    A command of alternating floats and integers is therefore writen as::
+
+        Command('QRY?', 'WRT', Stream(Float, Integer))
+
+    """
+    def __init__(self, *types):
+        self.types = [_to_instance(t) for t in types]
+
+    def simulate(self):
+        """Simulates a stream of types."""
+        # Simulates zero to 20 types
+        return [t.simulate() for t in itertools.islice(self, random.choice(range(10)))]
+
+    def __iter__(self):
+        return itertools.cycle(self.types)
