@@ -378,7 +378,7 @@ class Stream(object):
 
     def simulate(self):
         """Simulates a stream of types."""
-        # Simulates zero to 20 types
+        # Simulates zero to 10 types
         return [t.simulate() for t in itertools.islice(self, random.choice(range(10)))]
 
     def __iter__(self):
