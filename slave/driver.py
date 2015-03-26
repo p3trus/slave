@@ -190,7 +190,18 @@ class Command(object):
         try:
             return self._simulation_buffer
         except AttributeError:
-            response = [t.simulate() for t in self._query.response_type]
+            response_type = self._query.response_type
+            if isinstance(response_type, collections.Sequence):
+                response = [t.simulate() for t in self._query.response_type]
+            else:
+                try:
+                    # If response type is a container type use it's simulation
+                    # method.
+                    response = response_type.simulate()
+                except AttributeError:
+                    # response type is probably an infinite iterator. We limit
+                    # the number of items to 10.
+                    response = it.islice(response_type, 10)
             # If the command is writeable it represents state. Therefore we
             # store the simulated response.
             if self._write:
