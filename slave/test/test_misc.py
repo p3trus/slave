@@ -7,7 +7,7 @@ from future.builtins import *
 import os
 import pytest
 from slave.misc import (index, ForwardSequence, range_to_numeric, AutoRange,
-                        Measurement, LockInMeasurement)
+                        Measurement, LockInMeasurement, wrap_exception)
 
 
 class TestIndex(object):
@@ -159,3 +159,12 @@ class TestLockInMeasurement(object):
             measure()
         assert path.read() == 'X1,Y1,ENV\n1.3,1.4,env\n'
         assert lockins[0].sensitivity == 1.
+
+
+def test_wrap_exception():
+    @wrap_exception(exc=ValueError, new_exc=TypeError)
+    def function():
+        raise ValueError('test')
+
+    with pytest.raises(TypeError):
+        function()

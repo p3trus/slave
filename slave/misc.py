@@ -5,12 +5,14 @@ from __future__ import (absolute_import, division,
                         print_function, unicode_literals)
 from future.builtins import *
 import future.utils
+
 import csv
 import collections
 import threading
 import logging
 import os.path
 import io
+import functools
 
 
 SI_PREFIX = {
@@ -270,3 +272,26 @@ class LockInMeasurement(Measurement):
         # Flatten lockin data and concatenate with optional data.
         data = [d for xy in lockin_xy for d in xy] + optional_data
         self._writer.writerow(data)
+
+
+def wrap_exception(exc, new_exc):
+    """Catches exceptions `exc` and raises `new_exc(exc)` instead.
+
+    E.g.::
+
+        >>> class MyValueError(Exception):
+        ... '''Custom ValueError.'''
+        ... @wrap_exception(exc=ValueError, new_exc=MyValueError)
+        ... def test():
+        ...    raise ValueError()
+
+    """
+    def make_wrapper(fn):
+        @functools.wraps(fn)
+        def wrapper(*args, **kw):
+            try:
+                return fn(*args, **kw)
+            except exc as e:
+                future.utils.raise_with_traceback(new_exc(e))
+        return wrapper
+    return make_wrapper
