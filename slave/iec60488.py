@@ -264,7 +264,7 @@ class IEC60488(Driver):
 
     def clear(self):
         """Clears the status data structure."""
-        self._write('*CLS')
+        self._protocol.clear(self._transport)
 
     def complete_operation(self):
         """Sets the operation complete bit high of the event status byte."""
@@ -440,18 +440,8 @@ class Trigger(object):
         super(Trigger, self).__init__(*args, **kw)
 
     def trigger(self):
-        """Creates a trigger event.
-
-        .. note::
-
-            It first tries to execute `transport._trigger()`. If this fails,
-            the `*TRG` is sent.
-
-        """
-        try:
-            self._transport.trigger()
-        except AttributeError:
-            self._write('*TRG')
+        """Creates a trigger event."""
+        self._protocol.trigger(self._transport)
 
 
 class TriggerMacro(object):

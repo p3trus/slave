@@ -130,6 +130,27 @@ class IEC60488(Protocol):
         with transport:
             transport.write(message)
 
+    def trigger(self, transport):
+        """Triggers the transport."""
+        logger.debug('IEC60488 trigger')
+        with transport:
+            try:
+                transport.trigger()
+            except AttributeError:
+                trigger_msg = self.create_message('*TRG')
+                transport.write(trigger_msg)
+
+    def clear(self, transport):
+        """Issues a device clear command."""
+        logger.debug('IEC60488 clear')
+        with transport:
+            try:
+                transport.clear()
+            except AttributeError:
+                clear_msg = self.create_message('*CLS')
+                transport.write(clear_msg)
+
+
 
 class SignalRecovery(IEC60488):
     """An implementation of the signal recovery network protocol.

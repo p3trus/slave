@@ -223,15 +223,16 @@ class SR830(Driver):
 
     E.g.::
 
-        import visa
-        from slave.sr830 import SR830
-        # create a transport with a sr830 instrument via GPIB on channel 8
-        transport = visa.Instrument('GPIB::8')
+        from slave import Visa
+        from slave.srs import SR830
+        import time
+        # create a transport with a SR830 instrument via GPIB on channel 8
+        transport =Visa('GPIB::8')
         # instantiate the lockin interface.
         lockin = SR830(transport)
         # execute a simple measurement
         for i in range(100):
-            print 'X:', lockin.x
+            print('X:', lockin.x)
             time.sleep(1)
 
     """
@@ -249,8 +250,7 @@ class SR830(Driver):
     def __init__(self, transport):
         """Constructs a SR830 instrument object.
 
-        :param transport: Represents a hardware transport to the real
-          instrument, e.g. a py-visa transport object.
+        :param transport: A transport object.
 
         """
         super(SR830, self).__init__(transport)
