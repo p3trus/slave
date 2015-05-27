@@ -341,7 +341,7 @@ class Register(SingleType):
 
     def load(self, value):
         # We need to cast all integers with the int() function. Otherwise we
-        # would mix
+        # would mix integer with int type of future package.
         bit = lambda x, i: bool(x & (int(1) << int(i)))
         value = int(value)
         return dict((k, bit(value, i)) for k, i in self._map.items())
