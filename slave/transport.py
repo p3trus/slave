@@ -235,7 +235,7 @@ try:
             class Timeout(Timeout, Error):
                 """Raised when a visa timeout occurs."""
 
-            def __init__(self, instrument, *args, **kw):
+            def __init__(self, *args, **kw):
                 super(Visa, self).__init__()
                 self._instrument = visa.instrument(*args, **kw)
 
@@ -258,7 +258,7 @@ try:
             class Timeout(Timeout, Error):
                 """Raised when a serial timeout occurs."""
 
-            def __init__(self, instrument, *args, **kw):
+            def __init__(self, *args, **kw):
                 super(Visa, self).__init__()
                 rm = visa.ResourceManager()
                 self._instrument = rm.get_instrument(*args, **kw)
