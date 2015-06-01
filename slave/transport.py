@@ -30,6 +30,7 @@ import ctypes as ct
 import ctypes.util
 import pkg_resources
 from distutils.version import LooseVersion
+import contextlib
 
 from slave.misc import wrap_exception
 
@@ -234,7 +235,7 @@ try:
             class Timeout(Timeout, Error):
                 """Raised when a visa timeout occurs."""
 
-            def __init__(self, instrument):
+            def __init__(self, instrument, *args, **kw):
                 super(Visa, self).__init__()
                 self._instrument = visa.instrument(*args, **kw)
 
@@ -247,7 +248,7 @@ try:
                     self._instrument.write(data)
 
     else:
-        from visa import VI_ERROR_TMO
+        from pyvisa.errors import VI_ERROR_TMO
 
         class Visa(Transport):
             """A pyvisa wrapper."""
@@ -257,7 +258,7 @@ try:
             class Timeout(Timeout, Error):
                 """Raised when a serial timeout occurs."""
 
-            def __init__(self, instrument):
+            def __init__(self, instrument, *args, **kw):
                 super(Visa, self).__init__()
                 rm = visa.ResourceManager()
                 self._instrument = rm.get_instrument(*args, **kw)
