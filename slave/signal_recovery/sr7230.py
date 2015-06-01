@@ -904,21 +904,9 @@ class SR7230(Driver):
         }
         self._write(('TDT', Integer), param(mode, edge, stop))
 
-    def take_data_continuously(self, trigger, stop):
+    def take_data_continuously(self, stop):
         """Starts continuous data acquisition.
 
-        :param trigger: The trigger condition, either 'curve' or 'point'.
-
-            ======= ===============================================
-            Value   Description
-            ======= ===============================================
-            'curve' Each trigger signal starts a curve acquisition. The max
-                    trigger frequency in this mode is 1 kHz.
-            'point' A point is stored for each trigger signal.
-            ======= ===============================================
-
-        :param edge: Defines wether a 'rising' or 'falling' edge is interpreted
-            as a trigger signal.
         :param stop: The stop condition. Valid are 'buffer', 'halt',
             'rising' and 'falling'.
 
@@ -937,7 +925,7 @@ class SR7230(Driver):
         .. note:: The internal buffer is used as a circular buffer.
 
         """
-        self._write(('TDC', Enum('halt', 'rising', 'falling')))
+        self._write(('TDC', Enum('halt', 'rising', 'falling')), stop)
 
     def halt(self):
         """Halts curve acquisition in progress.
