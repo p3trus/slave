@@ -621,7 +621,7 @@ class SR850(IEC60488, PowerOn):
         """Automatically selects the best matching phase."""
         self._write('APHS')
 
-    def auto_offset(quantity):
+    def auto_offset(self, quantity):
         """Automatically offsets the given quantity.
 
         :param quantity: The quantity to offset, either 'x', 'y' or 'r'
