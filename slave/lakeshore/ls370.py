@@ -381,7 +381,7 @@ class InputChannel(Driver):
                 7: 'temp under',
             })
         ))
-        self.resistance = Command(('RDGR?', Float))
+        self.resistance = Command(('RDGR? {}'.format(idx), Float))
         self.resistance_range = Command(
             'RDGRNG? {0}'.format(idx),
             'RDGRNG {0},'.format(idx),
