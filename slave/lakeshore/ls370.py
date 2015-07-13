@@ -105,7 +105,7 @@ class Curve(Driver):
             unit, temp = value
             data_t = [Integer(min=1), Integer(min=1, max=200), Float, Float]
             # Since indices in LS304 start at 1, it must be added.
-            self._write(('CRVPT', data_t, item + 1, unit, temp))
+            self._write(('CRVPT', data_t), self.idx, item + 1, unit, temp)
 
     def delete(self):
         """Deletes this curve."""
