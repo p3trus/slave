@@ -213,8 +213,8 @@ class String(SingleType):
     """
     def __init__(self, min=None, max=None, *args, **kw):
         super(String, self).__init__(*args, **kw)
-        self._min = min = min and self.__convert__(min)
-        self._max = max = max and self.__convert__(max)
+        self._min = min = min and int(min)
+        self._max = max = max and int(max)
         if (min is not None) and (max is not None):
             if (min > max):
                 raise ValueError('min > max')
