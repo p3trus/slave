@@ -348,10 +348,11 @@ class SR7230(Driver):
 
     :ivar fast_buffer: An instance of :class:`~.FastBuffer`, representing the
         fast curve buffer related commands.
-    :ivar standard_buffer: An instance of :class:`~.FastBuffer`, representing the
-        fast curve buffer related commands.
-    :ivar buffer_trigger_output: The trigger output generated when buffer
-        acquisition is running.
+    :ivar standard_buffer: An instance of :class:`~.FastBuffer`, representing
+        the fast curve buffer related commands.
+    :ivar trigger_output_event: Defines when a trigger output is generated,
+        while buffer acquisition is running and `SR7230.trigger_output` is set
+        to 'curve'.
 
         ======= ======================================
         Value   Description
@@ -360,7 +361,7 @@ class SR7230(Driver):
         'point' A trigger is generated once per point.
         ======= ======================================
 
-    :ivar buffer_trigger_output_polarity: The polarity of the trigger output.
+    :ivar trigger_output_polarity: The polarity of the trigger output.
         Valid are 'rising', 'falling'.
 
     .. rubric:: Computer Interfaces
@@ -703,12 +704,12 @@ class SR7230(Driver):
         ))
         self.fast_buffer = FastBuffer(self._transport, self._protocol)
         self.standard_buffer = StandardBuffer(self._transport, self._protocol)
-        self.buffer_trigger_output = Command(
+        self.trigger_output_event = Command(
             'TRIGOUT',
             'TRIGOUT',
             Enum('curve', 'point')
         )
-        self.buffer_trigger_output_polarity = Command(
+        self.trigger_output_polarity = Command(
             'TRIGOUTPOL',
             'TRIGOUTPOL',
             Enum('rising', 'falling')
