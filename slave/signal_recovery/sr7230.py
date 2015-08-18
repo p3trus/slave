@@ -902,7 +902,7 @@ class SR7230(Driver):
             ('curve', 'rising', 'trigger'): 8,
             ('curve', 'falling', 'trigger'): 9,
         }
-        self._write(('TDT', Integer), param(mode, edge, stop))
+        self._write(('TDT', Integer), param(trigger, edge, stop))
 
     def take_data_continuously(self, stop):
         """Starts continuous data acquisition.
