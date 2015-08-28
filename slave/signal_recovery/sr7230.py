@@ -50,7 +50,7 @@ from __future__ import (absolute_import, division,
 from future.builtins import *
 import datetime
 
-from numpy import fromstring
+import numpy as np
 
 from slave.driver import Command, Driver, CommandSequence
 from slave.protocol import SignalRecovery
@@ -326,21 +326,24 @@ class SR7230(Driver):
 
         * *<state>* is the curve acquisition state. Possible values are
 
-          =================== ==================================================
-          Value               Description
-          =================== ==================================================
-          'off'               No curve acquisition in progress.
-          'on'                Curve acquisition via :meth:`SR7230.take_data` in
-                              progress.
-          'continuous'        Curve acquisition via
-                              :meth:`~.Sr7230.take_data_continuously` in
-                              progress.
-          'halted'            Curve acquisition via :meth:`SR7230.take_data`
-                              in progress but halted.
-          'continuous halted' Curve acquisition via
-                              :meth:`~.Sr7230.take_data_continuously` in
-                              progress but halted.
-          =================== ==================================================
+          =========================== =================================================
+          Value                       Description
+          =========================== =================================================
+          'off'                       No curve acquisition in progress.
+          'on'                        Curve acquisition via :meth:`SR7230.take_data` in
+                                      progress.
+          'continuous'                Curve acquisition via
+                                      :meth:`~.Sr7230.take_data_continuously` in
+                                      progress.
+          'halted'                    Curve acquisition via :meth:`SR7230.take_data`
+                                      in progress but halted.
+          'continuous halted'         Curve acquisition via
+                                      :meth:`~.Sr7230.take_data_continuously` in
+                                      progress but halted.
+          'fast acquisition complete' Set when the fast curve acquisition is complete
+                                      and the data is ready to be transfered into the
+                                      Lock-In's internal memory.
+          =========================== =================================================
 
         * *<sweeps>* the number of sweeps acquired.
         * *<status byte>* the status byte, see :attr:`SR7230.status_byte`.
@@ -480,6 +483,14 @@ class SR7230(Driver):
         5: 'adc2',
         6: 'adc3',
         7: 'adc4',
+    }
+    ACQUISITION_STATUS = {
+        'off': '0',
+        'on': '1',
+        'continuous': '2',
+        'halted': '3',
+        'continuous halted': '4',
+        'fast acquisition complete': '16'
     }
 
     def __init__(self, transport, option=None):
@@ -696,7 +707,7 @@ class SR7230(Driver):
         self.acquisition_status = Command((
             'M',
             [
-                Enum('off', 'on', 'continuous', 'halted', 'continuous halted'),
+                Mapping(self.ACQUISITION_STATUS),
                 Integer,
                 Register(SR7230.STATUS_BYTE),
                 Integer
@@ -1198,7 +1209,7 @@ class FastBuffer(Driver):
         # The data is stored as two byte integers.
         nbytes = self.length * 2
         data = self._protocol.query_bytes(self._transport, nbytes, 'DCB', idx)
-        return fromstring(buffer(data), dtype='>h')
+        return np.frombuffer(data, dtype='>h')
 
 
 class StandardBuffer(Driver):
@@ -1277,12 +1288,12 @@ class StandardBuffer(Driver):
         if item == 'frequency':
             f1 = self._protocol.query_bytes(self._transport, nbytes, 'DCB', '15')
             f2 = self._protocol.query_bytes(self._transport, nbytes, 'DCB', '16')
-            f1 = fromstring(buffer(data), dtype='>H')
-            f2 = fromstring(buffer(data), dtype='>h')
+            f1 = np.frombuffer(data, dtype='>H')
+            f2 = np.frombuffer(data, dtype='>h')
             return (f2.astype(float) * 65536 + f1.astype(float)) / 1e3
         else:
             data = self._protocol.query_bytes(self._transport, nbytes, 'DCB', idx)
-            return fromstring(buffer(data), dtype='>h')
+            return np.frombuffer(data, dtype='>h')
 
 
 class Demodulator(Driver):
