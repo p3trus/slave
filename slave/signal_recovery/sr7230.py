@@ -879,9 +879,9 @@ class SR7230(Driver):
             ======= =======================================================
             Value   Description
             ======= =======================================================
-            'curve' Each trigger signal starts a curve acquisition. The max
+            'curve' Each trigger signal starts a curve acquisition.
+            'point' A point is stored for each trigger signal. The max
                     trigger frequency in this mode is 1 kHz.
-            'point' A point is stored for each trigger signal.
             ======= =======================================================
 
         :param edge: Defines wether a 'rising' or 'falling' edge is interpreted
