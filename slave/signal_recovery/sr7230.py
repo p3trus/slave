@@ -265,7 +265,7 @@ class SR7230(Driver):
     :ivar amplitude_stop: Amplitude sweep end value.
     :ivar amplitude_step: Amplitude sweep amplitude step.
     :ivar frequency: The oscillator frequency in Hz. Valid entries are 0. to
-        1.2e5.
+        1.2e5 and a resolution of 1e-3 Hz.
     :ivar frequency_start: The frequency sweep start value.
     :ivar frequency_stop: The frequency sweep stop value.
     :ivar frequency_step: The frequency sweep step size and sweep type.
@@ -648,16 +648,16 @@ class SR7230(Driver):
             Float(min=0., max=5.)
         )
         fmax = 250e3 if self.option is '250kHz' else 120e3
-        self.frequency = Command('OF.', 'OF.', Float(min=0, max=fmax))
+        self.frequency = Command('OF.', 'OF.', Float(min=0, max=fmax, fmt='{:.3f}'))
         self.frequency_start = Command(
             'FSTART.',
             'FSTART.',
-            Float(min=0, max=fmax)
+            Float(min=0, max=fmax, fmt='{:.3f}')
         )
         self.frequency_stop = Command(
             'FSTOP.',
             'FSTOP.',
-            Float(min=0, max=fmax)
+            Float(min=0, max=fmax, fmt='{:.3f}')
         )
         self.frequency_step = Command(
             'FSTEP.',
