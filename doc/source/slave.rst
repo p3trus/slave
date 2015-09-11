@@ -133,6 +133,13 @@ This part covers the complete api documentation of the slave library.
     :undoc-members:
     :show-inheritance:
 
+:mod:`slave.signal_recovery.sr5113`
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.. automodule:: slave.signal_recovery.sr5113
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 :mod:`slave.signal_recovery.sr7225`
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 .. automodule:: slave.signal_recovery.sr7225
