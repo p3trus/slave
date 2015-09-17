@@ -454,7 +454,7 @@ class Column(Driver):
 
         # Assuming an LS340 instance named ls340, the following should print
         # point1 of record 7.
-        print ls340.column1[7]
+        print ls340.column[0][7]
 
     .. note::
 
@@ -638,8 +638,7 @@ class LS340(IEC60488):
         enabled, `False` means disabled.
     :ivar beeping: A Integer value representing the current beeper status.
     :ivar busy: A Boolean representing the instrument busy status.
-    :ivar columnx: A Column instance, x is a placeholder for an integer between
-        1 and 4.
+    :ivar column: A tuple of 4 :class:`Column` instances.
     :ivar com: The serial interface configuration, represented by the following
         tuple: *(<terminator>, <baud rate>, <parity>)*.
 
@@ -877,9 +876,9 @@ class LS340(IEC60488):
         self.programs = tuple(
             Program(transport, self._protocol, i) for i in range(1, 11)
         )
-        for i in range(1, 5):
-            # TODO: Use tuple of columns instead.
-            setattr(self, 'column{0}'.format(i), Column(transport, self._protocol, i))
+        self.column = tuple(
+            Column(self._transport, self._protocol, i) for i in range(1, 5)
+        )
 
     def clear_alarm(self):
         """Clears the alarm status for all inputs."""
