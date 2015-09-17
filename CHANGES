@@ -36,6 +36,8 @@ Changes to the `slave.lakeshore.ls340` module:
  - The `slave.lakeshore.ls340.LS340._factory_defaults()` method does not take
    the boolean `confirm` argument anymore. The trailing underscore should be
    warning enough that you know what you're doing.
+ - The `slave.lakeshore.ls340.LS340.columnx` attributes are replaced by a tuple
+   of column instance.
 
 Changes to the `slave.lakeshore.ls370` module:
 
