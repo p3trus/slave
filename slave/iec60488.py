@@ -3,26 +3,170 @@
 # Slave, (c) 2012, see AUTHORS.  Licensed under the GNU GPL.
 
 """
-The iec60488 module implements a IEC 60488-2:2004(E) compliant interface.
+The :mod:`slave.iec60488` module implements a IEC 60488-2:2004(E) compliant
+interface.
 
-The minimal required interface is implemented by the IEC60488 class. Optional
-command groups a provided by mixin classes. They should not be used on their
-own.
+The `IEC 60488-2`_ describes a standard digital interface for programmable
+instrumentation. It is used by devices connected via the IEEE 488.1 bus,
+commonly known as GPIB. It is an adoption of the *IEEE std. 488.2-1992*
+standard.
 
-Usage::
+The `IEC 60488-2`_ requires the existence of several commands which are
+logically grouped.
 
-    from slave.IEC60488 import IEC60488, PowerOn
+Reporting Commands
+ * `*CLS` - Clears the data status structure [#]_ .
+ * `*ESE` - Write the event status enable register [#]_ .
+ * `*ESE?` - Query the event status enable register [#]_ .
+ * `*ESR?` - Query the standard event status register [#]_ .
+ * `*SRE` - Write the status enable register [#]_ .
+ * `*SRE?` - Query the status enable register [#]_ .
+ * `*STB` - Query the status register [#]_ .
 
-    class CustomInstrument(IEC60488, PowerOn):
-        '''A custom instrument compliant with the IEC 60488-2:2004(E),
-        supporting the optional PowerOn commands.
-        '''
-        def __init__(self, connection):
-            super(CustomInstrument, self).__init__(connection)
-            # Implement custom commands.
+Internal operation commands
+ * `*IDN?` - Identification query [#]_ .
+ * `*RST` -  Perform a device reset [#]_ .
+ * `*TST?` - Perform internal self-test [#]_ .
+
+Synchronization commands
+ * `*OPC` - Set operation complete flag high [#]_ .
+ * `*OPC?` -  Query operation complete flag [#]_ .
+ * `*WAI` - Wait to continue [#]_ .
+
+To ease development, these are implemented in the
+:class:`~slave.iec60488.IEC60488` base class. To implement a `IEC 60488-2`_
+compliant device driver, you only have to subclass it and implement the
+device specific commands, e.g::
+
+    from slave.driver import Command
+    from slave.iec60488 import IEC60488
+
+    class CustomDevice(IEC60488):
+        pass
+
+Optional Commands
+^^^^^^^^^^^^^^^^^
+
+Despite the required commands, there are several optional command groups
+defined. The standard requires that if one command is used, it's complete
+group must be implemented. These are
+
+Power on common commands
+ * `*PSC` - Set the power-on status clear bit [#]_ .
+ * `*PSC?` - Query the power-on status clear bit [#]_ .
+
+Parallel poll common commands
+ * `*IST?` - Query the individual status message bit [#]_ .
+ * `*PRE` - Set the parallel poll enable register [#]_ .
+ * `*PRE?` - Query the parallel poll enable register [#]_ .
+
+Resource description common commands
+ * `*RDT` - Store the resource description in the device [#]_ .
+ * `*RDT?` - Query the stored resource description [#]_ .
+
+Protected user data commands
+ * `*PUD` - Store protected user data in the device [#]_ .
+ * `*PUD?` - Query the protected user data [#]_ .
+
+Calibration command
+ * `*CAL?` - Perform internal self calibration [#]_ .
+
+Trigger command
+ * `*TRG` - Execute trigger command [#]_ .
+
+Trigger macro commands
+ * `*DDT` - Define device trigger [#]_ .
+ * `*DDT?` - Define device trigger query [#]_ .
+
+Macro Commands
+ * `*DMC` - Define device trigger [#]_ .
+ * `*EMC` - Define device trigger query [#]_ .
+ * `*EMC?` - Define device trigger [#]_ .
+ * `*GMC?` - Define device trigger query [#]_ .
+ * `*LMC?` - Define device trigger [#]_ .
+ * `*PMC` - Define device trigger query [#]_ .
+
+Option Identification command
+ * `*OPT?` - Option identification query [#]_ .
+
+Stored settings commands
+ * `*RCL` - Restore device settings from local memory [#]_ .
+ * `*SAV` - Store current settings of the device in local memory [#]_ .
+
+Learn command
+ * `*LRN?` - Learn device setup query [#]_ .
+
+System configuration commands
+ * `*AAD` - Accept address command [#]_ .
+ * `*DLF` - Disable listener function command [#]_ .
+
+Passing control command
+ * `*PCB` - Pass control back [#]_ .
+
+The optional command groups are implemented as Mix-in classes. A device
+supporting required `IEC 60488-2`_ commands as well as the optional Power-on
+commands is implemented as follows::
+
+    from slave.driver import Command
+    from slave.iec60488 import IEC60488, PowerOn
+
+    class CustomDevice(IEC60488, PowerOn):
+        pass
+
+----
+
+Reference:
+
+.. [#] IEC 60488-2:2004(E) section 10.3
+.. [#] IEC 60488-2:2004(E) section 10.10
+.. [#] IEC 60488-2:2004(E) section 10.11
+.. [#] IEC 60488-2:2004(E) section 10.12
+.. [#] IEC 60488-2:2004(E) section 10.34
+.. [#] IEC 60488-2:2004(E) section 10.35
+.. [#] IEC 60488-2:2004(E) section 10.36
+.. [#] IEC 60488-2:2004(E) section 10.14
+.. [#] IEC 60488-2:2004(E) section 10.32
+.. [#] IEC 60488-2:2004(E) section 10.38
+.. [#] IEC 60488-2:2004(E) section 10.18
+.. [#] IEC 60488-2:2004(E) section 10.19
+.. [#] IEC 60488-2:2004(E) section 10.39
+.. [#] IEC 60488-2:2004(E) section 10.25
+.. [#] IEC 60488-2:2004(E) section 10.26
+.. [#] IEC 60488-2:2004(E) section 10.15
+.. [#] IEC 60488-2:2004(E) section 10.23
+.. [#] IEC 60488-2:2004(E) section 10.24
+.. [#] IEC 60488-2:2004(E) section 10.30
+.. [#] IEC 60488-2:2004(E) section 10.31
+.. [#] IEC 60488-2:2004(E) section 10.27
+.. [#] IEC 60488-2:2004(E) section 10.28
+.. [#] IEC 60488-2:2004(E) section 10.2
+.. [#] IEC 60488-2:2004(E) section 10.37
+.. [#] IEC 60488-2:2004(E) section 10.4
+.. [#] IEC 60488-2:2004(E) section 10.5
+.. [#] IEC 60488-2:2004(E) section 10.7
+.. [#] IEC 60488-2:2004(E) section 10.8
+.. [#] IEC 60488-2:2004(E) section 10.9
+.. [#] IEC 60488-2:2004(E) section 10.13
+.. [#] IEC 60488-2:2004(E) section 10.16
+.. [#] IEC 60488-2:2004(E) section 10.22
+.. [#] IEC 60488-2:2004(E) section 10.20
+.. [#] IEC 60488-2:2004(E) section 10.29
+.. [#] IEC 60488-2:2004(E) section 10.33
+.. [#] IEC 60488-2:2004(E) section 10.17
+.. [#] IEC 60488-2:2004(E) section 10.1
+.. [#] IEC 60488-2:2004(E) section 10.6
+.. [#] IEC 60488-2:2004(E) section 10.21
+
+.. _IEC 60488-2: http://dx.doi.org/10.1109/IEEESTD.2004.95390
 
 """
-from slave.core import Command, InstrumentBase
+from __future__ import (absolute_import, division,
+                        print_function, unicode_literals)
+# We're not using a star import here, because python-future 0.13's `newobject`
+# breaks multiple inheritance due to it's metaclass.
+from future.builtins import map, zip, dict, int, list, range, str
+
+from slave.driver import Command, Driver
 from slave.types import Boolean, Integer, Register, String
 
 
@@ -54,19 +198,17 @@ PARALLEL_POLL_REGISTER = dict((i, str(i)) for i in range(8, 16))
 def _construct_register(reg, default_reg):
     """Constructs a register dict."""
     if reg:
-        x = dict((k, reg.get(k, d)) for k, d in default_reg.iteritems())
+        x = dict((k, reg.get(k, d)) for k, d in default_reg.items())
     else:
         x = dict(default_reg)
-    # XXX invert dict because Register type uses inverted key, value pairs
-    x = dict((v, k) for k, v in x.iteritems())
     return x
 
 
-class IEC60488(InstrumentBase):
+class IEC60488(Driver):
     """The IEC60488 class implements a IEC 60488-2:2004(E) compliant base
     class.
 
-    :param connection: A connection object.
+    :param transport: A transport object.
     :param esb: A dictionary mapping the 8 bit standard event status register.
         Integers in the range 0 to 7 are valid keys. If present they replace
         the default values.
@@ -108,8 +250,8 @@ class IEC60488(InstrumentBase):
     * `*WAI` - See IEC 60488-2:2004(E) section 10.39
 
     """
-    def __init__(self, connection, esb=None, stb=None, *args, **kw):
-        super(IEC60488, self).__init__(connection, *args, **kw)
+    def __init__(self, transport, protocol=None, esb=None, stb=None, *args, **kw):
+        super(IEC60488, self).__init__(transport, protocol,*args, **kw)
         self._esb = esb = _construct_register(esb, EVENT_STATUS_BYTE)
         self._stb = stb = _construct_register(stb, STATUS_BYTE)
 
@@ -122,21 +264,21 @@ class IEC60488(InstrumentBase):
 
     def clear(self):
         """Clears the status data structure."""
-        self.connection.write('*CLS')
+        self._protocol.clear(self._transport)
 
     def complete_operation(self):
         """Sets the operation complete bit high of the event status byte."""
-        self.connection.write('*OPC')
+        self._write('*OPC')
 
     def reset(self):
         """Performs a device reset."""
-        self.connection.write('*RST')
+        self._write('*RST')
 
     def test(self):
         """Performs a internal self-test and returns an integer in the range
         -32767 to + 32767.
         """
-        return int(self.connection.ask('*TST?'))
+        return self._query(('*TST?', Integer))
 
     def wait_to_continue(self):
         """Prevents the device from executing any further commands or queries
@@ -148,7 +290,7 @@ class IEC60488(InstrumentBase):
            flag is always True.
 
         """
-        self.connection.write('*WAI')
+        self._write('*WAI')
 
 
 class PowerOn(object):
@@ -275,7 +417,7 @@ class Calibration(object):
             without errors.
 
         """
-        return int(self.connection.ask('*CAL?'))
+        return self._query(('*CAL?', Integer))
 
 
 class Trigger(object):
@@ -298,18 +440,8 @@ class Trigger(object):
         super(Trigger, self).__init__(*args, **kw)
 
     def trigger(self):
-        """Creates a trigger event.
-
-        .. note::
-
-            It first tries to execute `connection.trigger()`. If this fails,
-            the `*TRG` is sent.
-
-        """
-        try:
-            self.connection.trigger()
-        except AttributeError:
-            self.connection.write('*TRG')
+        """Creates a trigger event."""
+        self._protocol.trigger(self._transport)
 
 
 class TriggerMacro(object):
@@ -364,15 +496,15 @@ class Macro(object):
             .. note:: The macro string is not validated.
 
         """
-        self.connection.write('*DMC {0}'.format(macro))
+        self._write(('*DMC', String), macro)
 
     def disable_macro_commands(self):
         """Disables all macro commands."""
-        self.connection.write('*EMC 0')
+        self._write(('*EMC', Integer), 0)
 
     def enable_macro_commands(self):
         """Enables all macro commands."""
-        self.connection.write('*EMC 1')
+        self._write(('*EMC', Integer), 1)
 
     def get_macro(self, label):
         """Returns the macro.
@@ -380,15 +512,15 @@ class Macro(object):
         :param label: The label of the requested macro.
 
         """
-        return str(self.connection.write('*GMC? {0}'.format(label)))
+        return self._query(('*GMC?', String, String), label)
 
     def macro_labels(self):
         """Returns the currently defined macro labels."""
-        return str(self.connection.ask('*LMC?'))
+        return self._query(('*LMC?', String))
 
     def purge_macros(self):
         """Deletes all previously defined macros."""
-        self.connection.write('*PMC')
+        self._write('*PMC')
 
 
 class ObjectIdentification(object):
@@ -423,8 +555,6 @@ class StoredSetting(object):
     """
     def __init__(self, *args, **kw):
         super(StoredSetting, self).__init__(*args, **kw)
-        self.__recall = Command(write=('*RCL', Integer(min=0)))
-        self.__save = Command(write=('*SAV', Integer(min=0)))
 
     def recall(self, idx):
         """Restores the current settings from a copy stored in local memory.
@@ -432,7 +562,7 @@ class StoredSetting(object):
         :param idx: Specifies the memory slot.
 
         """
-        self.__recall = idx
+        self._write(('*RCL', Integer(min=0)), idx)
 
     def save(self, idx):
         """Stores the current settings of a device in local memory.
@@ -440,7 +570,7 @@ class StoredSetting(object):
         :param idx: Specifies the memory slot.
 
         """
-        self.__save = idx
+        self._write(('*SAV', Integer(min=0)), idx)
 
 
 class Learn(object):
@@ -464,7 +594,7 @@ class Learn(object):
             of the device at the time this command was executed.
 
         """
-        return str(self.connection.ask('*LRN?'))
+        return self._query(('*LRN?', String))
 
 
 class SystemConfiguration(object):
@@ -484,11 +614,11 @@ class SystemConfiguration(object):
 
     def accept_address(self):
         """Executes the accept address command."""
-        self.connection.write('*AAD')
+        self._write('*AAD')
 
     def disable_listener(self):
         """Executes the disable listener command."""
-        self.connection.write('*DLF')
+        self._write('*DLF')
 
 
 class PassingControl(object):
@@ -520,11 +650,10 @@ class PassingControl(object):
 
         """
         if secondary is None:
-            cmd = Command(write=('*PCB', Integer(min=0, max=30)),
-                          connection=self.connection)
-            cmd.write(primary)
+            self._write(('*PCB', Integer(min=0, max=30)), primary)
         else:
-            type_ = [Integer(min=0, max=30), Integer(min=0, max=30)]
-            cmd = Command(write=('*PCB', type_),
-                          connection=self.connection)
-            cmd.write((primary, secondary))
+            self._write(
+                ('*PCB', [Integer(min=0, max=30), Integer(min=0, max=30)]),
+                primary,
+                secondary
+            )

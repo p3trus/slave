@@ -4,27 +4,49 @@
 """Contains the type factory classes used to load and dump values to string.
 
 The type module contains several type classes used by the :class:`~.Command`
-class to load and dump values.
+class to load and dump values. These are
+
+Single types:
+
+ * :class:`Boolean`
+ * :class:`Integer`
+ * :class:`Float`
+ * :class:`Enum`
+ * :class:`Register`
+ * :class:`String`
+ * :class:`Mapping`
+ * :class:`Set`
+
+Composite types:
+
+ * :class:`Stream`
 
 Custom Types
 ------------
 
 The :class:`~.Command` class needs an object with three methods:
 
- * :meth:`.load(value)`, takes the value and returns the userspace representation.
- * :meth:`.dump(value)`, returns the device space representation of value.
- * :meth:`.simulate()`, generates a valid user space value.
+ * :meth:`~.Type.load(value)`, takes the value and returns the userspace representation.
+ * :meth:`~.Type.dump(value)`, returns the device space representation of value.
+ * :meth:`~.Type.simulate()`, generates a valid user space value.
 
 The abstract :class:`~.Type` class implements this interface but most of the
-time it is sufficient to inherit from :class:`~.SingleType`. 
+time it is sufficient to inherit from :class:`~.SingleType`.
 
 :class:`~.SingleType` provides a default implementation, as well as three hooks
 to modify the behaviour.
 
 """
+from __future__ import (absolute_import, division,
+                        print_function, unicode_literals)
+from future.builtins import *
+
+from slave.driver import _to_instance
+
 import random
 import string
 import sys
+import itertools
 
 
 class Type(object):
@@ -166,8 +188,8 @@ class Integer(Range):
 
     def simulate(self):
         """Generates a random integer in the available range."""
-        min_ = (-sys.maxint - 1) if self._min is None else self._min
-        max_ = sys.maxint if self._max is None else self._max
+        min_ = (-sys.maxsize - 1) if self._min is None else self._min
+        max_ = sys.maxsize if self._max is None else self._max
         return random.randint(min_, max_)
 
 
@@ -191,8 +213,8 @@ class String(SingleType):
     """
     def __init__(self, min=None, max=None, *args, **kw):
         super(String, self).__init__(*args, **kw)
-        self._min = min = min and self.__convert__(min)
-        self._max = max = max and self.__convert__(max)
+        self._min = min = min and int(min)
+        self._max = max = max and int(max)
         if (min is not None) and (max is not None):
             if (min > max):
                 raise ValueError('min > max')
@@ -293,22 +315,36 @@ class Enum(Mapping):
 
 
 class Register(SingleType):
-    """Represents a binary register, where bits are mapped with a name."""
+    """Represents a binary register, where bits are mapped to a key.
+
+    :param mapping: The mapping defines the mapping between bits and keys, e.g.
+        ::
+
+            mapping = {
+                0: 'First bit',
+                1: 'Second bit',
+            }
+            reg = Register(mapping)
+
+
+    """
     def __init__(self, mapping):
         super(Register, self).__init__()
-        self._map = dict((str(k), int(v)) for k, v in mapping.iteritems())
+        self._map = dict((str(key), int(bit)) for bit, key in mapping.items())
 
     def __convert__(self, value):
-        x = 0
-        for k, v in value.iteritems():
+        x = int(0)
+        for k, v in value.items():
             if v:  # set bit
-                x |= 1 << self._map[k]
+                x |= int(1) << self._map[k]
         return x
 
     def load(self, value):
-        bit = lambda x, i: bool(x & (1 << i))
+        # We need to cast all integers with the int() function. Otherwise we
+        # would mix integer with int type of future package.
+        bit = lambda x, i: bool(x & (int(1) << int(i)))
         value = int(value)
-        return dict((k, bit(value, i)) for k, i in self._map.iteritems())
+        return dict((k, bit(value, i)) for k, i in self._map.items())
 
     def simulate(self):
         """Returns a dictionary representing the mapped register with random
@@ -318,3 +354,32 @@ class Register(SingleType):
 
     def __repr__(self):
         return 'Register({0!r})'.format(self._map)
+
+
+class Stream(object):
+    """A type container for a variable number of types.
+
+    :param args: A sequence of types.
+
+    The :class:`Stream` class is a type container for variable numbers of types.
+    Let's say a command returns the content of an internal buffer which can
+    contain a variable number of Floats. The corresponding slave command could
+    look like this::
+
+        Command('QRY?', 'WRT', Stream(Float))
+
+    A command of alternating floats and integers is therefore writen as::
+
+        Command('QRY?', 'WRT', Stream(Float, Integer))
+
+    """
+    def __init__(self, *types):
+        self.types = [_to_instance(t) for t in types]
+
+    def simulate(self):
+        """Simulates a stream of types."""
+        # Simulates zero to 10 types
+        return [t.simulate() for t in itertools.islice(self, random.choice(range(10)))]
+
+    def __iter__(self):
+        return itertools.cycle(self.types)

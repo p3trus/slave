@@ -1,6 +1,9 @@
 #  -*- coding: utf-8 -*-
 #
 # Slave, (c) 2012, see AUTHORS.  Licensed under the GNU GPL.
+from __future__ import (absolute_import, division,
+                        print_function, unicode_literals)
+from future.builtins import *
 import itertools
 import unittest
 
@@ -9,11 +12,11 @@ from slave.types import Boolean, Integer, Float, Mapping, Register, Set
 
 class TypeCheck(object):
     def test_dump(self):
-        for val, ser in itertools.izip(self._values, self._serialized):
+        for val, ser in zip(self._values, self._serialized):
             self.assertEqual(ser, self._type.dump(val))
 
     def test_load(self):
-        for val, ser in itertools.izip(self._values, self._serialized):
+        for val, ser in zip(self._values, self._serialized):
             self.assertEqual(val, self._type.load(ser))
 
 
@@ -60,9 +63,12 @@ class TestMapping(unittest.TestCase, TypeCheck):
             def __eq__(self, other):
                 return type(self) == type(other)
 
+            def __hash__(self):
+                return hash(type(self))
+
         mapping = {'foobar': 'string', 1337: 'number', TestObject(): 'object'}
-        self._values = tuple(mapping.iterkeys())
-        self._serialized = tuple(mapping.itervalues())
+        self._values = tuple(mapping.keys())
+        self._serialized = tuple(mapping.values())
         self._type = Mapping(mapping)
 
 
@@ -78,8 +84,12 @@ class TestRegister(unittest.TestCase, TypeCheck):
         self._values = ({'first': True, 'second': False,
                        'third': False, 'fourth': True},)
         self._serialized = ('9',)
-        self._type = Register({'first': 0, 'second': 1,
-                               'third': 2, 'fourth': 3})
+        self._type = Register({
+            0: 'first',
+            1: 'second',
+            2: 'third',
+            3: 'fourth'
+        })
 
 if __name__ == '__main__':
     unittest.main()

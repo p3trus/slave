@@ -1,5 +1,6 @@
-slave Package
-=============
+API
+===
+This part covers the complete api documentation of the slave library.
 
 :mod:`slave` Package
 --------------------
@@ -9,10 +10,18 @@ slave Package
     :undoc-members:
     :show-inheritance:
 
-:mod:`connection` Module
-------------------------
+:mod:`transport` Module
+-----------------------
 
-.. automodule:: slave.connection
+.. automodule:: slave.transport
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+:mod:`protocol` Module
+----------------------
+
+.. automodule:: slave.protocol
     :members:
     :undoc-members:
     :show-inheritance:
@@ -20,7 +29,7 @@ slave Package
 :mod:`core` Module
 ------------------
 
-.. automodule:: slave.core
+.. automodule:: slave.driver
     :members:
     :undoc-members:
     :show-inheritance:
@@ -33,6 +42,24 @@ slave Package
     :undoc-members:
     :show-inheritance:
 
+.. automodule:: slave.cryomagnetics.mps4g
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+:mod:`ics` Module
+-----------------
+
+.. automodule:: slave.ics
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+.. automodule:: slave.ics.ics4807
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 :mod:`iec60488` Module
 ----------------------
 
@@ -41,34 +68,106 @@ slave Package
     :undoc-members:
     :show-inheritance:
 
-:mod:`ls340` Module
--------------------
+:mod:`keithley` Module
+----------------------
 
-.. automodule:: slave.ls340
+.. automodule:: slave.keithley
     :members:
     :undoc-members:
     :show-inheritance:
 
-:mod:`ls370` Module
--------------------
-
-.. automodule:: slave.ls370
+.. automodule:: slave.keithley.k2182
     :members:
     :undoc-members:
     :show-inheritance:
 
-:mod:`sr7225` Module
---------------------
-
-.. automodule:: slave.sr7225
+.. automodule:: slave.keithley.k6221
     :members:
     :undoc-members:
     :show-inheritance:
 
-:mod:`sr830` Module
--------------------
+:mod:`lakeshore` Module
+-----------------------
 
-.. automodule:: slave.sr830
+.. automodule:: slave.lakeshore
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+.. automodule:: slave.lakeshore.ls340
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+.. automodule:: slave.lakeshore.ls370
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+:mod:`misc` Module
+------------------
+
+.. automodule:: slave.misc
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+:mod:`quantum_design` Module
+----------------------------
+
+.. automodule:: slave.quantum_design
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+.. automodule:: slave.quantum_design.ppms
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+:mod:`signal_recovery` Module
+-----------------------------
+
+.. automodule:: slave.signal_recovery
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+:mod:`slave.signal_recovery.sr5113`
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.. automodule:: slave.signal_recovery.sr5113
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+:mod:`slave.signal_recovery.sr7225`
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.. automodule:: slave.signal_recovery.sr7225
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+:mod:`slave.signal_recovery.sr7230`
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.. automodule:: slave.signal_recovery.sr7230
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+:mod:`srs` Module
+-----------------
+
+.. automodule:: slave.srs
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+.. automodule:: slave.srs.sr830
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+.. automodule:: slave.srs.sr850
     :members:
     :undoc-members:
     :show-inheritance:
@@ -80,11 +179,3 @@ slave Package
     :members:
     :undoc-members:
     :show-inheritance:
-
-Subpackages
------------
-
-.. toctree::
-
-    slave.test
-

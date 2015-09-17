@@ -12,10 +12,18 @@
 # serve to show the default.
 
 import sys, os
-
 # Check if doc is build on readthedocs
 on_rtd = os.environ.get('READTHEDOCS', None) == 'True'
 
+from mock import Mock as MagicMock
+
+class Mock(object):
+    @classmethod
+    def __getattr__(cls, name):
+        return Mock()
+
+MOCK_MODULES = ['numpy']
+sys.modules.update((mod_name, Mock()) for mod_name in MOCK_MODULES)
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
@@ -29,6 +37,9 @@ sys.path.insert(0, os.path.abspath('../../'))
 # Add any Sphinx extension module names here, as strings. They can be extensions
 # coming with Sphinx (named 'sphinx.ext.*') or your custom ones.
 extensions = ['sphinx.ext.autodoc', 'sphinx.ext.todo', 'sphinx.ext.coverage', 'sphinx.ext.pngmath', 'sphinx.ext.mathjax']
+if not on_rtd:
+    extensions.append('sphinxcontrib.spelling')
+spelling_show_suggestions = True
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
@@ -94,20 +105,26 @@ pygments_style = 'sphinx'
 
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
-if on_rtd:
-    html_theme = 'default'
-else:
-    html_theme = 'bootstrap'
+html_theme = 'default'
 
-    # Theme options are theme-specific and customize the look and feel of a theme
-    # further.  For a list of options available for each theme, see the
-    # documentation.
-    #html_theme_options = {}
+# Add any paths that contain custom themes here, relative to this directory.
+html_theme_path = []
 
-    # Add any paths that contain custom themes here, relative to this directory.
-    sys.path.append(os.path.abspath('_themes'))
-    html_theme_path = ['_themes']
-    html_translator_class = 'bootstrap.HTMLTranslator'
+if not on_rtd:
+    try:
+        import sphinx_bootstrap_theme
+
+        html_theme = 'bootstrap'
+
+        # Add any paths that contain custom themes here, relative to this directory.
+        html_theme_path = sphinx_bootstrap_theme.get_html_theme_path()
+
+        # Theme options are theme-specific and customize the look and feel of a theme
+        # further.  For a list of options available for each theme, see the
+        # documentation.
+        #html_theme_options = {}
+    except ImportError:
+        pass
 
 # The name for this set of Sphinx documents.  If None, it defaults to
 # "<project> v<release> documentation".
