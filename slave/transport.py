@@ -24,6 +24,7 @@ The following transports are already available:
 from __future__ import (absolute_import, division,
                         print_function, unicode_literals)
 from future.builtins import *
+from future.utils import raise_with_traceback
 import socket
 import threading
 import ctypes as ct
@@ -216,7 +217,7 @@ try:
         try:
             yield
         except visa.VisaIOError as e:
-            if visa.error_code == VI_ERROR_TMO:
+            if e.error_code == VI_ERROR_TMO:
                 raise_with_traceback(Visa.Timeout(e))
             else:
                 raise_with_traceback(Visa.Error(e))
