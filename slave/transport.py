@@ -288,7 +288,7 @@ try:
             """Raised when a serial timeout occurs."""
 
         def __init__(self, *args, **kw):
-            super(Serial, self).__init__()
+            super(Serial, self).__init__(max_bytes=1)
             self._serial = serial.Serial(*args, **kw)
 
         @wrap_exception(exc=serial.SerialException, new_exc=Error)
