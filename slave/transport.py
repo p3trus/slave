@@ -228,7 +228,7 @@ try:
         from pyvisa.vpp43_constants import VI_ERROR_TMO
 
         class Visa(Transport):
-            """A pyvisa wrapper."""
+            """A pyvisa 1.4 wrapper."""
             class Error(TransportError):
                 """Base class for visa exceptions."""
 
@@ -246,6 +246,46 @@ try:
             def __write__(self, data):
                 with _wrap_visa_exceptions():
                     self._instrument.write(data)
+
+            def clear(self):
+                """Issues a device clear command."""
+                self._instrument.clear()
+
+            def trigger(self):
+                """Sends a gpib trigger command."""
+                self._instrument.trigger()
+
+
+    elif LooseVersion(VISA_VERSION) < LooseVersion('1.6'):
+        class Visa(Transport):
+            """A pyvisa 1.5 wrapper."""
+            class Error(TransportError):
+                """Base class for serial port exceptions."""
+
+            class Timeout(Timeout, Error):
+                """Raised when a serial timeout occurs."""
+
+            def __init__(self, *args, **kw):
+                super(Visa, self).__init__()
+                rm = visa.ResourceManager()
+                self._instrument = rm.get_instrument(*args, **kw)
+
+            def __read__(self, num_bytes):
+                with _wrap_visa_exceptions():
+                    return self._instrument.read_raw(num_bytes)
+
+            def __write__(self, data):
+                with _wrap_visa_exceptions():
+                    self._instrument.write_raw(data)
+
+            def clear(self):
+                """Issues a device clear command."""
+                self._instrument.clear()
+
+            def trigger(self):
+                """Sends a gpib trigger command."""
+                self._instrument.trigger()
+
 
     else:
         from pyvisa.errors import VI_ERROR_TMO
@@ -270,6 +310,14 @@ try:
             def __write__(self, data):
                 with _wrap_visa_exceptions():
                     self._instrument.write_raw(data)
+
+            def clear(self):
+                """Issues a device clear command."""
+                self._instrument.clear()
+
+            def trigger(self):
+                """Sends a gpib trigger command."""
+                self._instrument.assert_trigger()
 
 except ImportError:
     pass
