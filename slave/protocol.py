@@ -24,6 +24,10 @@ from __future__ import (absolute_import, division,
                         print_function, unicode_literals)
 from future.builtins import *
 import logging
+import functools
+import time
+
+from slave.transport import Timeout
 
 logger = logging.getLogger(__name__)
 logger.addHandler(logging.NullHandler())
@@ -31,11 +35,36 @@ logger.addHandler(logging.NullHandler())
 
 class Protocol(object):
     """Abstract protocol base class."""
+    class Error(Exception):
+        """Generic baseclass for all protocol related errors."""
+
+    class ParsingError(Error):
+        """Raised when a parsing error occurs."""
+
     def query(self, transport, *args, **kw):
         raise NotImplementedError()
 
     def write(self, transport, *args, **kw):
         raise NotImplementedError()
+
+
+def _retry(errors, logger):
+    def wrapper(fn):
+        @functools.wraps(fn)
+        def wrapped(self, *args, **kw):
+            try:
+                return fn(self, *args, **kw)
+            except errors as e:
+                logger.exception('Exception occured on 1. try. Msg: %r Retrying.', e)
+            try:
+                return fn(self, *args, **kw)
+            except errors as e:
+                logger.exception('Exception occured on 2. try. Msg: %r Clearing device and retrying.', e)
+                self.clear()
+            # Try one more time
+            return fn(self, *args, **kw)
+        return wrapped
+    return wrapper
 
 
 class IEC60488(Protocol):
@@ -60,6 +89,9 @@ class IEC60488(Protocol):
 
 
     """
+    class ParsingError(Protocol.ParsingError):
+        pass
+
     def __init__(self, msg_prefix='', msg_header_sep=' ', msg_data_sep=',', msg_term='\n',
                  resp_prefix='', resp_header_sep='', resp_data_sep=',', resp_term='\n', encoding='ascii'):
         self.msg_prefix = msg_prefix
@@ -110,10 +142,11 @@ class IEC60488(Protocol):
         if header:
             header = "".join((self.resp_prefix, header, self.resp_header_sep))
             if not response.startswith(header):
-                raise ValueError('Response header mismatch')
+                raise IEC60488.ParsingError('Response header mismatch')
             response = response[len(header):]
         return response.split(self.resp_data_sep)
 
+    @_retry(errors=(ParsingError, UnicodeDecodeError, UnicodeEncodeError, Timeout), logger=logger)
     def query(self, transport, header, *data):
         message = self.create_message(header, *data)
         logger.debug('IEC60488 query: %r', message)
@@ -124,6 +157,7 @@ class IEC60488(Protocol):
         logger.debug('IEC60488 response: %r', response)
         return self.parse_response(response)
 
+    @_retry(errors=(ParsingError, UnicodeDecodeError, UnicodeEncodeError, Timeout), logger=logger)
     def write(self, transport, header, *data):
         message = self.create_message(header, *data)
         logger.debug('IEC60488 write: %r', message)
@@ -304,6 +338,17 @@ class OxfordIsobus(Protocol):
     message. E.g the error response to a message `@7R10` would be `?R10`.
 
     """
+    # TODO: Use base exception.
+    class InvalidRequestError(Protocol.Error):
+        """Raised when a command is not recognized by the device, has illegal
+        parameters or cannot be obeyed for any reason.
+        """
+
+
+    class ParsingError(Protocol.ParsingError):
+        """Raised when a parsing error occurs."""
+
+
     def __init__(self, address=None, echo=True, msg_term='\r',
                  resp_term='\r', encoding='ascii'):
         self.address = address
@@ -327,11 +372,11 @@ class OxfordIsobus(Protocol):
         response = response.decode(self.encoding)
         if response.startswith('?'):
             # TODO: Maybe we should raise a more informative exception.
-            raise IOError(response)
+            raise OxfordIsobus.InvalidRequestError(response)
         # ISOBUS uses a single char as message header but we allow longer header
         # for convenience.
         if not response.startswith(header[0]):
-            raise ValueError('Response header mismatch')
+            raise OxfordIsobus.ParsingError('Response header mismatch')
         # TODO: Check if Isobus allows more than one return value. If it does,
         # this won't work.
         return response[1:]
@@ -360,4 +405,4 @@ class OxfordIsobus(Protocol):
                 parsed = self.parse_response(response, header)
                 # A write should not return any data.
                 if parsed:
-                    raise ValueError('Unexpected response data:{}'.format(parsed))
+                    raise OxfordIsobus.ParsingError('Unexpected response data:{}'.format(parsed))

@@ -8,7 +8,7 @@ import collections
 
 import pytest
 
-from slave.protocol import IEC60488, SignalRecovery, OxfordIsobus
+from slave.protocol import IEC60488, OxfordIsobus, Protocol, SignalRecovery
 from slave.transport import Transport
 
 
@@ -64,7 +64,7 @@ class TestIEC60488Protocol(object):
 
     def test_parse_response_with_wrong_header(self):
         protocol = IEC60488()
-        with pytest.raises(ValueError) as excinfo:
+        with pytest.raises(Protocol.ParsingError) as excinfo:
             protocol.parse_response(b'DATA,DATA', 'HEADER')
         assert str(excinfo.value) == 'Response header mismatch'
 
