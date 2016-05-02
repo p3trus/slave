@@ -297,7 +297,12 @@ try:
             self._serial.write(data)
 
         def __read__(self, num_bytes):
-            return self._serial.read(num_bytes)
+            # The serial.SerialTimeoutException is only raised on write timeouts.
+            # In case of a read timeout, an empty string is returned.
+            data = self._serial.read(num_bytes)
+            if len(data) == 0:
+                raise Serial.Timeout()
+            return data
 
 except ImportError:
     pass
