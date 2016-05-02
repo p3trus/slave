@@ -51,18 +51,18 @@ class Protocol(object):
 def _retry(errors, logger):
     def wrapper(fn):
         @functools.wraps(fn)
-        def wrapped(self, *args, **kw):
+        def wrapped(self, transport, *args, **kw):
             try:
-                return fn(self, *args, **kw)
+                return fn(self, transport, *args, **kw)
             except errors as e:
                 logger.exception('Exception occured on 1. try. Msg: %r Retrying.', e)
             try:
-                return fn(self, *args, **kw)
+                return fn(self, transport, *args, **kw)
             except errors as e:
                 logger.exception('Exception occured on 2. try. Msg: %r Clearing device and retrying.', e)
-                self.clear()
+                self.clear(transport)
             # Try one more time
-            return fn(self, *args, **kw)
+            return fn(self, transport, *args, **kw)
         return wrapped
     return wrapper
 
@@ -381,6 +381,7 @@ class OxfordIsobus(Protocol):
         # this won't work.
         return response[1:]
 
+    @_retry(errors=(InvalidRequestError, ParsingError, UnicodeDecodeError, UnicodeEncodeError, Timeout), logger=logger)
     def query(self, transport, header, *data):
         message = self.create_message(header, *data)
         logger.debug('OxfordIsobus query: %r', message)
@@ -393,6 +394,7 @@ class OxfordIsobus(Protocol):
         # consistent with the other protocols.
         return [self.parse_response(response, header)]
 
+    @_retry(errors=(InvalidRequestError, ParsingError, UnicodeDecodeError, UnicodeEncodeError, Timeout), logger=logger)
     def write(self, transport, header, *data):
         message = self.create_message(header, *data)
         logger.debug('OxfordIsobus write: %r', message)
@@ -406,3 +408,16 @@ class OxfordIsobus(Protocol):
                 # A write should not return any data.
                 if parsed:
                     raise OxfordIsobus.ParsingError('Unexpected response data:{}'.format(parsed))
+
+    def clear(self, transport):
+        """Issues a device clear command.
+
+        .. note:: Only if the transport supports it.
+
+        """
+        logger.debug('OxfordIsobus clear')
+        with transport:
+            try:
+                transport.clear()
+            except AttributeError:
+                pass
