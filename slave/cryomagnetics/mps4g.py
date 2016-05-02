@@ -193,7 +193,7 @@ class MPS4G(slave.iec60488.IEC60488):
         self.voltage_limit = Command('VLIM?', 'VLIM',
                                      UnitFloat(min=0., max=10.))
         self.magnet_voltage = Command(('VMAG?', UnitFloat(min=-10., max=10.)))
-        self.output_voltage = Command(('VMAG?',
+        self.output_voltage = Command(('VOUT?',
                                        UnitFloat(min=-12.8, max=12.8)))
         self.sweep_status = Command(('SWEEP?', String))
 
