@@ -206,8 +206,7 @@ class Socket(Transport):
         super(Socket, self).__exit__(type, value, tb)
 
 # TODO:
-# 1. Wrap visa exceptions
-# 2. Implement trigger functionality
+# 1. Implement trigger functionality
 try:
     import visa
     VISA_VERSION = pkg_resources.get_distribution('pyvisa').version
@@ -226,7 +225,7 @@ try:
 
 
     if LooseVersion(VISA_VERSION) < LooseVersion('1.5'):
-        from vpp43_constants import VI_ERROR_TMO
+        from pyvisa.vpp43_constants import VI_ERROR_TMO
 
         class Visa(Transport):
             """A pyvisa wrapper."""
