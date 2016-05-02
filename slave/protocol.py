@@ -116,17 +116,17 @@ class IEC60488(Protocol):
 
     def query(self, transport, header, *data):
         message = self.create_message(header, *data)
-        logger.debug('IEC60488 query: "%s"', message)
+        logger.debug('IEC60488 query: %r', message)
         with transport:
             transport.write(message)
             response = transport.read_until(self.resp_term.encode(self.encoding))
         # TODO: Currently, response headers are not handled.
-        logger.debug('IEC60488 response: "%s"', response)
+        logger.debug('IEC60488 response: %r', response)
         return self.parse_response(response)
 
     def write(self, transport, header, *data):
         message = self.create_message(header, *data)
-        logger.debug('IEC60488 write: "%s"', message)
+        logger.debug('IEC60488 write: %r', message)
         with transport:
             transport.write(message)
 
@@ -149,7 +149,6 @@ class IEC60488(Protocol):
             except AttributeError:
                 clear_msg = self.create_message('*CLS')
                 transport.write(clear_msg)
-
 
 
 class SignalRecovery(IEC60488):
@@ -215,15 +214,15 @@ class SignalRecovery(IEC60488):
 
     def query(self, transport, header, *data):
         message = self.create_message(header, *data)
-        logger.debug('SignalRecovery query: "%s"', message)
+        logger.debug('SignalRecovery query: %r', message)
         with transport:
             transport.write(message)
 
             response = transport.read_until(self.resp_term.encode(self.encoding))
-            logger.debug('SignalRecovery response: "%s"', response)
+            logger.debug('SignalRecovery response: %r', response)
             status_byte, overload_byte = transport.read_bytes(2)
 
-        logger.debug('SignalRecovery stb: "%s" olb: "%s"', status_byte, overload_byte)
+        logger.debug('SignalRecovery stb: %r olb: %r', status_byte, overload_byte)
         self.call_byte_handler(status_byte, overload_byte)
         return self.parse_response(response)
 
@@ -238,30 +237,30 @@ class SignalRecovery(IEC60488):
 
         """
         message = self.create_message(header, *data)
-        logger.debug('SignalRecovery query bytes: "%s"', message)
+        logger.debug('SignalRecovery query bytes: %r', message)
         with transport:
             transport.write(message)
 
             response = transport.read_exactly(num_bytes)
-            logger.debug('SignalRecovery response: "%s"', response)
+            logger.debug('SignalRecovery response: %r', response)
             # We need to read 3 bytes, because there is a \0 character
             # separating the data from the status bytes.
             _, status_byte, overload_byte = transport.read_exactly(3)
 
-        logger.debug('SignalRecovery stb: "%s" olb: "%s"', status_byte, overload_byte)
+        logger.debug('SignalRecovery stb: %r olb: %r', status_byte, overload_byte)
         self.call_byte_handler(status_byte, overload_byte)
         # returns raw unparsed bytes.
         return response
 
     def write(self, transport, header, *data):
         message = self.create_message(header, *data)
-        logger.debug('SignalRecovery write: "%s"', message)
+        logger.debug('SignalRecovery write: %r', message)
         with transport:
             transport.write(message)
 
             response = transport.read_until(self.resp_term.encode(self.encoding))
             status_byte, overload_byte = transport.read_bytes(2)
-        logger.debug('SignalRecovery stb: "%s" olb: "%s"', status_byte, overload_byte)
+        logger.debug('SignalRecovery stb: %r olb: %r', status_byte, overload_byte)
 
         self.call_byte_handler(status_byte, overload_byte)
 
@@ -339,22 +338,22 @@ class OxfordIsobus(Protocol):
 
     def query(self, transport, header, *data):
         message = self.create_message(header, *data)
-        logger.debug('OxfordIsobus query: "%s"', message)
+        logger.debug('OxfordIsobus query: %r', message)
         with transport:
             transport.write(message)
             response = transport.read_until(self.resp_term.encode(self.encoding))
 
-        logger.debug('OxfordIsobus response: "%s"', response)
-        return self.parse_response(response, header)
+        logger.debug('OxfordIsobus response: %r', response)
+        return [self.parse_response(response, header)]
 
     def write(self, transport, header, *data):
         message = self.create_message(header, *data)
-        logger.debug('OxfordIsobus write: "%s"', message)
+        logger.debug('OxfordIsobus write: %r', message)
         with transport:
             transport.write(message)
             if self.echo:
                 response = transport.read_until(self.resp_term.encode(self.encoding))
-                logger.debug('OxfordIsobus response: "%s"', response)
+                logger.debug('OxfordIsobus response: %r', response)
 
                 parsed = self.parse_response(response, header)
                 # A write should not return any data.
