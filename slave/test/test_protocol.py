@@ -147,7 +147,7 @@ class TestOxfordIsobus(object):
 
     def test_parse_response_with_error(self):
         protocol = OxfordIsobus()
-        with pytest.raises(OxfordIsobus.InvalidRequest) as excinfo:
+        with pytest.raises(OxfordIsobus.InvalidRequestError) as excinfo:
             protocol.parse_response(b'?R', 'R')
         assert str(excinfo.value) == '?R'
 
