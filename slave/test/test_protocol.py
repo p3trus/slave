@@ -147,13 +147,13 @@ class TestOxfordIsobus(object):
 
     def test_parse_response_with_error(self):
         protocol = OxfordIsobus()
-        with pytest.raises(IOError) as excinfo:
+        with pytest.raises(OxfordIsobus.InvalidRequest) as excinfo:
             protocol.parse_response(b'?R', 'R')
         assert str(excinfo.value) == '?R'
 
     def test_parse_response_with_wrong_header(self):
         protocol = OxfordIsobus()
-        with pytest.raises(ValueError) as excinfo:
+        with pytest.raises(OxfordIsobus.ParsingError) as excinfo:
             protocol.parse_response(b'U1', 'R')
         assert str(excinfo.value) == 'Response header mismatch'
 
@@ -166,7 +166,7 @@ class TestOxfordIsobus(object):
     def test_write_with_response_data(self):
         transport = MockTransport(responses=[b'R10\r'])
         protocol = OxfordIsobus(address=7)
-        with pytest.raises(ValueError) as excinfo:
+        with pytest.raises(OxfordIsobus.ParsingError) as excinfo:
             protocol.write(transport, 'R', '11')
         assert str(excinfo.value) == 'Unexpected response data:10'
 
