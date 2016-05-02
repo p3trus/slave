@@ -550,6 +550,11 @@ class SR7230(Driver):
             'REFMODE',
             Enum('single', 'dual harmonic', 'dual reference')
         )
+        self.reference = Command(
+            'IE',
+            'IE',
+            Enum('internal', 'ttl', 'analog')
+        )
         self.internal_reference_channel = Command(
             'INT',
             'INT',
