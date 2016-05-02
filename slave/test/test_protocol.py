@@ -164,7 +164,9 @@ class TestOxfordIsobus(object):
         assert transport.messages[0] == b'@7R10\r'
 
     def test_write_with_response_data(self):
-        transport = MockTransport(responses=[b'R10\r'])
+        # Note: Added the response three times because the retry functionallity
+        # will catch the first two errors.
+        transport = MockTransport(responses=[b'R10\r', b'R10\r', b'R10\r'])
         protocol = OxfordIsobus(address=7)
         with pytest.raises(OxfordIsobus.ParsingError) as excinfo:
             protocol.write(transport, 'R', '11')
