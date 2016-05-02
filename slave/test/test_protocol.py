@@ -173,5 +173,5 @@ class TestOxfordIsobus(object):
     def test_query(self):
         transport = MockTransport(responses=[b'R1337\r'])
         protocol = OxfordIsobus(address=7)
-        assert protocol.query(transport, 'R10') == '1337'
+        assert protocol.query(transport, 'R10') == ['1337']
         assert transport.messages[0] == b'@7R10\r'

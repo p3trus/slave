@@ -344,6 +344,8 @@ class OxfordIsobus(Protocol):
             response = transport.read_until(self.resp_term.encode(self.encoding))
 
         logger.debug('OxfordIsobus response: %r', response)
+        # Although isobus has only response item, we put it into a list to be
+        # consistent with the other protocols.
         return [self.parse_response(response, header)]
 
     def write(self, transport, header, *data):
