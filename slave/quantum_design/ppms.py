@@ -705,7 +705,7 @@ class BridgeChannel(Driver):
 
     :ivar id: The user bridge channel id.
     :ivar config: The bridge configuration, represented by a tuple of the form
-        *(<excitation>, <power limit>, <dc flag>, <mode>)*, where
+        *(<excitation>, <power limit>, <dc flag>, <mode>, <unknown>)*, where
 
         * *<excitation>* The excitation current in microamps from 0.01 to 5000.
         * *<power limit>* The maximum power to be applied in microwatts from
@@ -722,14 +722,15 @@ class BridgeChannel(Driver):
     def __init__(self, transport, protocol, id):
         super(BridgeChannel, self).__init__(transport, protocol)
         self.idx = id
+        
+        config_type = [
+          Float(min=0.01, max=5000.), Float(min=0.001, max=1000.),
+          Enum('AC', 'DC'), Enum('standart', 'fast', 'high res')
+        ]
         self.config = Command(
-            'BRIDGE? {}'.format(id),
-            'BRIDGE {} '.format(id),
-            [
-                Float(min=0.01, max=5000.), Float(min=0.001, max=1000.),
-                Enum('AC', 'DC'), Enum('standart', 'fast', 'high res')
-            ]
+            query=('BRIDGE? {}'.format(id), [Integer] + config_type + [Float]),
+            write=('BRIDGE {} '.format(id), config_type)
         )
         bit = 2 * (id + 1)
-        self.current = Command(('GETDAT? {}'.format(2**bit), Float))
-        self.resistance = Command(('GETDAT? {}'.format(2**(bit + 1)), Float))
+        self.current = Command(('GETDAT? {}'.format(2**(bit + 1), Float))
+        self.resistance = Command(('GETDAT? {}'.format(2**bit), Float))
