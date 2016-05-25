@@ -742,50 +742,50 @@ class SourceDelta(Driver):
     def __init__(self, transport, protocol):
         super(SourceDelta, self).__init__(transport, protocol)
         self.high = Command(
-            ':SOUR:DEL:HIGH?',
-            ':SOUR:DEL:HIGH',
+            ':SOUR:DELT:HIGH?',
+            ':SOUR:DELT:HIGH',
             Float(min=0, max=105e-3)
         )
         self.low = Command(
-            ':SOUR:DEL:LOW?',
-            ':SOUR:DEL:LOW',
+            ':SOUR:DELT:LOW?',
+            ':SOUR:DELT:LOW',
             Float(min=-105e-3, max=0.)
         )
         self.delay = Command(
-            ':SOUR:DEL:DEL?',
-            ':SOUR:DEL:DEL',
+            ':SOUR:DELT:DEL?',
+            ':SOUR:DELT:DEL',
             Float(min=1e-3, max=9999.999)
         )
         self.count = Command(
-            ':SOUR:DEL:COUN?',
-            ':SOUR:DEL:COUN',
+            ':SOUR:DELT:COUN?',
+            ':SOUR:DELT:COUN',
             # We use a float instead of an integer because it can represent
             # infinity. E.g. float('inf') is valid python.
             Float
         )
         self.compliance_abort = Command(
-            ':SOUR:DEL:CAB?',
-            ':SOUR:DEL:CAB',
+            ':SOUR:DELT:CAB?',
+            ':SOUR:DELT:CAB',
             Boolean
         )
         self.cold_switching = Command(
-            ':SOUR:DEL:CSW?',
-            ':SOUR:DEL:CSW',
+            ':SOUR:DELT:CSW?',
+            ':SOUR:DELT:CSW',
             # TODO check response
             Boolean
         )
 
     def voltmeter_connected(self):
         """The nanovoltmeter connection status."""
-        return self._query((':SOUR:DEL:NVPR?', Boolean))
+        return self._query((':SOUR:DELT:NVPR?', Boolean))
 
     def arm(self):
         """Arms the source delta mode."""
-        self._write(':SOUR:DEL:ARM')
+        self._write(':SOUR:DELT:ARM')
 
     def is_armed(self):
         """A boolean flag returning arm state."""
-        return self._query((':SOUR:DEL:ARM?', Boolean))
+        return self._query((':SOUR:DELT:ARM?', Boolean))
 
 
 class SourcePulseDelta(Driver):
