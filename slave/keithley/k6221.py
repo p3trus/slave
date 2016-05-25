@@ -437,7 +437,7 @@ class SenseData(Driver):
     """
     def __init__(self, transport, protocol):
         super(SenseData, self).__init__(transport, protocol)
-        self.fresh = Command((':SENS:DATA:FRES?', Float))
+        self.fresh = Command((':SENS:DATA:FRES?', Stream(Float)))
         self.latest = Command((':SENS:DATA?', Stream(Float)))
 
 
