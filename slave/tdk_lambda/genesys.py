@@ -80,7 +80,7 @@ class Genesys(Driver):
         
     def __init__(self, transport, address=6):
         protocol = TDKLambda()
-        super(Gen750W, self).__init__(transport, protocol)
+        super(Genesys, self).__init__(transport, protocol)
         self._address = address
         
         ON_OFF = Mapping({True: 'ON', False: 'OFF'})
