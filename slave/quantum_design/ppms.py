@@ -732,5 +732,5 @@ class BridgeChannel(Driver):
             write=('BRIDGE {} '.format(id), config_type)
         )
         bit = 2 * (id + 1)
-        self.current = Command(('GETDAT? {}'.format(2**(bit + 1), Float)))
+        self.current = Command(('GETDAT? {}'.format(2**(bit + 1)), Float))
         self.resistance = Command(('GETDAT? {}'.format(2**bit), Float))
