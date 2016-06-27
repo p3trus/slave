@@ -421,3 +421,79 @@ class OxfordIsobus(Protocol):
                 transport.clear()
             except AttributeError:
                 pass
+                
+                
+class TDKLambda(IEC60488):
+    """The communication protocol used by the TDK Lambda Genesys series.
+    
+    """
+    class CommandError(Protocol.Error):
+        """Raised when a command error occurs."""
+        ERROR_MESSAGES = {
+            'C01': 'Illegal command or query',
+            'C02': 'Missing parameter',
+            'C03': 'Illegal parameter',
+            'C04': 'Checksum Error',
+            'C05': 'Setting out of range'
+        }
+        def __init__(self, err_code):
+            self.err_code = err_code
+            msg = self.ERROR_MESSAGES[err_code]
+            super(TDKLambdaProtocol.CommandError, self).__init__(msg)
+
+    class ProgrammingError(Protocol.Error):
+        """Raised when a programming error occurs."""
+        ERROR_MESSAGES = {
+            'E01': 'Program voltage is above acceptable range',
+            'E02': 'Programming output voltage below UVL setting',
+            'E04': 'OVP is programmed below acceptable range',
+            'E06': 'UVL is programmed above the programmed output voltage',
+            'E07': 'Tried to program the output to ON during a fault shut down',
+        }
+        def __init__(self, err_code):
+            self.err_code = err_code
+            msg = self.ERROR_MESSAGES[err_code]
+            super(TDKLambdaProtocol.ProgrammingError, self).__init__(msg)
+    
+    def __init__(self):
+        super(TDKLambda, self).__init__(msg_term='\r', resp_term='\r')
+
+    @_retry(errors=(IEC60488.ParsingError, UnicodeDecodeError, UnicodeEncodeError, Timeout), logger=logger)
+    def query(self, transport, header, *data):
+        message = self.create_message(header, *data)
+        logger.debug('TDKLambda query: %r', message)
+        with transport:
+            transport.write(message)
+            response = transport.read_until(self.resp_term.encode(self.encoding))
+        
+        logger.debug('TDKLambda response: %r', response)
+        response = self.parse_response(response)
+        
+        # If an error occured, only a single item message is returned.
+        if len(response) == 1:
+            if response[0] in self.CommandError.ERROR_MESSAGES:
+                raise self.CommandError(response[0])
+            if response[0] in self.CommandError.ERROR_MESSAGES:
+                raise self.CommandError(response[0])
+        return response
+
+    @_retry(errors=(IEC60488.ParsingError, UnicodeDecodeError, UnicodeEncodeError, Timeout), logger=logger)
+    def write(self, transport, header, *data):
+        message = self.create_message(header, *data)
+        logger.debug('TDKLambda write: %r', message)
+        with transport:
+            transport.write(message)
+            # Check for 'OK' or error response
+            response = transport.read_until(self.resp_term.encode(self.encoding))
+            logger.debug('TDKLambda response: %r', response)
+            response = self.parse_response(response)
+            if not len(response) == 1:
+                raise self.ParsingError('Invalid Response:{!r}'.format(response))
+            response = response[0]
+            if response == 'OK':
+                return
+            if response in self.CommandError.ERROR_MESSAGES:
+                raise self.CommandError(response)
+            if response in self.CommandError.ERROR_MESSAGES:
+                raise self.CommandError(response)
+            raise IEC60488.ParsingError('Invalid Response:{!r}'.format(response))
