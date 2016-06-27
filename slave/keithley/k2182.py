@@ -264,8 +264,8 @@ class K2182(iec.IEC60488, iec.StoredSetting, iec.Trigger):
         ..note:: This Command is much slower than :meth:`.read`.
 
     """
-    def __init__(self, transport):
-        super(K2182, self).__init__(transport)
+    def __init__(self, transport, protocol=None):
+        super(K2182, self).__init__(transport, protocol)
         self.initiate = Initiate(self._transport, self._protocol)
         self.output = Output(self._transport, self._protocol)
         self.sample_count = Command(

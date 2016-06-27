@@ -813,12 +813,12 @@ class SourcePulseDelta(Driver):
         self.high = Command(
             ':SOUR:PDEL:HIGH?',
             ':SOUR:PDEL:HIGH',
-            Float(min=0, max=105e-3)
+            Float(min=-105e-3, max=105e-3)
         )
         self.low = Command(
             ':SOUR:PDEL:LOW?',
             ':SOUR:PDEL:LOW',
-            Float(min=-105e-3, max=0.)
+            Float(min=-105e-3, max=105e-3)
         )
         self.width = Command(
             ':SOUR:PDEL:WIDT?',
@@ -915,7 +915,7 @@ class SourceDifferentialConductance(Driver):
         self.compliance_abort = Command(
             ':SOUR:DCON:CAB?',
             ':SOUR:DCON:CAB',
-            Boolean
+            Mapping({True: 'ON', False: 'OFF'})
         )
 
     def voltmeter_connected(self):
@@ -1757,7 +1757,7 @@ class UnitVoltage(Driver):
         self.dc = Command(
             ':UNIT:VOLT?',
             ':UNIT:VOLT',
-            Mapping({'V': 'V', 'Ohm': 'OHM', 'W': 'W', 'Siemens': 'SIEM'})
+            Mapping({'V': 'V', 'Ohm': 'OHMS', 'W': 'W', 'Siemens': 'S'})
         )
 
 
