@@ -172,6 +172,21 @@ This part covers the complete api documentation of the slave library.
     :undoc-members:
     :show-inheritance:
 
+:mod:`tdk_lambda` Module
+------------------------
+
+.. automodule:: slave.tdk_lambda
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+:mod:`slave.tdk_lambda.genesys`
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.. automodule:: slave.tdk_lambda.genesys
+    :members:
+    :undoc-members:
+    :show-inheritance:
+    
 :mod:`types` Module
 -------------------
 

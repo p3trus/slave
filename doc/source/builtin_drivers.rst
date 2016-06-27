@@ -54,8 +54,20 @@ Manufacturer  Model  Class
 Lakeshore     LS340  :class:`slave.lakeshore.ls340.LS340`
 ============  =====  ====================================
 
+Generic Power Supplies
+----------------------
+
+============  ==============  =========================================
+Manufacturer  Model           Class
+============  ==============  =========================================
+TDK Lambda    Genesys Series  :class:`slave.tdk_lambda.genesys.Genesys`
+============  ==============  =========================================
+
+
 Magnet Power Supplies
 ---------------------
+
+Power Supplies specifically designed for superconducting magnets.
 
 ==================  ============================  ========================================
 Manufacturer        Model                         Class
