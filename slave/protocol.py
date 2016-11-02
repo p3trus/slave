@@ -439,7 +439,7 @@ class TDKLambda(IEC60488):
         def __init__(self, err_code):
             self.err_code = err_code
             msg = self.ERROR_MESSAGES[err_code]
-            super(TDKLambdaProtocol.CommandError, self).__init__(msg)
+            super(TDKLambda.CommandError, self).__init__(msg)
 
     class ProgrammingError(Protocol.Error):
         """Raised when a programming error occurs."""
@@ -453,7 +453,7 @@ class TDKLambda(IEC60488):
         def __init__(self, err_code):
             self.err_code = err_code
             msg = self.ERROR_MESSAGES[err_code]
-            super(TDKLambdaProtocol.ProgrammingError, self).__init__(msg)
+            super(TDKLambda.ProgrammingError, self).__init__(msg)
     
     def __init__(self):
         super(TDKLambda, self).__init__(msg_term='\r', resp_term='\r')

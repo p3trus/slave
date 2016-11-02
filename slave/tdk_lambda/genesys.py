@@ -6,6 +6,7 @@ from __future__ import (absolute_import, division,
 from future.builtins import *
 
 from slave.driver import Command, Driver
+from slave.protocol import TDKLambda
 from slave.types import Boolean, Enum, Float, Integer, Mapping, Set, String
 
 
@@ -21,7 +22,6 @@ class Genesys(Driver):
         tdk.address() # Tell this device to listen to cmd's
         
         tdk.target_current = 1
-        tdk.output_mode = 'current'
     
     :param transport: A transport object.
     :param address: The device address in the range 0 to 30.
