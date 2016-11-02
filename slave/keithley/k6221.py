@@ -11,7 +11,48 @@ from slave.iec60488 import (IEC60488, Trigger, ObjectIdentification,
     StoredSetting)
 from slave.types import (Boolean, Enum, Float, Integer, Mapping, String, Set,
     Stream, Register)
+from slave.keithley.k2182 import K2182
+from slave.protocol import IEC60488 as IEC60488Protocol, Timeout, logger, _retry
 
+    
+class MediatorProtocol(IEC60488Protocol):
+    """Allows communication with the nanovolt meter through the K6221."""
+    def __init__(self, *args, **kw):
+        super(MediatorProtocol, self).__init__(*args, resp_term='\n\n', **kw)
+        self.write_cmd = 'SYST:COMM:SER:SEND'
+        self.query_cmd = 'SYST:COMM:SER:ENT?'
+    
+    def create_message(self, header, *data):
+        if not data:
+            msg = ''.join((self.msg_prefix, header))
+        else:
+            data = self.msg_data_sep.join(data)
+            msg = ''.join((self.msg_prefix, header, self.msg_header_sep, data))
+        # Wrap mediated message
+        msg = ''.join((self.write_cmd, ' "', msg, '\n"', self.msg_term))
+        return msg.encode(self.encoding)
+    
+    @_retry(errors=(IEC60488Protocol.ParsingError, UnicodeDecodeError, UnicodeEncodeError, Timeout), logger=logger)
+    def query(self, transport, header, *data):
+        message = self.create_message(header, *data)
+        logger.debug('Mediator query: %r', message)
+        with transport:
+            transport.write(message)
+            # Initiate query
+            logger.debug('Mediator init read')
+            transport.write(self.query_cmd + self.msg_term)
+            response = transport.read_until(self.resp_term.encode(self.encoding))
+        # TODO: Currently, response headers are not handled.
+        logger.debug('IEC60488 response: %r', response)
+        return self.parse_response(response)
+
+    @_retry(errors=(IEC60488Protocol.ParsingError, UnicodeDecodeError, UnicodeEncodeError, Timeout), logger=logger)
+    def write(self, transport, header, *data):
+        message = self.create_message(header, *data)
+        logger.debug('IEC60488 write: %r', message)
+        with transport:
+            transport.write(message)
+    
 
 class K6221(IEC60488, Trigger, ObjectIdentification):
     """The Keithley K6221 ac/dc current source.
@@ -626,9 +667,8 @@ class SourceSweep(Driver):
             Float
         )
         self.compliance_abort = Command(
-            ':SOUR:SWE:CAB?',
-            ':SOUR:SWE:CAB',
-            Boolean
+            (':SOUR:SWE:CAB?', Boolean),
+            (':SOUR:SWE:CAB', Mapping({True: 'ON', False: 'OFF'}))
         )
 
     def arm(self):
@@ -764,9 +804,8 @@ class SourceDelta(Driver):
             Float
         )
         self.compliance_abort = Command(
-            ':SOUR:DELT:CAB?',
-            ':SOUR:DELT:CAB',
-            Boolean
+            (':SOUR:DELT:CAB?', Boolean),
+            (':SOUR:DELT:CAB', Mapping({True: 'ON', False: 'OFF'}))
         )
         self.cold_switching = Command(
             ':SOUR:DELT:CSW?',
@@ -913,9 +952,8 @@ class SourceDifferentialConductance(Driver):
             Float(min=1e-3, max=9999.999)
         )
         self.compliance_abort = Command(
-            ':SOUR:DCON:CAB?',
-            ':SOUR:DCON:CAB',
-            Mapping({True: 'ON', False: 'OFF'})
+            (':SOUR:DCON:CAB?', Boolean),
+            (':SOUR:DCON:CAB', Mapping({True: 'ON', False: 'OFF'}))
         )
 
     def voltmeter_connected(self):
@@ -1405,6 +1443,9 @@ class SystemCommunicateGpib(Driver):
 class SystemCommunicateSerial(Driver):
     """The serial command subsystem.
 
+    :ivar k2182: An instance of :class:`~K2182` used to communicate with the
+        nanovoltmeter through the K6221. Therefore the nanovoltmeter must be
+        connected to the K6221 with the serial interface.
     :ivar handshake: The serial control handshaking. Valid are 'ibfull', 'rfr'
         and 'off'.
     :ivar pace: The flow control, either 'xon' or 'xoff'.
@@ -1416,6 +1457,7 @@ class SystemCommunicateSerial(Driver):
     BAUDRATE = [300, 600, 1200, 2400, 4800, 9600, 19200, 38400, 57600, 115200]
     def __init__(self, transport, protocol):
         super(SystemCommunicateSerial, self).__init__(transport, protocol)
+        self.k2182 = K2182(self._transport, MediatorProtocol())
         self.handshake = Command(
             ':SYST:COMM:SER:CONT:RTS?',
             ':SYST:COMM:SER:CONT:RTS',
@@ -1438,7 +1480,9 @@ class SystemCommunicateSerial(Driver):
         )
 
     def send(self, data):
-        """Send data via serial port of the device..
+        """Send data via serial port of the device.
+        
+        See :attr:`~.k2182` for an alternative.
 
         .. warning:: Not implemented yet.
 
@@ -1447,6 +1491,8 @@ class SystemCommunicateSerial(Driver):
 
     def enter(self, data):
         """Read data from serial port of the device.
+        
+         See :attr:`~.k2182` for an alternative
 
         .. warning:: Not implemented yet.
 
@@ -1574,6 +1620,7 @@ class Trace(Driver):
             ':TRAC:TST:FORM',
             Mapping({'absolute': 'ABS', 'delta': 'DELT'})
         )
+        self.data = TraceData(self._transport, self._protocol)
 
     def clear(self):
         """Clears the readings from buffer."""
