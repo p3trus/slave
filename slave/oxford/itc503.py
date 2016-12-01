@@ -49,8 +49,11 @@ class ITC503(Driver):
         {'gas': False, 'heater': False}
     :ivar bool auto_pid: Enables/Disables the auto_pid feature. When enabled,
         the internal pid table is used.
+    :ivar pid_table: The itc pid table, an instance of :class:`~.PIDTable`.
     :ivar float gas_flow: The gas flow in percent with a resolution of 0.1%.
     :ivar float heater: The heater output in percent with a resolution of 0.1%.
+
+    :ivar sweep_table: The itc sweep table, an instance of :class:`~.SweepTable`.
 
     :ivar float target_temperature: The target temperature.
     :ivar float temperature1: The temperature of sensor 1. (read-only)
@@ -77,6 +80,7 @@ class ITC503(Driver):
         self.heater = Command('R5', 'O', Float(min=0, max=99.9))
 
         self.sweep_table = SweepTable(self._transport, self._protocol)
+        self.pid_table = PIDTable(self._transport, self._protocol)
 
         self.target_temperature = Command('R0', 'T', Float)
 
@@ -320,6 +324,39 @@ class SweepTable(Table):
     def __init__(self, transport, protocol):
         super(SweepTable, self).__init__(transport, protocol, shape=(16, 3))
         self._item = Command('r', 's', Float)
+
+    def clear(self):
+        """Clears the sweep table."""
+        try:
+            self._write('w')
+        except OxfordIsobus.InvalidRequestError:
+            # Wipe command was not recognized. Try manual wiping
+            self[:] = 0
+            
+            
+class PIDTable(Table):
+    """The itc pid table subsystem uses slicing notation to access the table.
+    
+    A single row consists of upper temperature limit (K), proportional band(K),
+    integral time(min) and derivative time (min).
+    
+    E.g.
+        # read pid table
+        pid_table = itc.pid_table
+        
+        # read the first row of the pid table
+        temp_upper, p, i, d = itc.pid_table[0]
+        
+        # read the integral value
+        i = itc.pid_table[0, 3]
+        
+        # Reads every second row
+        row = itc.pid_table[::2]
+
+    """
+    def __init__(self, transport, protocol):
+        super(PIDTable, self).__init__(transport, protocol, shape=(32, 4))
+        self._item = Command('q', 'p', Float)
 
     def clear(self):
         """Clears the sweep table."""
