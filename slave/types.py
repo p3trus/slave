@@ -1,6 +1,6 @@
 #  -*- coding: utf-8 -*-
 #
-# E21, (c) 2012, see AUTHORS.  Licensed under the GNU GPL.
+# Slave, (c) 2012, see AUTHORS.  Licensed under the GNU GPL.
 """Contains the type factory classes used to load and dump values to string.
 
 The type module contains several type classes used by the :class:`~.Command`
@@ -47,6 +47,8 @@ import random
 import string
 import sys
 import itertools
+
+
 
 
 class Type(object):
