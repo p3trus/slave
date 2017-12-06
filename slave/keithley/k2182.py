@@ -97,7 +97,7 @@ class Sense(Driver):
         )
         self.auto_range = Command(
             ':SENS:VOLT:RANG:AUTO?',
-            ':SENS:VOLT:RANG',
+            ':SENS:VOLT:RANG:AUTO',
             Boolean
         )
         self.range = Command(

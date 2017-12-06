@@ -32,15 +32,25 @@ class MediatorProtocol(IEC60488Protocol):
         msg = ''.join((self.write_cmd, ' "', msg, '\n"', self.msg_term))
         return msg.encode(self.encoding)
     
+    def create_query_message(self, header, *data):
+        if not data:
+            msg = ''.join((self.msg_prefix, header))
+        else:
+            data = self.msg_data_sep.join(data)
+            msg = ''.join((self.msg_prefix, header, self.msg_header_sep, data))
+        # Wrap mediated message
+        msg = ''.join((
+            self.write_cmd, ' "', msg, '\n"', self.msg_term,
+            ';', self.query_cmd, self.msg_term
+        ))
+        return msg.encode(self.encoding)
+    
     @_retry(errors=(IEC60488Protocol.ParsingError, UnicodeDecodeError, UnicodeEncodeError, Timeout), logger=logger)
     def query(self, transport, header, *data):
-        message = self.create_message(header, *data)
+        message = self.create_query_message(header, *data)
         logger.debug('Mediator query: %r', message)
         with transport:
             transport.write(message)
-            # Initiate query
-            logger.debug('Mediator init read')
-            transport.write(self.query_cmd + self.msg_term)
             response = transport.read_until(self.resp_term.encode(self.encoding))
         # TODO: Currently, response headers are not handled.
         logger.debug('IEC60488 response: %r', response)
@@ -784,12 +794,12 @@ class SourceDelta(Driver):
         self.high = Command(
             ':SOUR:DELT:HIGH?',
             ':SOUR:DELT:HIGH',
-            Float(min=0, max=105e-3)
+            Float(min=-105e-3, max=105e-3)
         )
         self.low = Command(
             ':SOUR:DELT:LOW?',
             ':SOUR:DELT:LOW',
-            Float(min=-105e-3, max=0.)
+            Float(min=-105e-3, max=105e-3)
         )
         self.delay = Command(
             ':SOUR:DELT:DEL?',
